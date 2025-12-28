@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gotd/td/mtproxy"
 	"github.com/gotd/td/telegram/dcs"
 	xproxy "golang.org/x/net/proxy"
 )
@@ -37,7 +38,7 @@ type Descriptor struct {
 	Port   int
 	User   string
 	Pass   string
-	Secret string // hex-encoded; required for MTProto
+	Secret string // hex or base64 encoded; required for MTProto
 }
 
 // FromEnv builds a Descriptor from INDEXIT_PROXY_* variables. Returns
@@ -94,6 +95,9 @@ func fromURL(raw string) (*Descriptor, error) {
 	if u.Scheme == "" || u.Host == "" {
 		return nil, fmt.Errorf("INDEXIT_PROXY_URL must be a full URL with scheme and host")
 	}
+	if kind, ok := linkKind(u); ok {
+		return fromLink(u, kind)
+	}
 	portStr := u.Port()
 	if portStr == "" {
 		return nil, fmt.Errorf("INDEXIT_PROXY_URL must include a port")
@@ -120,6 +124,65 @@ func fromURL(raw string) (*Descriptor, error) {
 	return d, nil
 }
 
+// linkKind reports whether the URL is a Telegram proxy-sharing link
+// (tg://proxy, tg://socks, https://t.me/proxy, https://t.me/socks) and which
+// kind it denotes. Those links are what Telegram itself hands out, so accepting
+// them verbatim spares the user a manual conversion.
+func linkKind(u *url.URL) (string, bool) {
+	kind := ""
+	switch strings.ToLower(u.Scheme) {
+	case "tg":
+		kind = strings.ToLower(u.Host)
+	case "http", "https":
+		switch strings.ToLower(u.Hostname()) {
+		case "t.me", "telegram.me", "telegram.dog":
+			kind = strings.ToLower(strings.Trim(u.Path, "/"))
+		default:
+			return "", false
+		}
+	default:
+		return "", false
+	}
+	switch kind {
+	case "proxy", "socks":
+		return kind, true
+	}
+	return "", false
+}
+
+// fromLink builds a Descriptor from a Telegram proxy-sharing link.
+func fromLink(u *url.URL, kind string) (*Descriptor, error) {
+	q := u.Query()
+	host := q.Get("server")
+	if host == "" {
+		return nil, fmt.Errorf("INDEXIT_PROXY_URL proxy link must include server=")
+	}
+	portStr := q.Get("port")
+	if portStr == "" {
+		return nil, fmt.Errorf("INDEXIT_PROXY_URL proxy link must include port=")
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse port in INDEXIT_PROXY_URL: %w", err)
+	}
+	d := &Descriptor{
+		Host:   host,
+		Port:   port,
+		User:   q.Get("user"),
+		Pass:   q.Get("pass"),
+		Secret: q.Get("secret"),
+	}
+	if kind == "socks" {
+		d.Type = TypeSOCKS5
+	} else {
+		d.Type = TypeMTProto
+	}
+	if err := d.validate(); err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
 func (d *Descriptor) validate() error {
 	if d.Host == "" {
 		return fmt.Errorf("proxy host is required")
@@ -134,13 +197,61 @@ func (d *Descriptor) validate() error {
 		if d.Secret == "" {
 			return fmt.Errorf("mtproto proxy requires INDEXIT_PROXY_SECRET")
 		}
-		if _, err := hex.DecodeString(d.Secret); err != nil {
-			return fmt.Errorf("INDEXIT_PROXY_SECRET must be hex: %w", err)
+		if _, err := decodeSecret(d.Secret); err != nil {
+			return err
 		}
 		return nil
 	default:
 		return fmt.Errorf("unsupported INDEXIT_PROXY_TYPE %q (want socks5|mtproto|http)", d.Type)
 	}
+}
+
+// decodeSecret decodes an MTProto secret given in hex or base64 form and checks
+// that gotd can make sense of it. Telegram shares secrets as base64url inside
+// tg://proxy links and as hex elsewhere, and both forms reach us verbatim from
+// whatever the user copied, so both are accepted; a plain 16-byte secret, a
+// dd-prefixed (secured) one, and an ee-prefixed (fakeTLS) one all pass.
+//
+// Hex is tried first: a 32-character hex string is also valid base64, and
+// reading it as base64 would yield a different, wrong secret.
+func decodeSecret(raw string) ([]byte, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, fmt.Errorf("mtproto proxy requires INDEXIT_PROXY_SECRET")
+	}
+
+	candidates := make([][]byte, 0, 2)
+	if b, err := hex.DecodeString(raw); err == nil {
+		candidates = append(candidates, b)
+	}
+	if b, ok := decodeBase64(raw); ok {
+		candidates = append(candidates, b)
+	}
+	for _, candidate := range candidates {
+		if _, err := mtproxy.ParseSecret(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+	return nil, fmt.Errorf(
+		"INDEXIT_PROXY_SECRET is not a valid MTProto secret: want hex or base64 " +
+			"holding 16 bytes, or a dd/ee-prefixed 17+ byte secret")
+}
+
+// decodeBase64 tries every base64 flavour Telegram links are seen with. Query
+// decoding turns a "+" of standard base64 into a space, so that is undone first.
+func decodeBase64(raw string) ([]byte, bool) {
+	plus := strings.ReplaceAll(raw, " ", "+")
+	for _, enc := range []*base64.Encoding{
+		base64.RawURLEncoding,
+		base64.URLEncoding,
+		base64.RawStdEncoding,
+		base64.StdEncoding,
+	} {
+		if b, err := enc.DecodeString(plus); err == nil {
+			return b, true
+		}
+	}
+	return nil, false
 }
 
 // Display returns a human-readable, credential-free descriptor. Safe to log.
@@ -159,9 +270,9 @@ func (d *Descriptor) addr() string {
 func (d *Descriptor) Resolver() (dcs.Resolver, error) {
 	switch d.Type {
 	case TypeMTProto:
-		secret, err := hex.DecodeString(d.Secret)
+		secret, err := decodeSecret(d.Secret)
 		if err != nil {
-			return nil, fmt.Errorf("decode mtproto secret: %w", err)
+			return nil, err
 		}
 		return dcs.MTProxy(d.addr(), secret, dcs.MTProxyOptions{})
 	case TypeSOCKS5:
