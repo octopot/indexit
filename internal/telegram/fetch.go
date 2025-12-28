@@ -21,6 +21,15 @@ type Writer interface {
 	Write(any) error
 }
 
+// dialogRef exposes the peer/top-message pair shared by *tg.Dialog and
+// *tg.DialogFolder. gotd/td v0.161.0 dropped these getters from the generated
+// tg.DialogClass interface (only GetPinned remains), but both concrete types
+// still implement them.
+type dialogRef interface {
+	GetPeer() tg.PeerClass
+	GetTopMessage() int
+}
+
 type DialogsOptions struct {
 	Limit    int
 	PageSize int
@@ -83,7 +92,11 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 		page++
 		pageGot := 0
 		for _, dialog := range dialogs {
-			last := lastByID[dialog.GetTopMessage()]
+			ref, ok := dialog.(dialogRef)
+			if !ok {
+				continue
+			}
+			last := lastByID[ref.GetTopMessage()]
 			rec, ok := mapper.Dialog(dialog, entities, last)
 			if !ok {
 				continue
@@ -99,7 +112,14 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 			}
 		}
 
-		lastDialog := dialogs[len(dialogs)-1]
+		lastDialog, ok := dialogs[len(dialogs)-1].(dialogRef)
+		if !ok {
+			// Without a top message there is no cursor to advance, and
+			// repeating the request would spin on the same page forever.
+			slog.Default().Warn("dialogs: no cursor at page boundary, stopping",
+				"n", page, "total", emitted)
+			return nil
+		}
 		offsetID = lastDialog.GetTopMessage()
 		offsetPeer = inputPeerForOffset(lastDialog.GetPeer(), entities)
 		if last, ok := lastByID[offsetID]; ok {

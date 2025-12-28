@@ -50,7 +50,7 @@ func Setup(opts Options) *Settings {
 		level = slog.LevelDebug
 	}
 
-	logger := slog.New(&handler{w: opts.Out, level: level})
+	logger := slog.New(&handler{w: opts.Out, level: level, mu: new(sync.Mutex)})
 	slog.SetDefault(logger)
 
 	gotd := zap.NewNop()
@@ -92,7 +92,7 @@ var (
 func defaultSettings() *Settings {
 	defaultOnce.Do(func() {
 		defaultVal = &Settings{
-			Logger:    slog.New(&handler{w: io.Discard, level: slog.LevelError}),
+			Logger:    slog.New(&handler{w: io.Discard, level: slog.LevelError, mu: new(sync.Mutex)}),
 			GotdLog:   zap.NewNop(),
 			Heartbeat: 0,
 		}
@@ -102,11 +102,13 @@ func defaultSettings() *Settings {
 
 // handler renders slog records as compact human-friendly lines on the writer.
 type handler struct {
-	w       io.Writer
-	level   slog.Leveler
-	mu      sync.Mutex
-	attrs   []slog.Attr
-	groups  []string
+	w     io.Writer
+	level slog.Leveler
+	// mu is shared with every handler cloned by WithAttrs/WithGroup: they all
+	// write to the same w, so they must serialize against one another.
+	mu     *sync.Mutex
+	attrs  []slog.Attr
+	groups []string
 }
 
 func (h *handler) Enabled(_ context.Context, l slog.Level) bool {

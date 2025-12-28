@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/fatih/color v1.19.0
 	github.com/golang/mock v1.6.0
+	github.com/gotd/log/logzap v0.1.1
 	github.com/gotd/td v0.161.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.11.1
@@ -14,6 +15,7 @@ require (
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.57.0
 	golang.org/x/term v0.45.0
+	rsc.io/qr v0.2.0
 )
 
 require (
@@ -69,5 +71,4 @@ require (
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	rsc.io/qr v0.2.0 // indirect
 )

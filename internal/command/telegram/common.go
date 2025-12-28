@@ -41,6 +41,16 @@ func contextFromFlags(cmd *cobra.Command, opt *options) (context.Context, contex
 }
 
 func newClient(cmd *cobra.Command, paths tgsession.Paths) (*tgsvc.Client, error) {
+	return buildClient(cmd, paths, false)
+}
+
+// newQRClient builds a client with the update stream enabled, as required by the
+// QR login flow (it awaits the updateLoginToken confirmation).
+func newQRClient(cmd *cobra.Command, paths tgsession.Paths) (*tgsvc.Client, error) {
+	return buildClient(cmd, paths, true)
+}
+
+func buildClient(cmd *cobra.Command, paths tgsession.Paths, withUpdates bool) (*tgsvc.Client, error) {
 	if err := tgsession.EnsureSessionPath(paths.Session); err != nil {
 		return nil, err
 	}
@@ -54,9 +64,10 @@ func newClient(cmd *cobra.Command, paths tgsession.Paths) (*tgsvc.Client, error)
 	}
 	settings := indexlog.FromContext(cmd.Context())
 	opts := tgsvc.ClientOptions{
-		Logger:    settings.Logger,
-		GotdLog:   settings.GotdLog,
-		Heartbeat: settings.Heartbeat,
+		Logger:      settings.Logger,
+		GotdLog:     settings.GotdLog,
+		Heartbeat:   settings.Heartbeat,
+		WithUpdates: withUpdates,
 	}
 	if descriptor != nil {
 		resolver, err := descriptor.Resolver()

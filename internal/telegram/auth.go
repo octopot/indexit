@@ -12,8 +12,18 @@ import (
 	"github.com/gotd/td/tg"
 )
 
+// CodeResender is an optional interface a UserAuthenticator may implement to
+// receive the live auth client. With it, the authenticator can resend the login
+// code (e.g. to switch the delivery channel from the Telegram app to SMS).
+type CodeResender interface {
+	AttachClient(*auth.Client)
+}
+
 func Login(ctx context.Context, runner Runner, authenticator auth.UserAuthenticator) error {
 	return runner.Run(ctx, func(ctx context.Context, api API, client *auth.Client) error {
+		if resender, ok := authenticator.(CodeResender); ok {
+			resender.AttachClient(client)
+		}
 		if err := client.IfNecessary(ctx, auth.NewFlow(authenticator, auth.SendCodeOptions{})); err != nil {
 			return err
 		}
