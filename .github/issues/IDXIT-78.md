@@ -16,11 +16,11 @@ milestone: null
 parent: null
 issueFields: []
 
-state: OPEN
-stateReason: null
+state: CLOSED
+stateReason: COMPLETED
 createdAt: 2026-08-26T04:36:39Z
-updatedAt: 2026-08-26T04:39:20Z
-closedAt: null
+updatedAt: 2026-08-26T04:53:34Z
+closedAt: 2026-08-26T04:52:07Z
 ---
 
 # proxy: support MTProto proxies as a SOCKS5 replacement
@@ -59,17 +59,17 @@ and rejects a broken one immediately, with a message that says what was wrong.
 
 ## Acceptance criteria
 
-- [ ] an MTProto secret is accepted in hex and in base64, in plain, `dd`, and
+- [x] an MTProto secret is accepted in hex and in base64, in plain, `dd`, and
       `ee` forms;
-- [ ] a hex secret is never misread as base64;
-- [ ] `tg://proxy`, `https://t.me/proxy`, and `tg://socks` links are accepted as
+- [x] a hex secret is never misread as base64;
+- [x] `tg://proxy`, `https://t.me/proxy`, and `tg://socks` links are accepted as
       `INDEXIT_PROXY_URL`;
-- [ ] `http://host:port` keeps resolving to the HTTP CONNECT transport;
-- [ ] a malformed secret fails at configuration time with a usage exit code and
+- [x] `http://host:port` keeps resolving to the HTTP CONNECT transport;
+- [x] a malformed secret fails at configuration time with a usage exit code and
       a message naming the expected forms;
-- [ ] the secret never reaches logs or `auth status` output;
-- [ ] `.env.example` documents both secret encodings and the link forms;
-- [ ] unit tests cover the secret table and every accepted URL form.
+- [x] the secret never reaches logs or `auth status` output;
+- [x] `.env.example` documents both secret encodings and the link forms;
+- [x] unit tests cover the secret table and every accepted URL form.
 
 ## Verification
 
