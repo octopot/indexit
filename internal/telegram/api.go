@@ -11,6 +11,7 @@ import (
 	gotd "github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/auth"
 	"github.com/gotd/td/telegram/dcs"
+	"github.com/gotd/td/telegram/downloader"
 	"github.com/gotd/td/tg"
 	"go.uber.org/zap"
 
@@ -24,6 +25,15 @@ type API interface {
 	MessagesGetReplies(context.Context, *tg.MessagesGetRepliesRequest) (tg.MessagesMessagesClass, error)
 	MessagesGetForumTopics(context.Context, *tg.MessagesGetForumTopicsRequest) (*tg.MessagesForumTopics, error)
 	AuthLogOut(context.Context) (*tg.AuthLoggedOut, error)
+}
+
+// MediaAPI is API plus the upload.* calls the file downloader needs. It is kept
+// apart from API because only the media fetcher requires them: every other
+// fetcher — and every hand-written fake in the tests — stays on the narrow
+// surface. The concrete *tg.Client satisfies both.
+type MediaAPI interface {
+	API
+	downloader.Client
 }
 
 type Runner interface {
@@ -100,6 +110,14 @@ func NewClient(apiID int, apiHash, sessionPath string, opts ClientOptions) *Clie
 func (c *Client) Run(ctx context.Context, fn func(context.Context, API, *auth.Client) error) error {
 	return c.run(ctx, func(ctx context.Context) error {
 		return fn(ctx, c.client.API(), c.client.Auth())
+	})
+}
+
+// RunMedia is Run with the download RPCs exposed. The media fetcher needs the
+// upload.* calls, which the narrow API surface deliberately does not carry.
+func (c *Client) RunMedia(ctx context.Context, fn func(context.Context, MediaAPI) error) error {
+	return c.run(ctx, func(ctx context.Context) error {
+		return fn(ctx, c.client.API())
 	})
 }
 

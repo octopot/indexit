@@ -77,3 +77,20 @@ type TopicRecord struct {
 	Pinned     bool   `json:"pinned,omitempty"`
 	My         bool   `json:"my,omitempty"`
 }
+
+// MediaRecord is one downloaded (or skipped) file. It is the manifest side of
+// `fetch media`: the bytes go to disk, this says where they came from.
+type MediaRecord struct {
+	Kind      string `json:"_kind"`
+	DialogUID string `json:"dialog_uid"`
+	MessageID int    `json:"message_id"`
+	TopicID   int    `json:"topic_id,omitempty"`
+	GroupedID int64  `json:"grouped_id,omitempty"`
+	Date      string `json:"date"`
+	Type      string `json:"type"`
+	MIME      string `json:"mime,omitempty"`
+	Size      int64  `json:"size,omitempty"`
+	Path      string `json:"path"`
+	Skipped   bool   `json:"skipped,omitempty"`
+	Error     string `json:"error,omitempty"`
+}

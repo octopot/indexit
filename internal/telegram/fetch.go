@@ -137,6 +137,51 @@ func FetchMessages(ctx context.Context, api API, cache *peers.Cache, out Writer,
 	if err != nil {
 		return err
 	}
+	window := walkOptions{
+		Limit:    opt.Limit,
+		PageSize: opt.PageSize,
+		MinID:    opt.MinID,
+		MaxID:    opt.MaxID,
+		From:     opt.From,
+		To:       opt.To,
+	}
+	return walkMessages(ctx, api, cache, resolved, window, guard, "messages",
+		func(_ context.Context, msg *tg.Message, entities gotdpeer.Entities) (bool, error) {
+			if err := out.Write(mapper.Message(resolved.UID, resolved.TopicID, msg, entities)); err != nil {
+				return false, err
+			}
+			return true, nil
+		})
+}
+
+// walkOptions is the history window shared by the fetchers that walk one
+// dialog: `fetch messages` and `fetch media` differ in what they do with a
+// message, not in how the history is paged.
+type walkOptions struct {
+	Limit    int
+	PageSize int
+	MinID    int
+	MaxID    int
+	From     time.Time
+	To       time.Time
+}
+
+// walkMessages pages one dialog — or one forum topic, when the resolved peer
+// carries a topic anchor — and hands every content message to visit, newest
+// first. The bool visit returns says whether the message counted against
+// Limit: a message the caller skipped must not consume the budget, otherwise
+// `--limit 10` on a media fetch would stop after ten *messages* rather than
+// ten files.
+func walkMessages(
+	ctx context.Context,
+	api API,
+	cache *peers.Cache,
+	resolved ResolvedPeer,
+	opt walkOptions,
+	guard RateGuard,
+	scope string,
+	visit func(context.Context, *tg.Message, gotdpeer.Entities) (bool, error),
+) error {
 	limit := opt.Limit
 	pageSize := normalizePageSize(opt.PageSize, limit)
 	// URL anchor (t.me/.../<msg>) is captured on PeerRef but NOT applied as a
@@ -215,7 +260,8 @@ func FetchMessages(ctx context.Context, api API, cache *peers.Cache, out Writer,
 			// They are metadata, not user content. The most visible case is the
 			// MessageActionTopicCreate that lives at id == topic_id and would
 			// otherwise emit a record with empty text. See plan §6 and §15.
-			if _, isContent := notEmpty.(*tg.Message); !isContent {
+			full, isContent := notEmpty.(*tg.Message)
+			if !isContent {
 				continue
 			}
 			if !opt.To.IsZero() && messageTime(notEmpty).After(opt.To) {
@@ -225,20 +271,24 @@ func FetchMessages(ctx context.Context, api API, cache *peers.Cache, out Writer,
 				stop = true
 				continue
 			}
-			if err := out.Write(mapper.Message(resolved.UID, resolved.TopicID, notEmpty, entities)); err != nil {
+			counted, err := visit(ctx, full, entities)
+			if err != nil {
 				return err
+			}
+			offsetID = notEmpty.GetID()
+			offsetDate = notEmpty.GetDate()
+			if !counted {
+				continue
 			}
 			emitted++
 			pageGot++
-			offsetID = notEmpty.GetID()
-			offsetDate = notEmpty.GetDate()
 			if limit > 0 && emitted >= limit {
-				slog.Default().Info("messages: page",
+				slog.Default().Info(scope+": page",
 					"n", page, "got", pageGot, "total", emitted)
 				return nil
 			}
 		}
-		slog.Default().Info("messages: page",
+		slog.Default().Info(scope+": page",
 			"n", page, "got", pageGot, "total", emitted, "offset_id", offsetID)
 		if stop {
 			return nil

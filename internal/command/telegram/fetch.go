@@ -39,6 +39,14 @@ type topicsOptions struct {
 	dialog string
 }
 
+type mediaOptions struct {
+	messagesOptions
+
+	dir       string
+	kinds     []string
+	overwrite bool
+}
+
 type messagesOptions struct {
 	dialog string
 	minID  int
@@ -65,6 +73,7 @@ func fetchCommand(opt *options) *cobra.Command {
 		fetchDialogsCommand(opt, &fetchOpt),
 		fetchMessagesCommand(opt, &fetchOpt),
 		fetchTopicsCommand(opt, &fetchOpt),
+		fetchMediaCommand(opt, &fetchOpt),
 	)
 	return &command
 }
@@ -261,5 +270,99 @@ func fetchTopicsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 	}
 	command.Flags().StringVar(&topicOpt.dialog, "dialog", "", "dialog UID")
 	_ = command.MarkFlagRequired("dialog")
+	return &command
+}
+
+func fetchMediaCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
+	var mediaOpt mediaOptions
+	command := cobra.Command{
+		Use:   "media",
+		Short: "Download media of one dialog into a directory",
+		Long: "Download media of one dialog into a directory.\n\n" +
+			"Files go to --dir; --output keeps its usual meaning and receives the\n" +
+			"JSONL manifest, one record per file.\n\n" +
+			"To narrow the run to one forum topic, address it as channel:<id>:<topic>.\n" +
+			"A t.me/c/<peer>/<n> link means message <n>, not topic <n> — pasted alone\n" +
+			"it walks the whole dialog.",
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validateFormat(fetchOpt.format); err != nil {
+				return usageErr(err)
+			}
+			ref, err := uid.Parse(mediaOpt.dialog)
+			if err != nil {
+				return usageErr(err)
+			}
+			from, err := parseRFC3339(mediaOpt.from, "--from")
+			if err != nil {
+				return usageErr(err)
+			}
+			to, err := parseRFC3339(mediaOpt.to, "--to")
+			if err != nil {
+				return usageErr(err)
+			}
+			paths, err := pathsFromFlags(opt)
+			if err != nil {
+				return err
+			}
+			ctx, cancel, err := contextFromFlags(cmd, opt)
+			if err != nil {
+				return err
+			}
+			defer cancel()
+			client, err := newClient(cmd, paths)
+			if err != nil {
+				return err
+			}
+			log := indexlog.FromContext(cmd.Context()).Logger
+			cache, err := peers.Load(paths.Peers)
+			if err != nil {
+				return err
+			}
+			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
+			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			counter := &countingWriter{inner: writer}
+			start := time.Now()
+			err = client.RunMedia(ctx, func(ctx context.Context, api tgsvc.MediaAPI) error {
+				err := tgsvc.FetchMedia(ctx, api, cache, counter, tgsvc.MediaOptions{
+					Peer:      ref,
+					Dir:       mediaOpt.dir,
+					Kinds:     mediaOpt.kinds,
+					Limit:     fetchOpt.limit,
+					PageSize:  fetchOpt.pageSize,
+					MinID:     mediaOpt.minID,
+					MaxID:     mediaOpt.maxID,
+					From:      from,
+					To:        to,
+					Overwrite: mediaOpt.overwrite,
+				}, tgsvc.RateGuard{})
+				if errors.Is(err, tgsvc.ErrColdPeer) {
+					return usageErr(tgsvc.ColdPeerHint(err, ref.String()))
+				}
+				return err
+			})
+			if saveErr := cache.Save(paths.Peers); err == nil {
+				err = saveErr
+				log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
+			}
+			log.Info("done", "files", counter.count, "elapsed", time.Since(start).Round(time.Millisecond))
+			return err
+		},
+	}
+	command.Flags().StringVar(&mediaOpt.dialog, "dialog", "", "dialog UID")
+	command.Flags().StringVar(&mediaOpt.dir, "dir", "", "destination directory for downloaded files")
+	command.Flags().StringSliceVar(&mediaOpt.kinds, "media", nil,
+		"media types to download, e.g. photo,video; empty means every downloadable type")
+	command.Flags().BoolVar(&mediaOpt.overwrite, "overwrite", false, "re-download files that already exist")
+	command.Flags().IntVar(&mediaOpt.minID, "min-id", 0, "minimum MTProto message ID")
+	command.Flags().IntVar(&mediaOpt.maxID, "max-id", 0, "maximum MTProto message ID")
+	command.Flags().StringVar(&mediaOpt.from, "from", "", "start timestamp in RFC3339")
+	command.Flags().StringVar(&mediaOpt.to, "to", "", "end timestamp in RFC3339")
+	_ = command.MarkFlagRequired("dialog")
+	_ = command.MarkFlagRequired("dir")
 	return &command
 }
