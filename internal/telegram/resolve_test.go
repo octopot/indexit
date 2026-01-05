@@ -88,6 +88,10 @@ func (f fakeAPI) MessagesGetReplies(context.Context, *tg.MessagesGetRepliesReque
 	return nil, errors.New("unexpected MessagesGetReplies call")
 }
 
+func (f fakeAPI) MessagesGetForumTopics(context.Context, *tg.MessagesGetForumTopicsRequest) (*tg.MessagesForumTopics, error) {
+	return nil, errors.New("unexpected MessagesGetForumTopics call")
+}
+
 func (f fakeAPI) AuthLogOut(context.Context) (*tg.AuthLoggedOut, error) {
 	return nil, errors.New("unexpected AuthLogOut call")
 }

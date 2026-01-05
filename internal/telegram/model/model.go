@@ -61,3 +61,19 @@ type MessageRecord struct {
 	Views         int                `json:"views,omitempty"`
 	Reactions     *ReactionSummary   `json:"reactions,omitempty"`
 }
+
+// TopicRecord is one forum topic of a dialog.
+type TopicRecord struct {
+	Kind       string `json:"_kind"`
+	DialogUID  string `json:"dialog_uid"`
+	TopicID    int    `json:"topic_id"`
+	Title      string `json:"title"`
+	Date       string `json:"date"`
+	TopMessage int    `json:"top_message,omitempty"`
+	Messages   int    `json:"messages,omitempty"`
+	Unread     int    `json:"unread_count,omitempty"`
+	Closed     bool   `json:"closed,omitempty"`
+	Hidden     bool   `json:"hidden,omitempty"`
+	Pinned     bool   `json:"pinned,omitempty"`
+	My         bool   `json:"my,omitempty"`
+}

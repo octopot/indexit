@@ -297,3 +297,25 @@ func userDisplay(user *tg.User) string {
 func unix(value int) string {
 	return time.Unix(int64(value), 0).UTC().Format(time.RFC3339)
 }
+
+// Topic maps a forum topic. The reduced constructor (tg.ForumTopicDeleted) has
+// nothing but an ID, so it is dropped: a deleted topic is not a topic.
+func Topic(dialogUID string, topic tg.ForumTopicClass) *model.TopicRecord {
+	full, ok := topic.(*tg.ForumTopic)
+	if !ok {
+		return nil
+	}
+	return &model.TopicRecord{
+		Kind:       "topic",
+		DialogUID:  dialogUID,
+		TopicID:    full.ID,
+		Title:      full.Title,
+		Date:       unix(full.Date),
+		TopMessage: full.TopMessage,
+		Unread:     full.UnreadCount,
+		Closed:     full.Closed,
+		Hidden:     full.Hidden,
+		Pinned:     full.Pinned,
+		My:         full.My,
+	}
+}

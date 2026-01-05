@@ -35,6 +35,10 @@ type fetchOptions struct {
 	pageSize int
 }
 
+type topicsOptions struct {
+	dialog string
+}
+
 type messagesOptions struct {
 	dialog string
 	minID  int
@@ -60,6 +64,7 @@ func fetchCommand(opt *options) *cobra.Command {
 	command.AddCommand(
 		fetchDialogsCommand(opt, &fetchOpt),
 		fetchMessagesCommand(opt, &fetchOpt),
+		fetchTopicsCommand(opt, &fetchOpt),
 	)
 	return &command
 }
@@ -191,6 +196,70 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 	command.Flags().IntVar(&msgOpt.maxID, "max-id", 0, "maximum MTProto message ID")
 	command.Flags().StringVar(&msgOpt.from, "from", "", "start timestamp in RFC3339")
 	command.Flags().StringVar(&msgOpt.to, "to", "", "end timestamp in RFC3339")
+	_ = command.MarkFlagRequired("dialog")
+	return &command
+}
+
+func fetchTopicsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
+	var topicOpt topicsOptions
+	command := cobra.Command{
+		Use:   "topics",
+		Short: "Fetch forum topics of one dialog",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validateFormat(fetchOpt.format); err != nil {
+				return usageErr(err)
+			}
+			ref, err := uid.Parse(topicOpt.dialog)
+			if err != nil {
+				return usageErr(err)
+			}
+			paths, err := pathsFromFlags(opt)
+			if err != nil {
+				return err
+			}
+			ctx, cancel, err := contextFromFlags(cmd, opt)
+			if err != nil {
+				return err
+			}
+			defer cancel()
+			client, err := newClient(cmd, paths)
+			if err != nil {
+				return err
+			}
+			log := indexlog.FromContext(cmd.Context()).Logger
+			cache, err := peers.Load(paths.Peers)
+			if err != nil {
+				return err
+			}
+			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
+			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			counter := &countingWriter{inner: writer}
+			start := time.Now()
+			err = client.Run(ctx, func(ctx context.Context, api tgsvc.API, _ *auth.Client) error {
+				err := tgsvc.FetchTopics(ctx, api, cache, counter, tgsvc.TopicsOptions{
+					Peer:     ref,
+					Limit:    fetchOpt.limit,
+					PageSize: fetchOpt.pageSize,
+				}, tgsvc.RateGuard{})
+				if errors.Is(err, tgsvc.ErrColdPeer) {
+					return usageErr(tgsvc.ColdPeerHint(err, ref.String()))
+				}
+				return err
+			})
+			if saveErr := cache.Save(paths.Peers); err == nil {
+				err = saveErr
+				log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
+			}
+			log.Info("done", "topics", counter.count, "elapsed", time.Since(start).Round(time.Millisecond))
+			return err
+		},
+	}
+	command.Flags().StringVar(&topicOpt.dialog, "dialog", "", "dialog UID")
 	_ = command.MarkFlagRequired("dialog")
 	return &command
 }

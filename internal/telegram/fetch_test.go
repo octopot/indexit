@@ -32,6 +32,19 @@ type scriptedAPI struct {
 	historyReqs []*tg.MessagesGetHistoryRequest
 	repliesReqs []*tg.MessagesGetRepliesRequest
 	dialogsReqs []*tg.MessagesGetDialogsRequest
+
+	topicsPages []*tg.MessagesForumTopics
+	topicsReqs  []*tg.MessagesGetForumTopicsRequest
+}
+
+func (f *scriptedAPI) MessagesGetForumTopics(_ context.Context, req *tg.MessagesGetForumTopicsRequest) (*tg.MessagesForumTopics, error) {
+	f.topicsReqs = append(f.topicsReqs, req)
+	if len(f.topicsPages) == 0 {
+		return &tg.MessagesForumTopics{}, nil
+	}
+	out := f.topicsPages[0]
+	f.topicsPages = f.topicsPages[1:]
+	return out, nil
 }
 
 func (f *scriptedAPI) MessagesGetHistory(_ context.Context, req *tg.MessagesGetHistoryRequest) (tg.MessagesMessagesClass, error) {
