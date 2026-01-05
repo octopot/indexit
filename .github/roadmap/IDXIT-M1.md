@@ -1,39 +1,41 @@
 ---
-type: milestone
-title: Telegram fetcher PoC implementation
+code: IDXIT-M1
+id:
+databaseId:
 number:
-state: open
-description: Read-only Telegram fetcher in the indexit CLI — dialogs, messages, topics, contacts, multi-account — delivered in four phases.
-open_issues:
-closed_issues:
-due_on:
-created_at:
-updated_at:
-closed_at:
+url:
+title: "Telegram fetcher PoC implementation"
+state: OPEN
+openIssueCount:
+closedIssueCount:
+dueOn:
+createdAt:
+updatedAt:
+closedAt:
 creator: kamilsk
-html_url:
-project:
-spec:
 tags:
   - type/milestone
   - topic/telegram
 ---
-# Telegram fetcher PoC implementation
 
-Milestone of [[Telegram integration]]. Tracks the four-phase PoC defined in
+# milestone: Telegram fetcher PoC implementation
+
+Read-only Telegram fetcher in the indexit CLI — dialogs, messages, topics, contacts, multi-account — delivered in four phases.
+
+Milestone of [[IDXIT-P1]]. Tracks the four-phase PoC defined in
 [[Telegram fetcher, PoC implementation plan]] (see its `PoC phases` section and
 §12 milestones). Tasks below map 1:1 to the §12 milestone IDs.
 
 ## Progress
 
-**7 / 16 tasks closed.** Phase 1 is functionally complete (build green,
+**7 / 17 tasks closed.** Phase 1 is functionally complete (build green,
 `go test ./...` green); the remaining Phase-1 work is robustness/polish tracked
 in `.github/reports/` and `.github/reviews/`. Phases 3–4 are not started.
 
 | Phase | Scope                       | State       | Done  |
 | ----- | --------------------------- | ----------- | ----- |
 | 1     | Dialogs & messages          | in progress | 6 / 9 |
-| 2     | Topics & single message     | in progress | 1 / 3 |
+| 2     | Topics & single message     | in progress | 1 / 4 |
 | 3     | Contacts & Stories          | not started | 0 / 2 |
 | 4     | Multiple accounts & proxies | not started | 0 / 2 |
 
@@ -54,8 +56,9 @@ Legend: `[x]` done · `[ ] 🔄` in progress · `[ ]` not started.
 ### Phase 2 — Topics & single message
 
 - [x] 2.0 Forum-topic history via `messages.getReplies`
-- [ ] 2.1 Topic discovery — `fetch topics --dialog=<uid>` (`channels.getForumTopics`)
+- [ ] 2.1 Topic discovery — `fetch topics --dialog=<uid>` (`channels.getForumTopics`) — [[IDXIT-3]]
 - [ ] 2.2 Single message — `fetch message <msg-uid>` (URL anchor applied)
+- [ ] 2.3 Media download — `fetch media --dialog=<uid> --dir <path>` (`gotd` downloader) — [[IDXIT-4]]
 
 ### Phase 3 — Contacts & Stories
 

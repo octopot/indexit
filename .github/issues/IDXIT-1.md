@@ -1,26 +1,26 @@
 ---
-code: IDXIT-78
+code: IDXIT-1
 id: I_kwDOSVi84s8AAAABOSBR_Q
+databaseId: 5253386749
 number: 78
 url: https://github.com/octopot/indexit/issues/78
-
 title: "proxy: support MTProto proxies as a SOCKS5 replacement"
-issueType: Feature
 labels:
   - "type: feature"
   - "scope: code"
   - "impact: medium"
   - "effort: medium"
-assignees: []
-milestone: null
-parent: null
-issueFields: []
-
+milestone:
 state: CLOSED
 stateReason: COMPLETED
 createdAt: 2026-08-26T04:36:39Z
 updatedAt: 2026-08-26T04:53:34Z
+lastEditedAt: 2026-08-26T04:53:34Z
 closedAt: 2026-08-26T04:52:07Z
+issueType: Feature
+assignees: []
+parent: null
+issueFields: []
 ---
 
 # proxy: support MTProto proxies as a SOCKS5 replacement
