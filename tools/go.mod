@@ -1,6 +1,6 @@
 module tools
 
-go 1.26
+go 1.26.0
 
 toolchain go1.26.3
 
@@ -9,8 +9,8 @@ require (
 	github.com/golangci/golangci-lint v1.55.2
 	github.com/goreleaser/godownloader v0.1.0
 	github.com/goreleaser/goreleaser v1.23.0
-	golang.org/x/tools v0.48.0
-	golang.org/x/vuln v1.6.0
+	golang.org/x/tools v0.50.0
+	golang.org/x/vuln v1.8.0
 )
 
 replace (
@@ -381,12 +381,12 @@ require (
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
 	golang.org/x/exp/typeparams v0.0.0-20230307190834-24139beb5833 // indirect
-	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260708182218-49f421fb7959 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260908163034-4bcc4b2ee518 // indirect
 	golang.org/x/term v0.44.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.4.0 // indirect
