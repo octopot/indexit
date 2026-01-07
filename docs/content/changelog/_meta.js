@@ -1,4 +1,4 @@
-{
+export default {
   "v1.0.0": {
     "title": "v1.0.0",
     "theme": {

@@ -1,4 +1,4 @@
-{
+export default {
   "index": {
     "title": "🏡 Home",
     "theme": {
@@ -22,8 +22,8 @@
         "href": "https://github.com/octolab"
       },
       "octomation": {
-          "title": "Octomation",
-          "href": "https://github.com/octomation"
+        "title": "Octomation",
+        "href": "https://github.com/octomation"
       },
       "octopods": {
         "title": "Octopods",

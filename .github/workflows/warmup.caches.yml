@@ -13,6 +13,9 @@ on:
     workflows: [ Workflow caches cleanup ]
     types: [ completed ]
 
+permissions:
+  contents: read
+
 jobs:
   deps:
     name: Caching deps
@@ -49,7 +52,7 @@ jobs:
       - name: Set up Node.js environment
         uses: actions/setup-node@v7.0.0
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: docs/package-lock.json
           check-latest: true
@@ -76,7 +79,7 @@ jobs:
 
   notify:
     name: Notifying
-    needs: [ deps, tools ]
+    needs: [ deps, docs, tools ]
     runs-on: ubuntu-latest
     if: failure() || success()
 

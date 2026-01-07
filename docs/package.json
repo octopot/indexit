@@ -12,5 +12,13 @@
     "nextra-theme-docs": "^4.6.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
+  },
+  "overrides": {
+    "nextra": {
+      "zod": "4.1.12"
+    },
+    "nextra-theme-docs": {
+      "zod": "4.1.12"
+    }
   }
 }
