@@ -14,6 +14,9 @@ on:
         default: manual healthcheck
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   delete:
     name: Deleting
@@ -24,16 +27,8 @@ jobs:
       GITHUB_TOKEN: ${{ github.token }}
 
     steps:
-      - name: Install the GitHub CLI cache extension
-        run: gh extension install actions/gh-actions-cache
-
       - name: Cleanup caches
-        run: |
-          echo Deleting caches...
-          for key in $(gh actions-cache list -L 100 -R '${{ github.repository }}' | cut -f 1); do
-            gh actions-cache delete "${key}" -R '${{ github.repository }}' --confirm || true
-          done
-          echo Done
+        run: gh cache delete --all --succeed-on-no-caches -R "$GITHUB_REPOSITORY"
 
   notify:
     name: Notifying

@@ -33,6 +33,9 @@ on:
         default: manual healthcheck
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   delete:
     name: Deleting
@@ -42,7 +45,7 @@ jobs:
 
     steps:
       - name: Delete workflow runs
-        uses: Mattraks/delete-workflow-runs@v2.0.6
+        uses: Mattraks/delete-workflow-runs@v2.1.0
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
@@ -52,21 +55,9 @@ jobs:
               && github.event.inputs.pattern
               || ''
             }}
-          dry_run: ${{ fromJSON('["", "true"]')[github.event.inputs.dry_run == 'true'] }}
-          retain_days: 0
-          keep_minimum_runs: 0
-      - name: Finishing workflow runs deletion
-        run: |
-          gh run list \
-            -R '${{ github.repository }}' \
-            --status completed \
-            --limit 100 \
-            --json databaseId \
-            --jq '.[] | .databaseId' |
-            xargs -n1 --no-run-if-empty gh run delete -R '${{ github.repository }}'
-        if: github.event.inputs.pattern == 'All'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+          dry_run: ${{ inputs.dry_run && 'true' || 'false' }}
+          retain_days: 30
+          keep_minimum_runs: 10
 
   notify:
     name: Notifying
