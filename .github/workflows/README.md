@@ -1,98 +1,34 @@
-[![Go Tool][social.preview]][preview.config]
+# GitHub Actions
 
-# 🧩 Tool
+All external actions use concrete release tags. The version history, migration
+notes and verification results are in [the audit report](../reports/20260918-actions-audit.md).
+Dependabot checks the `github-actions` ecosystem daily; review upstream changes
+and the action contract before accepting an update.
 
-GitHub Actions workflows.
+| Workflow | Trigger | Purpose |
+| --- | --- | --- |
+| [ci.yml](ci.yml) | PR, main push, version tag, monthly, manual | Lint, Go tests, coverage artifact and Codecov |
+| [cd.yml](cd.yml) | Version tag, manual | Test and publish tag releases; build a snapshot on manual branch runs |
+| [cd.docs.yml](cd.docs.yml) | Documentation PR/main push, monthly, manual, reusable | Build documentation; deploy only from main outside PRs |
+| [tools.yml](tools.yml) | Tools PR/main push, monthly, manual | Install tools and check generation |
+| [cleanup.caches.yml](cleanup.caches.yml) | Monthly, manual, reusable | Delete caches with the built-in GitHub CLI |
+| [warmup.caches.yml](warmup.caches.yml) | Cache cleanup completion, manual | Warm Go, docs and tools caches |
+| [cleanup.runs.yml](cleanup.runs.yml) | Monthly, manual, reusable | Prune old runs (30 days / 10 retained); manual dry-run supported |
+| [cleanup.stale.yml](cleanup.stale.yml) | Daily, manual, reusable | Mark/close stale issues and PRs |
 
-✅ Slack notification is available for all workflows.
-Just add `SLACK_WEBHOOK` secret to your repository.
+GitHub-hosted Ubuntu runners supply the runtime required by the current actions.
+Workflow permissions default to `contents: read`; publishing and maintenance jobs
+request their additional permissions explicitly.
 
-## [Cache invalidation](caches.yml)
-
-[![Status][caches.icon]][caches.page]
-
-Invalidates caches of GitHub Actions workflows.
-Read more about caches https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows.
-
-
-## [Continuous delivery](cd.yml)
-
-[![Status][cd.icon]][cd.page]
-
-Delivery binaries using [GoReleaser](https://goreleaser.com/).
-
-
-## [Continuous integration](ci.yml)
-
-[![Status][ci.icon]][ci.page]
-
-Runs linter and tests on different Go environments.
-
-
-## [Dependabot at weekends](deps.yml)
-
-[![Status][deps.icon]][deps.page]
-
-🚧 Experimental feature, still under development. Read more
-
-- https://github.com/orgs/community/discussions/15901
-- https://github.com/dependabot/dependabot-core/issues/2980#issuecomment-760586879
-- https://github.com/octomation/go-module/issues/79
-- https://github.com/dependabot/cli
-- https://github.com/github/dependabot-action
-
-⚠️ Required:
-
-- `DEPENDABOT_TOKEN`, GitHub personal access tokens with scope: gist.
-
-
-## [Documentation delivery](docs.yml)
-
-[![Status][docs.icon]][docs.page]
-
-Builds and deploys documentation to GitHub Pages.
-[💬 Discussion](https://github.com/under-the-hood/docs/discussions/2).
-
-
-## [Workflow invalidation](runs.yml)
-
-[![Status][runs.icon]][runs.page]
-
-⚠️ Removes old workflow runs. Please, use it carefully.
-
-
-## [Issue invalidation](stale.yml)
-
-[![Status][stale.icon]][stale.page]
-
-Checks for stale issues and pull requests.
-
-
-## [Tools validation](tools.yml)
-
-[![Status][tools.icon]][tools.page]
-
-Checks tools for consistency.
-
-<p align="right">made with ❤️ for everyone by <a href="https://www.octolab.org/">OctoLab</a></p>
-
-[social.preview]:   https://cdn.octolab.org/repo/go-tool.png
-[preview.config]:   https://socialify.git.ci/octomation/go-tool?description=1&font=Raleway&language=1&name=1&owner=1&pattern=Circuit%20Board&theme=Light
-[preview.fallback]: https://socialify.git.ci/octomation/go-tool/image?description=1&font=Raleway&language=1&name=1&owner=1&pattern=Circuit%20Board&theme=Light
-
-[caches.icon]:      https://github.com/octomation/go-tool/actions/workflows/caches.yml/badge.svg
-[caches.page]:      https://github.com/octomation/go-tool/actions/workflows/caches.yml
-[cd.icon]:          https://github.com/octomation/go-tool/actions/workflows/cd.yml/badge.svg
-[cd.page]:          https://github.com/octomation/go-tool/actions/workflows/cd.yml
-[ci.icon]:          https://github.com/octomation/go-tool/actions/workflows/ci.yml/badge.svg
-[ci.page]:          https://github.com/octomation/go-tool/actions/workflows/ci.yml
-[deps.icon]:        https://github.com/octomation/go-tool/actions/workflows/deps.yml/badge.svg
-[deps.page]:        https://github.com/octomation/go-tool/actions/workflows/deps.yml
-[docs.icon]:        https://github.com/octomation/go-tool/actions/workflows/docs.yml/badge.svg
-[docs.page]:        https://github.com/octomation/go-tool/actions/workflows/docs.yml
-[runs.icon]:        https://github.com/octomation/go-tool/actions/workflows/runs.yml/badge.svg
-[runs.page]:        https://github.com/octomation/go-tool/actions/workflows/runs.yml
-[stale.icon]:       https://github.com/octomation/go-tool/actions/workflows/stale.yml/badge.svg
-[stale.page]:       https://github.com/octomation/go-tool/actions/workflows/stale.yml
-[tools.icon]:       https://github.com/octomation/go-tool/actions/workflows/tools.yml/badge.svg
-[tools.page]:       https://github.com/octomation/go-tool/actions/workflows/tools.yml
+- Releases publish to this repository and update `Casks/indexit.rb` in
+  `octolab/homebrew-tap`. `GORELEASER_TOKEN` must allow release publishing here
+  and content writes to the tap. After the first Cask release, install with
+  `brew install --cask octolab/tap/indexit`.
+  macOS signing/notarization is not configured yet; Gatekeeper may block the binary.
+- Codecov uses GitHub OIDC. The repository must be activated in Codecov; no
+  `CODECOV_TOKEN` is required by the workflow.
+- Pages must use **GitHub Actions** as its build source. The `github-pages`
+  environment must permit main-branch deployments.
+- Run cleanup also deletes orphaned runs whose workflows no longer exist; the
+  upstream action applies no age/count retention to those runs.
+- `SLACK_WEBHOOK` is optional: an empty value skips sending notifications.

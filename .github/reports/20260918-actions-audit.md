@@ -1,0 +1,70 @@
+---
+uid: cc62d02f-4303-4629-a793-42511cd11d7e
+timestamp: 2026-09-18T13:24:40.461164+00:00
+model: gpt-6-astra
+---
+# GitHub Actions audit
+
+Working baseline: `ba90772f124c6d666882c13494e0528d9bb9b129`. The earliest available workflow snapshot is `df1e20a3f0d119edfaf913365982b5f5c2025f57`, the go-tool import. The initial version is the literal reference in that snapshot; upstream SHAs were captured during the audit. Old commit dates do not prove the historical targets of mutable tags.
+
+Research lives in the adjacent `octolaba/changelog` repository, separate from the frozen Go pilot: inventory, complete adjacent diffs/commit logs, manifests, release notes, SHA-256 hashes, and a changelog for each dependency. All sources and indexit itself are submodules. Shared cutoff: `2026-09-18T12:58:56.545422+00:00`. The [plan](20260918-actions-plan.md) was reviewed with [Claude 5.1 Fable / high](20260918-actions-plan-review.md); three `gpt-5.6-luna / max` agents conducted the research, with acceptance review by the coordinator.
+
+## Versions
+
+Release counts include the initial baseline. Every stable patch tag was researched in sequence, not just major-version transitions. Workflows use exact version tags; exact SHAs are preserved in the research.
+
+| Action / research | Initial | Before audit | Final | Releases | Decision |
+| --- | --- | --- | --- | ---: | --- |
+| [rtCamp/action-slack-notify](../../../../octolaba/changelog/results/actions/rtCamp--action-slack-notify/CHANGELOG.md) | v2.2.1 | v2.2.1 | **v2.4.0** | 6 | Composite + Docker digest; webhook remains optional, message passed through env. |
+| [actions/checkout](../../../../octolaba/changelog/results/actions/actions--checkout/CHANGELOG.md) | v4.1.1 | v7.0.1 | **v7.0.1** | 23 | Node 24, credentials in RUNNER_TEMP, privileged fork checkout protection; current calls meet the contract. |
+| [actions/setup-node](../../../../octolaba/changelog/results/actions/actions--setup-node/CHANGELOG.md) | v4.0.1 | v7.0.0 | **v7.0.0** | 16 | Node 24 / ESM, explicit npm cache retained; docs runtime raised from 20 to 24. |
+| [actions/configure-pages](../../../../octolaba/changelog/results/actions/actions--configure-pages/CHANGELOG.md) | v4.0.0 | v4.0.0 | **v6.0.0** | 3 | Node 24; pass the base_path output to the build environment. |
+| [actions/upload-pages-artifact](../../../../octolaba/changelog/results/actions/actions--upload-pages-artifact/CHANGELOG.md) | v3.0.0 | v3.0.0 | **v5.0.0** | 4 | Internal upload v7, hidden files opt-in; artifact directory remains docs/dist. |
+| [actions/deploy-pages](../../../../octolaba/changelog/results/actions/actions--deploy-pages/CHANGELOG.md) | v4.0.2 | v5.0.1 | **v5.0.1** | 6 | Node 24, backoff/jitter polling; deploy only from main outside PRs. |
+| [actions/setup-go](../../../../octolaba/changelog/results/actions/actions--setup-go/CHANGELOG.md) | v5.0.0 | v7.0.0 | **v7.0.0** | 16 | Node 24 / ESM, cache and toolchain-selection changes; release cache covers both application and tools go.sum files. |
+| [goreleaser/goreleaser-action](../../../../octolaba/changelog/results/actions/goreleaser--goreleaser-action/CHANGELOG.md) | v5.0.0 | v7.2.3 | **v7.2.3** | 14 | GoReleaser v2.18.2, config v2, indexit identity; existing Homebrew tap publication retained. |
+| [golangci/golangci-lint-action](../../../../octolaba/changelog/results/actions/golangci--golangci-lint-action/CHANGELOG.md) | v3.7.0 | v9.3.0 | **v9.3.0** | 30 | Linter v2.13.2, config v2; --fast-only preserves the former linters.fast policy. |
+| [actions/upload-artifact](../../../../octolaba/changelog/results/actions/actions--upload-artifact/CHANGELOG.md) | v4.0.0 | v4.0.0 | **v7.0.1** | 22 | Backend v4+, hidden files opt-in; retain the c.out artifact and fail if the report is missing. |
+| [actions/download-artifact](../../../../octolaba/changelog/results/actions/actions--download-artifact/CHANGELOG.md) | v4.1.0 | v4.1.0 | **v8.0.1** | 18 | v8 supports upload v7; digest verification and download by name retained. |
+| [codecov/codecov-action](../../../../octolaba/changelog/results/actions/codecov--codecov-action/CHANGELOG.md) | v3.1.4 | v7.1.0 | **v7.1.1** | 45 | Composite/CLI; checkout before uploading coverage, OIDC instead of a secret. |
+| [Mattraks/delete-workflow-runs](../../../../octolaba/changelog/results/actions/Mattraks--delete-workflow-runs/CHANGELOG.md) | v2.0.6 | v2.0.6 | **v2.1.0** | 2 | Node 24; fix dry_run and remove the bypassing gh delete command; retention: 30 days / 10 runs. |
+| [actions/stale](../../../../octolaba/changelog/results/actions/actions--stale/CHANGELOG.md) | v9.0.0 | v11.0.0 | **v11.0.0** | 9 | Node 24 / ESM; inputs, time limits, and permissions checked. |
+
+Total: **16 actions, 221 stable versions**, including baselines. The two additional transitive actions are:
+
+| Action / research | First exact reference | Latest researched | Pin in current caller | Releases |
+| --- | --- | --- | --- | ---: |
+| [LoveToKnow/slackify-markdown-action](../../../../octolaba/changelog/results/actions/LoveToKnow--slackify-markdown-action/CHANGELOG.md) | v1.0.2 | v1.1.1 | v1.1.1 SHA in rtCamp v2.4.0 | 3 |
+| [actions/github-script](../../../../octolaba/changelog/results/actions/actions--github-script/CHANGELOG.md) | v7.0.1 | v9.0.0 | v8.0.0 SHA in Codecov v7.1.1 | 4 |
+
+Transitive dependencies `upload-pages-artifact → upload-artifact`, `rtCamp → LoveToKnow/slackify-markdown-action`, and `codecov → actions/github-script` are checked recursively. Their pins belong to the upstream action and are not rewritten locally. The Slack Docker image is pinned by digest. Conditional Slack Markdown conversion is disabled by default, but its action is included in the inventory.
+
+## Adaptations
+
+- CI no longer calls the missing `cd.dist.yml` or publishes Pages from PRs. Documentation has its own PR trigger; tag releases have their own workflow. Fixed `go.{mod,sum}` path filters, since Actions does not perform brace expansion on them.
+- Default permissions are `contents: read`; write permissions are granted to individual jobs. Codecov receives `id-token: write` and uses OIDC. Actual uploads require the repository to be activated in Codecov.
+- Releases retain `GORELEASER_TOKEN` for GitHub releases and publication of `Casks/indexit.rb` to the existing `octolab/homebrew-tap`. The token needs release access here and content write access to the tap. At the maintainer's request, deprecated `brews` is replaced by `homebrew_casks`. The binary and homepage use indexit; Bash, Zsh, and Fish completions use `generate_completions_from_executable` with Cobra syntax. Formula-specific `install` and `test` Ruby blocks are removed. The tap contained no indexit formula at review time, so there is no existing package to migrate. The other formulas in the tap remain untouched. Tags publish releases; manual branch runs build snapshots without publishing. The full `make fast-check test` gate is preserved, with prerequisite installation of tools needed for vulnerability scanning and generation.
+- Native `gh cache delete` replaces the archived extension. Run cleanup handles typed dry_run correctly; the second deletion path that bypassed dry_run is removed. Retention changes from 0/0 to 30 days / 10 runs. **Upstream deletes orphan runs separately without age/count retention**; this behavior of the new action is explicitly retained.
+- Slack is skipped when the webhook is empty; commit messages/reasons are no longer interpolated into shell code. Warmup notifications account for the docs job result.
+- Pages is configured with `build_type: workflow`; no publication was performed. At the user's explicit follow-up request, the docs migration is restored: Nextra 4 App Router, ESM configuration, and a working `/indexit` base path. Both Markdown pages and navigation metadata are preserved. Scoped Zod overrides avoid the known theme validation regression; the rationale is in `docs/README.md`. Search remains hidden until an index is configured.
+
+## Verification
+
+- `actionlint v1.7.12` and `.golangci.yml` schema validation pass. `goreleaser check` passes without deprecation warnings after migration to `homebrew_casks`. GoReleaser v2.18.2 source confirms support for the configured macOS/Linux amd64/arm64 archives. No release or Homebrew installation was run. [Actionlint](https://github.com/rhysd/actionlint) is a static checker for GitHub Actions workflow files: it checks YAML structure, expressions, job dependencies, and action usage without running the workflows.
+- The coordinator verifier checks all 221 versions: manifests against exact Git bytes, SHA-256 hashes, complete coverage, evidence links, gitlinks, exact current references, inputs, and transitive `uses`.
+- Independent acceptance review corrected advice that preceded input availability: golangci's `verify`, and Codecov's OIDC/`cleanup`. It also added linter-version requirements, runner requirements, and artifact extraction-path migration details.
+- Following the user's Plannotator clarification, documentation validation is included: clean `./Taskfile docs npm ci` and `TARGET=static BASE_PATH=/indexit ./Taskfile docs build` pass on Node 24.21.0 and export both pages. HTTP checks pass for both pages, 10 local assets, and internal links. Chromium checks pass for desktop/mobile rendering and client navigation, with no JavaScript errors or local HTTP failures. Explicit trailing-slash page links fix the dotted-version route’s RSC request. Original Markdown bytes and navigation metadata match the Git baseline. Existing external template images/badges have network failures; those are documented separately. Go application tests and release builds were not repeated. No actual workflows were dispatched.
+
+Homebrew Cask installation is not validated. macOS signing/notarization is not configured; Gatekeeper may prevent execution of downloaded binaries, including completion generation. No quarantine-removal hook is added.
+
+Tools installation/generation and external integrations still need separate runs. Codecov activation remains a service configuration requirement; a local documentation build does not prove successful Pages deployment.
+
+Verification records in `octolaba/changelog`: `state/actions-verification.json`, `state/actions-freshness.json`, and `state/actions-review.json`; YAML and documentation validation records: `evidence/actions/consumer/validation/`. These are frozen audit records from before paired commit review. Their consumer snapshot predates the shortened docs README and the Homebrew Cask migration; this report and the committed configuration describe the accepted implementation.
+
+## Delivery
+
+**All 8 workflows were verified as `active` on GitHub during the audit.** Before/after states are preserved in `evidence/actions/consumer/workflows-{before,after}.json`.
+
+The initial audit left indexit uncommitted at the baseline. During subsequent paired review, the maintainer committed six implementation groups: Slack (`e64e90b`), docs/Pages (`4c00721`), CI (`2f8b108`), releases/Homebrew Cask (`55f756c`), cleanup (`8c80e3f`), and tools (`23b0974`). The assistant prepared the staged changes; the maintainer made the commits. The plan and Claude review retain their original baseline context.
+
+Workflow enablement and delivery of updated definitions are separate: GitHub uses the definitions available on the relevant remote ref. No workflows were explicitly dispatched, and no commits or pushes were made by the assistant in indexit. Hosted run results are outside this audit's acceptance.
