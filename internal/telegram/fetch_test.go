@@ -24,14 +24,18 @@ func init() {
 // scriptedAPI replays a fixed list of responses per RPC; once exhausted, it
 // returns an empty page so iteration terminates cleanly.
 type scriptedAPI struct {
-	historyPages []tg.MessagesMessagesClass
-	repliesPages []tg.MessagesMessagesClass
-	dialogsPages []tg.MessagesDialogsClass
-	resolved     *tg.ContactsResolvedPeer
+	channelsPages []tg.MessagesMessagesClass
+	byIDPages     []tg.MessagesMessagesClass
+	historyPages  []tg.MessagesMessagesClass
+	repliesPages  []tg.MessagesMessagesClass
+	dialogsPages  []tg.MessagesDialogsClass
+	resolved      *tg.ContactsResolvedPeer
 
-	historyReqs []*tg.MessagesGetHistoryRequest
-	repliesReqs []*tg.MessagesGetRepliesRequest
-	dialogsReqs []*tg.MessagesGetDialogsRequest
+	channelsReqs []*tg.ChannelsGetMessagesRequest
+	byIDReqs     [][]tg.InputMessageClass
+	historyReqs  []*tg.MessagesGetHistoryRequest
+	repliesReqs  []*tg.MessagesGetRepliesRequest
+	dialogsReqs  []*tg.MessagesGetDialogsRequest
 
 	topicsPages []*tg.MessagesForumTopics
 	topicsReqs  []*tg.MessagesGetForumTopicsRequest
@@ -74,6 +78,26 @@ func (f *scriptedAPI) MessagesGetDialogs(_ context.Context, req *tg.MessagesGetD
 	}
 	out := f.dialogsPages[0]
 	f.dialogsPages = f.dialogsPages[1:]
+	return out, nil
+}
+
+func (f *scriptedAPI) ChannelsGetMessages(_ context.Context, req *tg.ChannelsGetMessagesRequest) (tg.MessagesMessagesClass, error) {
+	f.channelsReqs = append(f.channelsReqs, req)
+	if len(f.channelsPages) == 0 {
+		return &tg.MessagesMessages{}, nil
+	}
+	out := f.channelsPages[0]
+	f.channelsPages = f.channelsPages[1:]
+	return out, nil
+}
+
+func (f *scriptedAPI) MessagesGetMessages(_ context.Context, ids []tg.InputMessageClass) (tg.MessagesMessagesClass, error) {
+	f.byIDReqs = append(f.byIDReqs, ids)
+	if len(f.byIDPages) == 0 {
+		return &tg.MessagesMessages{}, nil
+	}
+	out := f.byIDPages[0]
+	f.byIDPages = f.byIDPages[1:]
 	return out, nil
 }
 

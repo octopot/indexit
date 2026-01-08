@@ -95,3 +95,11 @@ func (f fakeAPI) MessagesGetForumTopics(context.Context, *tg.MessagesGetForumTop
 func (f fakeAPI) AuthLogOut(context.Context) (*tg.AuthLoggedOut, error) {
 	return nil, errors.New("unexpected AuthLogOut call")
 }
+
+func (f fakeAPI) ChannelsGetMessages(context.Context, *tg.ChannelsGetMessagesRequest) (tg.MessagesMessagesClass, error) {
+	return nil, errors.New("unexpected ChannelsGetMessages call")
+}
+
+func (f fakeAPI) MessagesGetMessages(context.Context, []tg.InputMessageClass) (tg.MessagesMessagesClass, error) {
+	return nil, errors.New("unexpected MessagesGetMessages call")
+}
