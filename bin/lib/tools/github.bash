@@ -1,7 +1,7 @@
 # shellcheck source=../utils/env.bash   # @env @key @token
 # shellcheck source=../utils/print.bash # @fatal
 
-set_github_token() { @token store GitHub 40; }
+set_github_token() { @token store GitHub; }
 
 _gh=$(which gh || true)
 

@@ -89,8 +89,8 @@
     ;;
 
   store)
-    if [ ${#@} != 3 ]; then
-      @error 'usage: token store <name> <length>'
+    if [ ${#@} -lt 2 ] || [ ${#@} -gt 3 ]; then
+      @error 'usage: token store <name> [length]'
       return 1
     fi
 
@@ -107,7 +107,7 @@
     token=${token## }
     token=${token%% }
 
-    if [ "${#token}" -ne "${length}" ]; then
+    if [[ ! "${token}" =~ [^[:space:]] ]] || { [ -n "${length}" ] && [ "${#token}" -ne "${length}" ]; }; then
       @error token is invalid
       return 1
     fi
