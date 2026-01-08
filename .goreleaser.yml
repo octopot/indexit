@@ -1,43 +1,35 @@
-project_name: tool
+version: 2
+
+project_name: indexit
 
 archives:
-  - id: tool
+  - id: indexit
     files:
       - LICENSE
-    format: tar.gz
+    formats: [tar.gz]
     name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
 
-brews:
-  - name: tool
-    caveats: An example of the goreleaser usage.
+homebrew_casks:
+  - name: indexit
+    ids: [indexit]
+    binaries: [indexit]
     commit_author:
       name: Kamil Samigullin
       email: kamil@samigullin.info
-    description: Template for a typical CLI-tool written on Go.
-    folder: Formula
-    homepage: https://go-tool.octolab.org/
+    description: CLI for indexing personal data.
+    directory: Casks
+    homepage: https://github.com/octopot/indexit
     repository:
       owner: octolab
       name: homebrew-tap
-    install: |
-      bin.install "tool"
-
-      output = Utils.popen_read("#{bin}/tool completion bash")
-      (bash_completion/"tool").write output
-
-      output = Utils.popen_read("#{bin}/tool completion fish")
-      (fish_completion/"tool.fish").write output
-
-      output = Utils.popen_read("#{bin}/tool completion zsh")
-      (zsh_completion/"_tool").write output
-
-      prefix.install_metafiles
-    test: |
-      system "#{bin}/tool version"
+    generate_completions_from_executable:
+      executable: indexit
+      shell_parameter_format: cobra
+      shells: [bash, zsh, fish]
 
 builds:
-  - id: tool
-    binary: tool
+  - id: indexit
+    binary: indexit
     env:
       - CGO_ENABLED=0
     flags:
@@ -56,5 +48,5 @@ checksum: { name_template: checksums.txt }
 
 release:
   github:
-    owner: octomation
-    name: go-tool
+    owner: octopot
+    name: indexit
