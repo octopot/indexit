@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       pattern:
-        description: The name of workflow to clean.
+        description: Delete completed runs of this workflow, or All workflows.
         type: choice
         options:
           - All
@@ -21,7 +21,7 @@ on:
           - Workflow caches cleanup
           - Workflow caches warmup
           - Workflow runs cleanup
-        default: Workflow runs cleanup
+        default: All
         required: true
       dry_run:
         description: Only log actions, do not perform any delete operations.
@@ -56,8 +56,8 @@ jobs:
               || ''
             }}
           dry_run: ${{ inputs.dry_run && 'true' || 'false' }}
-          retain_days: 30
-          keep_minimum_runs: 10
+          retain_days: 0
+          keep_minimum_runs: 0
 
   notify:
     name: Notifying

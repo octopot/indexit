@@ -13,7 +13,7 @@ and the action contract before accepting an update.
 | [tools.yml](tools.yml) | Tools PR/main push, monthly, manual | Install tools and check generation |
 | [cleanup.caches.yml](cleanup.caches.yml) | Monthly, manual, reusable | Delete caches with the built-in GitHub CLI |
 | [warmup.caches.yml](warmup.caches.yml) | Cache cleanup completion, manual | Warm Go, docs and tools caches |
-| [cleanup.runs.yml](cleanup.runs.yml) | Monthly, manual, reusable | Prune old runs (30 days / 10 retained); manual dry-run supported |
+| [cleanup.runs.yml](cleanup.runs.yml) | Monthly, manual, reusable | Delete completed runs without age/count retention; manual dry-run supported |
 | [cleanup.stale.yml](cleanup.stale.yml) | Daily, manual, reusable | Mark/close stale issues and PRs |
 
 GitHub-hosted Ubuntu runners supply the runtime required by the current actions.
@@ -29,6 +29,9 @@ request their additional permissions explicitly.
   `CODECOV_TOKEN` is required by the workflow.
 - Pages must use **GitHub Actions** as its build source. The `github-pages`
   environment must permit main-branch deployments.
-- Run cleanup also deletes orphaned runs whose workflows no longer exist; the
-  upstream action applies no age/count retention to those runs.
+- To clear run history, run **Workflow runs cleanup** with `pattern: All` (the
+  default) and `dry_run` unchecked. Scheduled and reusable runs also target all
+  workflows, including Dependabot. Active runs remain, including cleanup itself.
+  The upstream action also deletes orphaned runs whose workflows no longer exist,
+  regardless of their status or the selected workflow.
 - `SLACK_WEBHOOK` is optional: an empty value skips sending notifications.
