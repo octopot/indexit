@@ -11,12 +11,12 @@ labels:
   - "impact: medium"
   - "effort: medium"
 milestone:
-state: OPEN
-stateReason:
+state: CLOSED
+stateReason: COMPLETED
 createdAt: 2026-08-26T06:01:14Z
 updatedAt: 2026-08-26T06:01:28Z
 lastEditedAt:
-closedAt:
+closedAt: 2026-09-18T11:53:43Z
 issueType: Feature
 assignees: []
 parent: null
