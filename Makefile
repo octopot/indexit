@@ -36,6 +36,7 @@ RELEASE := $(shell git describe --tags 2>/dev/null | rev | cut -d - -f3- | rev)
 
 git-config:
 	$(AT) git config core.autocrlf input
+	$(AT) git config core.hooksPath .github/hooks
 .PHONY: git-config
 
 ifneq (, $(wildcard bin/lib/git/hooks/))
@@ -303,6 +304,20 @@ go-install-clean:
 go-dist-check:
 	$(AT) goreleaser --clean --skip=publish --snapshot
 .PHONY: go-dist-check
+
+config-vet:
+	$(AT) cue vet -c .github/settings.cue .github/settings.json
+.PHONY: config-vet
+
+doctor:
+	$(AT) node .github/scripts/release.mjs doctor
+.PHONY: doctor
+
+release-check: config-vet
+	$(AT) test -n "$(TAG)" || { echo 'usage: make release-check TAG=vX.Y.Z'; exit 2; }
+	$(AT) node .github/scripts/release.mjs check $(TAG)
+	$(AT) goreleaser check
+.PHONY: release-check
 
 go-dist-clean:
 	$(AT) rm -rf dist

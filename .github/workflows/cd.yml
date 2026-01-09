@@ -21,11 +21,38 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
+      pages: read
 
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v7.0.1
         with: { fetch-depth: 0 }
+
+      # seconds-level safety net for bypassed local hooks, before any build
+      - name: Check the release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: node .github/scripts/release.mjs check "${GITHUB_REF_NAME}"
+      - name: Check release secrets
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: node .github/scripts/release.mjs preflight
+      - name: Set up GitHub Pages
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: pages
+        uses: actions/configure-pages@v6.0.0
+      - name: Render the release note
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
+        run: |
+          notes="${RUNNER_TEMP}/release-notes.md"
+          title="$(node .github/scripts/release.mjs render "${GITHUB_REF_NAME}" --site-url "${SITE_URL}" --out "${notes}")"
+          echo "RELEASE_TITLE=${title}" >> "${GITHUB_ENV}"
+          echo "RELEASE_NOTES=--release-notes ${notes}" >> "${GITHUB_ENV}"
+
       - name: Set up Go environment
         uses: actions/setup-go@v7.0.0
         with:
@@ -42,13 +69,14 @@ jobs:
       - name: Publish the release
         uses: goreleaser/goreleaser-action@v7.2.3
         env:
-          GITHUB_TOKEN: ${{ secrets.GORELEASER_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         with:
           distribution: goreleaser
           version: v2.18.2
           # four targets build in parallel by default; gotd needs ~5GB each,
           # which overruns the 16GB runner — see .goreleaser.yml builds
-          args: ${{ startsWith(github.ref, 'refs/tags/v') && 'release --clean --parallelism 2' || 'release --snapshot --clean --skip=publish --parallelism 2' }}
+          args: ${{ startsWith(github.ref, 'refs/tags/v') && format('release --clean --parallelism 2 {0}', env.RELEASE_NOTES) || 'release --snapshot --clean --skip=publish --parallelism 2' }}
 
   notify:
     name: Notifying

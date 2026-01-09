@@ -22,6 +22,7 @@ homebrew_casks:
     repository:
       owner: octolab
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     generate_completions_from_executable:
       executable: indexit
       shell_parameter_format: cobra
@@ -47,6 +48,8 @@ builds:
 checksum: { name_template: checksums.txt }
 
 release:
-  github:
-    owner: octopot
-    name: indexit
+  # the repository comes from the git remote; the title from the release note,
+  # see .github/scripts/release.mjs render
+  name_template: '{{ envOrDefault "RELEASE_TITLE" .Tag }}'
+  preflight:
+    fail_on_error: true
