@@ -1,8 +1,8 @@
 module tools
 
-go 1.26.5
+go 1.27.0
 
-toolchain go1.26.8
+toolchain go1.27.1
 
 require (
 	github.com/golang/mock v1.7.0-rc.1
