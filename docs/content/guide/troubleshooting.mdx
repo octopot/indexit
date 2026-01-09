@@ -1,0 +1,94 @@
+---
+title: Troubleshooting
+description: Resolve missing login codes, uncached peers, topic-link surprises, and incomplete media exports.
+---
+
+# Get back to your export
+
+## The login code never arrives
+
+Use a device where you are already signed in:
+
+```sh
+indexit telegram auth login --qr
+```
+
+You can also type `qr` at the phone-code prompt. Repeatedly requesting a code is not useful when Telegram has no alternate delivery channel. [More about login](/guide/authentication/).
+
+## “Peer … not in cache”
+
+Populate the cache using the same account and cache path as the failing command:
+
+```sh
+indexit telegram fetch dialogs
+```
+
+Then retry. A public `@username` or `t.me/name` link can resolve without a warm cache. Numeric user/channel IDs and `t.me/c/` links cannot.
+
+## I got the whole group instead of one topic
+
+A link ending in one number, such as `https://t.me/example_forum/42`, identifies a **message**, not a topic. Copy a message link from inside the topic, including both numbers:
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog https://t.me/example_forum/42/1042 --limit 100 | fx
+```
+
+Discover topic IDs with `fetch topics --dialog @example_forum`. Use singular `fetch message` for one exact linked message.
+
+## The command is waiting
+
+indexit logs progress and a heartbeat during long network calls. Telegram can require a `FLOOD_WAIT`; indexit waits and retries the call once. A wait longer than the remaining command deadline fails instead. `PEER_FLOOD` fails immediately.
+
+```sh
+indexit -v telegram fetch messages \
+  --dialog @example_channel --limit 10 --timeout 60s
+```
+
+If Telegram is unreachable, [configure a proxy](/guide/proxy/). Use `-vvv` only when you need transport details, and review diagnostic logs before sharing them.
+
+## Some files are missing
+
+Inspect download results directly:
+
+```sh
+indexit -q telegram fetch media \
+  --dialog @example_channel --media photo --limit 20 --dir ./photos \
+  | jq --unbuffered -c 'select(.error)'
+```
+
+A single failure does not abort the walk. Repeat the same command to retry missing files. Existing non-empty files are skipped; use `--overwrite` if a saved file is damaged. Put different dialogs in different destination directories.
+
+## fx does not open an interactive view
+
+Install the native [fx binary](https://fx.wtf/install), for example with `brew install fx`. The npm package provides non-interactive processing only. Run the command in a terminal and keep the first fetch bounded with `--limit 200`.
+
+## My search cannot find an older message
+
+fx and fzf search the records received in this run. Increase `--limit` or use a [date window](/guide/messages/#look-through-a-particular-month) to reach older messages.
+
+## A message is missing without a warning
+
+`-q` hides warnings as well as progress. Omit it to see why specific messages were skipped. Use the [output reference](/guide/reference/#exit-status) to interpret partial results.
+
+## My shell settings seem to be ignored
+
+A loaded `.env` wins over matching environment variables. Check the `loaded .env` line, or disable file loading:
+
+```sh
+indexit --env-file="" telegram auth status
+```
+
+Use `-v` or `-q` for log levels. [See configuration precedence](/guide/reference/).
+
+## Session permissions are rejected
+
+On macOS and Linux, set the session file’s mode to `0600` (substitute your path if you changed it):
+
+```sh
+chmod 600 ~/.config/indexit/telegram/session.json
+```
+
+If Telegram has revoked the session, sign in again. Keep session files and API credentials out of bug reports.
+
+Still stuck? [Open an issue](https://github.com/octopot/indexit/issues/new) with `indexit version`, the command with sensitive values removed, and the error message.

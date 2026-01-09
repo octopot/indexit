@@ -1,0 +1,64 @@
+---
+title: Save topics & media
+description: Find a forum topic, browse its messages, and download its photos with an interactive result view.
+---
+
+# Bring the album home
+
+Suppose each trip lives in a Telegram forum topic. Find the trip, browse its history, and download the photos without saving them one by one.
+
+[Sign in](/guide/) and [install fx](/guide/explore/) first. Replace `@example_forum` with your public forum’s username, and use its actual topic and message numbers in the links below. For private groups, discover the address with `fetch dialogs` and use a full topic link from Telegram.
+
+## Find the trip
+
+```sh
+indexit -q telegram fetch topics --dialog @example_forum | fx
+```
+
+Search for the trip’s title in fx. Each record includes `topic_id`, the title, creation date, and available counters and flags. Topic discovery is for forum supergroups and pages automatically.
+
+## Open the topic
+
+Copy a message link from inside that topic. A full topic link has both a topic ID and a message ID after the forum name:
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog https://t.me/example_forum/42/1042 --limit 100 | fx
+```
+
+Here, `42` identifies the topic and `1042` is the linked message. The history command walks the topic; it does not stop at message 1042.
+
+A link with just one number, such as `https://t.me/example_forum/42`, identifies a message. For history or media, it selects the **whole dialog**, not topic 42. [More about addresses](/guide/reference/#accepted-addresses).
+
+## Download the photos
+
+```sh
+indexit -q telegram fetch media \
+  --dialog https://t.me/example_forum/42/1042 \
+  --media photo --limit 20 --dir ./trip | fx
+```
+
+Up to 20 matching file records are processed. Photos go into `trip/`; the manifest opens in fx so you can inspect paths and results. Remove `--limit 20` to walk all matching photos in the topic.
+
+Photos use the largest available Telegram size, which may differ from an original compressed by Telegram. Names use the message ID, such as `1042.jpg`. A document uses its message ID plus the original extension when available.
+
+Each result carries `message_id`, `path`, `type`, date, size, and available topic/album information. `grouped_id` links frames from the same album. Sort by numeric message ID when reconstructing their order.
+
+## Check the result and repeat
+
+In fx, search paths with `@` and look for `error`. A failed file produces an error record while the walk continues, so check these records even after a successful exit.
+
+Run the command again to retry missing files. Existing non-empty files get `skipped: true`; add `--overwrite` to fetch them again. This checks existence and size, not a checksum.
+
+Downloads use a neighboring `.part` file and rename it after completion. A retry starts an unfinished file over. Use a separate directory per dialog because message IDs can overlap between dialogs.
+
+## Adjust the selection
+
+| You want… | Use… |
+| --- | --- |
+| Photos and videos | `--media photo,video` |
+| Documents, audio, voice messages, or stickers | `--media document,audio,voice,sticker` |
+| Every downloadable type | Omit `--media` |
+| A date or ID window | `--from`, `--to`, `--min-id`, `--max-id` as for [messages](/guide/messages/) |
+
+Skipped files and failed downloads also count toward `--limit`. Polls, locations, contacts, and web previews have no downloadable file in this command.

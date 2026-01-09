@@ -1,0 +1,66 @@
+---
+title: Accounts & sessions
+description: Sign in by QR or phone code, reuse your session, and keep account files separate.
+---
+
+# Sign in once. Keep working.
+
+indexit uses Telegram’s user API. You need your own `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`, plus an existing Telegram account. Follow the [quick start](/guide/) to create the credentials.
+
+## QR login
+
+```sh
+indexit telegram auth login --qr
+```
+
+In Telegram on your phone, open **Settings → Devices → Link Desktop Device** and scan the QR in your terminal. The QR refreshes automatically when it expires. If the account uses a cloud password (2FA), indexit asks for it after confirmation.
+
+QR login is useful when a phone code does not arrive. It needs a device that is already signed in.
+
+## Phone-code login
+
+```sh
+indexit telegram auth login
+```
+
+Enter your phone number, the code, and your 2FA password if requested. The prompt names the delivery channel Telegram selected. It offers a resend only when Telegram supplies another channel.
+
+If no code arrives, type `qr` at the code prompt to switch to QR login.
+
+## Check or end the session
+
+```sh
+indexit telegram auth status
+indexit telegram auth logout
+```
+
+`status` reports the session path, authorization state, and available account/DC information. With an existing session, it connects to Telegram to check authorization.
+
+`logout` attempts to revoke the Telegram session and removes the local session file. If the network request fails, local removal can still occur; use Telegram’s Devices screen to revoke a remaining remote session. Logout does not delete your exports or peer cache.
+
+## Where the files live
+
+| File | Default location |
+| --- | --- |
+| Session | `~/.config/indexit/telegram/session.json` |
+| Peer cache | `~/.cache/indexit/telegram/peers.json` |
+
+`XDG_CONFIG_HOME` and `XDG_CACHE_HOME` replace the respective base directories when set, including on macOS.
+
+The session grants access to your account. Keep it private. On macOS and Linux, an existing session file must have permissions `0600`.
+
+## Use separate account files
+
+You can explicitly select a session and cache for each command:
+
+```sh
+indexit telegram --session ./work/session.json \
+  --peer-cache ./work/peers.json auth login --qr
+
+indexit telegram --session ./work/session.json \
+  --peer-cache ./work/peers.json fetch dialogs
+```
+
+Keep the same pair together on later runs. v0.1.0 has no account registry or automatic multi-account orchestration.
+
+New sessions identify the device as `indexit`. The application name shown by Telegram comes from your API application registration.

@@ -1,0 +1,77 @@
+---
+title: Explore & find
+description: Two interactive workflows for Telegram — browse message fields with fx and find conversations with fzf.
+---
+
+import { FxDemo, FzfDemo } from '../../components/workflow-demo'
+
+# Fetch it. Find it. Use it.
+
+Start with a question: “Where was that trip mentioned?” or “Which chat was it in?” Pipe indexit into an interactive tool and get straight to the answer.
+
+[Sign in first](/guide/). The examples use public placeholder names; substitute your own channel or group. The browser illustrations below use fictional data and do not connect to Telegram.
+
+## 1. Explore messages with fx
+
+[Install fx](https://fx.wtf/install) (`brew install fx` on macOS), then run:
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog @example_channel --limit 200 | fx
+```
+
+Open a message, inspect its sender, and find a word in its text. In the browser example, try **trip**, then **@ from.display** and click a matching field.
+
+<FxDemo />
+
+In the real terminal, use these [fx controls](https://fx.wtf/getting-started):
+
+| Action | Key |
+| --- | --- |
+| Navigate and expand records | Arrow keys |
+| Search values with a regular expression | `/`, type your query, Enter |
+| Move between text matches | `n` / `N` |
+| Fuzzy-search JSON paths | `@` |
+| Print the selected value to stdout | `P` |
+| Show keyboard help | `?` |
+
+Path search finds fields such as `from.display`; content search finds words inside messages. The browser illustration uses literal text matching and a simple fuzzy path matcher; fx provides the full terminal behavior.
+
+Use the native fx binary (Homebrew or a release download) for this workflow. The npm package only provides non-interactive processing.
+
+## 2. Find a conversation with fzf
+
+Install [jq](https://jqlang.org/download/) and [fzf](https://github.com/junegunn/fzf#installation). On macOS: `brew install jq fzf`.
+
+```sh
+indexit -q telegram fetch dialogs \
+  | jq --unbuffered -r '[.uid, .title // .username // .uid] | @tsv' \
+  | fzf --delimiter '\t' --with-nth 2..
+```
+
+Type a few letters from the title, move with ↑ / ↓, and press Enter. In the browser example, **wknd** finds **Weekend trips** even though the letters are not adjacent.
+
+<FzfDemo />
+
+jq turns each dialog into a row containing its UID and title. fzf displays the title and returns the original row on selection, so you keep the address for the next command. Press Esc to cancel.
+
+`--unbuffered` lets rows reach fzf as they arrive. This example illustrates fuzzy matching; fzf also supports [exact matches and exclusions](https://github.com/junegunn/fzf#search-syntax).
+
+## Search messages as a list
+
+The same pattern works when you remember a phrase but not the message:
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog https://t.me/example_channel --limit 200 \
+  | jq --unbuffered -r '[.id, .date, .text] | @tsv' \
+  | fzf --delimiter '\t' --with-nth 2..
+```
+
+Each message stays on one row, including messages with line breaks. Selecting a row returns its message ID, date, and text. Use that ID with [fetch message](/guide/messages/#fetch-only-the-messages-you-picked) to inspect the complete record.
+
+## Keep the first look small
+
+Both workflows search the data fetched in this invocation. They do not search all of Telegram. `--limit 200` means the latest 200 emitted messages; increase it or [choose a date window](/guide/messages/) when needed. fx opens the fetched input for exploration; fzf can update its candidate list while records arrive.
+
+The `-q` flag suppresses progress chatter, not errors. All three tools run locally and receive data through stdout — no intermediate export file is needed.

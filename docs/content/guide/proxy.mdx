@@ -1,0 +1,69 @@
+---
+title: Connect through a proxy
+description: Configure SOCKS5, MTProto, or HTTP CONNECT, including Telegram proxy-sharing links.
+---
+
+# Take a different route
+
+If Telegram is unreachable directly, set a proxy in your `.env`. indexit supports **SOCKS5**, **MTProto**, and **HTTP CONNECT**.
+
+## Paste a Telegram proxy link
+
+Copy the complete link from your proxy provider into `.env`:
+
+```dotenv
+INDEXIT_PROXY_URL="tg://proxy?server=proxy.example&port=443&secret=YOUR_SECRET"
+```
+
+Replace the host and secret with the real values. `https://t.me/proxy?...` links also work, as do the `telegram.me` and `telegram.dog` variants. A `tg://socks?...` link selects SOCKS5.
+
+MTProto secrets may be hex or base64, with plain 16-byte, `dd` (secured), or `ee` (fakeTLS) forms. Malformed secrets are rejected before a connection is attempted.
+
+## Or use a proxy URL
+
+Choose **one** configuration:
+
+```dotenv
+# SOCKS5, with optional credentials
+INDEXIT_PROXY_URL="socks5://user:password@proxy.example:1080"
+```
+
+```dotenv
+# MTProto
+INDEXIT_PROXY_URL="mtproto://proxy.example:443?secret=YOUR_SECRET"
+```
+
+```dotenv
+# HTTP CONNECT
+INDEXIT_PROXY_URL="http://proxy.example:3128"
+```
+
+URL-encode special characters in usernames, passwords, and query values. An HTTP proxy must allow CONNECT to Telegram; support depends on the proxy’s policy.
+
+## Check the connection
+
+After signing in:
+
+```sh
+indexit telegram auth status --timeout 30s
+```
+
+The log names the proxy type, host, and port without printing the configured credentials. If there is no local session, `auth status` reports that fact without making a connection; run `auth login --qr` to connect.
+
+## Use separate variables
+
+If you prefer not to assemble a URL:
+
+```dotenv
+INDEXIT_PROXY_TYPE=socks5
+INDEXIT_PROXY_HOST=proxy.example
+INDEXIT_PROXY_PORT=1080
+INDEXIT_PROXY_USER=user
+INDEXIT_PROXY_PASS=password
+```
+
+For MTProto, set the type to `mtproto` and use `INDEXIT_PROXY_SECRET`. `INDEXIT_PROXY_URL` takes precedence over these separate variables.
+
+Standard `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` do not configure this Telegram connection. Without an `INDEXIT_PROXY_*` configuration, indexit connects directly. A configured proxy does not silently fall back to direct access, and v0.1.0 has no proxy pool or failover.
+
+Remember that a loaded `.env` overrides matching shell variables. For a one-off environment-only invocation, use `--env-file=""`; see [configuration](/guide/reference/).

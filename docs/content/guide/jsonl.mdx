@@ -1,0 +1,63 @@
+---
+title: Filter the stream
+description: Use jq directly with indexit to find matching messages and extract useful fields without intermediate files.
+---
+
+# Keep just what you need
+
+Every fetch command emits **JSONL**: one JSON object per line. [jq](https://jqlang.org/manual/#invoking-jq) accepts this stream directly, so you can filter it as it arrives. No conversion or intermediate file is needed.
+
+For interactive browsing and fuzzy selection, start with [fx and fzf](/guide/explore/). jq is useful when you already know the condition or fields you want.
+
+## Find matching messages
+
+After [signing in](/guide/), replace the example channel with your own:
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog @example_channel --limit 200 \
+  | jq --unbuffered -c 'select(.text | test("travel"; "i"))'
+```
+
+This prints records containing “travel”, ignoring case. `test()` accepts a regular expression; use `contains("travel")` for a literal, case-sensitive substring. jq has no built-in interactive fuzzy finder — use [fzf](/guide/explore/#2-find-a-conversation-with-fzf) for that.
+
+## Read the text
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog https://t.me/example_channel --limit 100 \
+  | jq --unbuffered -r 'select(.text != "") | .text'
+```
+
+`-r` prints strings without JSON quotes. `--unbuffered` forwards results promptly. For one row per message, use `@tsv` to keep embedded line breaks escaped:
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog @example_channel --limit 100 \
+  | jq --unbuffered -r '[.id, .date, .text] | @tsv'
+```
+
+## Understand the records
+
+| `_kind` | Identifying fields | Useful information |
+| --- | --- | --- |
+| `dialog` | `uid`, `peer_type`, `peer_id` | Title, username, forum status, unread count, available flags |
+| `topic` | `dialog_uid`, `topic_id` | Title, creation date, top message, counters and flags |
+| `message` | `dialog_uid`, `id` | Date, text, optional sender, topic, media description, replies and forwards |
+| `media` | `dialog_uid`, `message_id`, `path` | File type, date, size, optional album, skip status, or download error |
+
+Optional fields can be absent, including false flags and zero counters. Dates are RFC3339 in UTC. Text is plain text; formatting entities are not exported. Reactions are a total, not a breakdown by emoji.
+
+`fetch messages` describes attachments. [Use `fetch media`](/guide/media/) for bytes, paths, and album IDs. A photo descriptor can contain only `type`; the download result carries its size.
+
+IDs can require 64-bit integer precision, particularly `grouped_id`. Use a JSON reader that preserves exact integers when IDs matter. Keep importers tolerant of optional and additional fields; v0.1.0 has no schema version.
+
+## Check only failed downloads
+
+```sh
+indexit -q telegram fetch media \
+  --dialog @example_channel --media photo --limit 20 --dir ./photos \
+  | jq --unbuffered -c 'select(.error)'
+```
+
+Files go directly into `photos/`; only failed-file records are printed. A successful command exit does not guarantee every download succeeded. See [CLI & configuration](/guide/reference/) for output flags and exit codes.

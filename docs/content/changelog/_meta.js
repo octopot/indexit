@@ -1,9 +1,4 @@
 export default {
-  "v1.0.0": {
-    "title": "v1.0.0",
-    "theme": {
-      "breadcrumb": false,
-      "pagination": false
-    }
-  }
+  index: { title: 'All releases', theme: { toc: false, breadcrumb: false } },
+  'v0.1.0': 'v0.1.0 — Telegram, to go.',
 }

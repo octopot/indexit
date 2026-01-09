@@ -1,0 +1,94 @@
+---
+title: CLI & configuration
+description: A compact reference for indexit commands, flags, Telegram addresses, and configuration precedence.
+---
+
+# The essentials, in one place
+
+Use `indexit <command> --help` for help at any level. All examples describe the current v0.1.0 feature set.
+
+## Commands
+
+| Command prefix: `indexit telegram` | Purpose |
+| --- | --- |
+| `auth login [--qr]` | Sign in interactively |
+| `auth status` | Report the session and authorization state |
+| `auth logout` | Revoke the session and remove its local file |
+| `fetch dialogs` | List dialogs and populate the peer cache |
+| `fetch topics --dialog UID` | List a forum’s topics |
+| `fetch messages --dialog UID` | Walk conversation or topic history |
+| `fetch message LINK…` | Fetch exact messages; also accepts `--dialog UID --id 11,46` |
+| `fetch media --dialog UID --dir PATH` | Download files and emit a JSONL manifest |
+| `debug uid VALUE` | Parse an address without connecting to Telegram |
+
+`indexit version` shows the build version. `indexit completion bash`, `zsh`, `fish`, or `powershell` generates shell completion scripts.
+
+## Fetch flags
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--limit` | `0` | Maximum emitted records; `0` means all |
+| `--page-size` | `100` | History/dialog/topic page size; values outside 1–100 reset to 100 |
+| `-o`, `--output` | `-` | stdout, or a file opened in append mode |
+| `--format` | `jsonl` | Only JSONL is supported |
+
+For `fetch message`, `--page-size` has no effect. Requests contain at most 100 IDs.
+
+For `messages` and `media`, use `--from` / `--to` for RFC3339 dates, and `--min-id` / `--max-id` for exclusive ID bounds. Media adds `--media photo,video` and `--overwrite`. See [export conversations](/guide/messages/) and [save media](/guide/media/) for behavior and examples.
+
+## Runtime flags
+
+| Flag | Meaning |
+| --- | --- |
+| `--env-file PATH` | Use a particular configuration file; `--env-file=""` disables file loading |
+| `--session PATH` | Use a particular Telegram session |
+| `--peer-cache PATH` | Use a particular peer cache |
+| `--timeout 5m` | Total Telegram operation budget; default `0` has no deadline |
+| `-v` | Debug logging; `-vvv` also enables gotd internals |
+| `-q` | Show only errors on stderr; does not change stdout |
+| `--heartbeat 10s` | “Still waiting” interval for network calls; `0` disables it |
+
+`-q` and `-v` are mutually exclusive. For logging, use these flags; `INDEXIT_LOG_LEVEL` is not wired into the current implementation.
+
+## Configuration lookup
+
+indexit loads the first selected configuration file:
+
+1. The path passed to `--env-file`.
+2. The path in `INDEXIT_ENV_FILE`.
+3. `.env` in the current directory.
+4. `$XDG_CONFIG_HOME/indexit/.env`, or `~/.config/indexit/.env`.
+
+An explicitly selected missing file is an error. If neither an explicit file nor an auto-discovered file exists, the process environment is used.
+
+**Values in the loaded file override matching environment variables.** Other environment variables remain available. To use only the process environment:
+
+```sh
+indexit --env-file="" telegram auth status
+```
+
+The file supports `KEY=value`, single or double quotes, and an optional `export` prefix. It does not expand shell variables or execute commands.
+
+Required credentials are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`. Proxy settings are listed in [connect through a proxy](/guide/proxy/). No GitHub credentials are needed for the implemented Telegram commands.
+
+## Accepted addresses
+
+| Address | Target |
+| --- | --- |
+| `@example_channel`, `https://t.me/example_channel` | Public username |
+| `user:@example_user`, `user:<id>` | User by username or cached numeric ID |
+| `chat:<id>`, `-<id>` | Basic group |
+| `channel:<id>`, `-100<id>` | Cached channel or supergroup |
+| `channel:<id>:<topic>`, `-100<id>:<topic>` | Forum topic |
+| `https://t.me/example_channel/46` | Public dialog with message anchor |
+| `https://t.me/example_forum/42/46` | Public topic with message anchor |
+| `https://t.me/c/<id>/<message>` | Private dialog with message anchor |
+| `https://t.me/c/<id>/<topic>/<message>` | Private topic with message anchor |
+
+Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks.
+
+## Exit status
+
+`0` means the command completed, including empty or partial results. `1` is a runtime failure. `2` covers flagged usage/configuration errors, such as invalid fetch UIDs, missing required flags, or malformed proxy settings.
+
+For specific-message exports, inspect stderr for skipped IDs. For media, inspect records with `error`: individual download failures can coexist with exit code `0`.

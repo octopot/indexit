@@ -1,0 +1,76 @@
+---
+title: Explore conversations
+description: Read Telegram history interactively, choose a date window, or inspect exact messages by link.
+---
+
+# Find the useful part
+
+Read a channel, look through a project discussion, or inspect a handful of useful links. [Sign in first](/guide/); the same session works for every command. These examples use [fx](/guide/explore/#1-explore-messages-with-fx) to make the output immediately explorable.
+
+## Open a conversation
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog @example_channel --limit 200 | fx
+```
+
+Replace `@example_channel` with your channel or group. `https://t.me/example_channel` works too. A public username can resolve without a populated peer cache.
+
+Messages arrive **newest first**, with text, dates, available sender information, replies, forwards, and media descriptions. In fx, press `/` to search the contents or `@` to find a field. [Try the browser demos](/guide/explore/).
+
+Remove `--limit` to walk all available history, or add `--timeout 5m` to bound the operation. Service events such as “member joined” or “topic created” are skipped.
+
+## Find a private conversation
+
+```sh
+indexit -q telegram fetch dialogs | fx
+```
+
+Find the conversation’s title and copy its `uid` into `--dialog`. Listing dialogs populates the peer cache required by numeric IDs and private links. For selection by name, use the [fzf workflow](/guide/explore/#2-find-a-conversation-with-fzf).
+
+## Look through a particular month
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog @example_channel \
+  --from 2026-08-01T00:00:00Z \
+  --to 2026-09-01T00:00:00Z | fx
+```
+
+Dates use RFC3339, including `Z` for UTC or an offset such as `+03:00`. `--from` supplies the lower time bound; `--to` supplies the upper date cursor. These are history windows, not a live snapshot.
+
+For ID-based windows, `--min-id 500` requests IDs above 500 and `--max-id 1000` requests IDs below 1000. Both ID bounds are exclusive, following [Telegram’s history API](https://core.telegram.org/method/messages.getHistory).
+
+## Fetch only the messages you picked
+
+Use singular **`message`** when you have exact links:
+
+```sh
+indexit -q telegram fetch message \
+  https://t.me/example_channel/11 \
+  https://t.me/example_channel/46 | fx
+```
+
+Or supply IDs directly:
+
+```sh
+indexit -q telegram fetch message \
+  --dialog @example_channel --id 11 --id 46,47 | fx
+```
+
+Links are grouped by dialog and topic in first-seen order. IDs keep their order within each group; duplicates in that group are fetched once. `--limit` caps the total output across groups. History date/ID windows and `--page-size` do not apply here.
+
+Missing, inaccessible, service, and out-of-scope messages are skipped. A successful command can return fewer records than requested. Omit `-q` when you want to see the skip warnings.
+
+## Read a link correctly
+
+| Input | Meaning |
+| --- | --- |
+| `@example_channel` | A public dialog |
+| `https://t.me/example_channel` | The same dialog by link |
+| `https://t.me/example_channel/46` | Dialog plus message 46 |
+| `https://t.me/example_forum/42/46` | Public forum, topic 42, message 46 |
+
+**`messages` explores history; `message` selects exact messages.** For history, a link identifies the dialog and any explicit topic; its final message number is not applied as a cursor. Use window flags to restrict history.
+
+Continue with [topics and media](/guide/media/) to bring photos home, or [jq filters](/guide/jsonl/) to extract just the fields you need.

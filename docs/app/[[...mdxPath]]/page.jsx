@@ -1,12 +1,26 @@
 import { generateStaticParamsFor, importPage } from 'nextra/pages'
 import { useMDXComponents } from '../../mdx-components'
+import { siteUrl } from '../../site.mjs'
 
 export const generateStaticParams = generateStaticParamsFor('mdxPath')
 
 export async function generateMetadata({ params }) {
   const { mdxPath } = await params
   const page = await importPage(mdxPath)
-  return page.metadata
+  const { title, description } = page.metadata
+  const path = mdxPath?.length ? `${mdxPath.join('/')}/` : ''
+  const url = `${siteUrl}${path}`
+  const images = path ? [] : [{
+    url: `${siteUrl}og.png`,
+    width: 1733,
+    height: 908,
+    alt: 'indexit — Your Telegram. Your data.',
+  }]
+  return {
+    ...page.metadata,
+    openGraph: { title, description, url, siteName: 'indexit', type: 'website', images },
+    twitter: { card: path ? 'summary' : 'summary_large_image', title, description, images },
+  }
 }
 
 const Wrapper = useMDXComponents().wrapper

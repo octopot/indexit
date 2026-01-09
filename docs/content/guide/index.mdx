@@ -1,0 +1,110 @@
+---
+title: Quick start
+description: Install indexit, sign in, and explore your Telegram messages interactively.
+---
+
+# Your first useful result
+
+Connect your Telegram account and explore a conversation right in your terminal.
+You need a Telegram account and your own API credentials. indexit works as a user client; a bot token is not used.
+
+## 1. Install indexit
+
+On macOS, install the stable release with [Homebrew](https://brew.sh/):
+
+```sh
+brew install --cask octolab/tap/indexit
+indexit version
+```
+
+For Linux or a manual installation, use a ready-to-run archive below. Go is not required.
+
+<details>
+<summary>Linux & manual installation</summary>
+
+Download the **v0.1.0** archive for your machine:
+
+| Platform | Download |
+| --- | --- |
+| macOS · Apple Silicon | [darwin-arm64](https://github.com/octopot/indexit/releases/download/v0.1.0/indexit_0.1.0_darwin-arm64.tar.gz) |
+| macOS · Intel | [darwin-amd64](https://github.com/octopot/indexit/releases/download/v0.1.0/indexit_0.1.0_darwin-amd64.tar.gz) |
+| Linux · x86-64 | [linux-amd64](https://github.com/octopot/indexit/releases/download/v0.1.0/indexit_0.1.0_linux-amd64.tar.gz) |
+| Linux · ARM64 | [linux-arm64](https://github.com/octopot/indexit/releases/download/v0.1.0/indexit_0.1.0_linux-arm64.tar.gz) |
+
+In the directory containing your download, extract the archive and install the binary. This example uses Linux x86-64; substitute your archive's filename:
+
+```sh
+tar -xzf indexit_0.1.0_linux-amd64.tar.gz
+mkdir -p "$HOME/.local/bin"
+install -m 755 indexit "$HOME/.local/bin/indexit"
+export PATH="$HOME/.local/bin:$PATH"
+indexit version
+```
+
+Add the `export PATH` line to your shell configuration to keep `indexit` available in new terminals. All archives and checksums are on the [v0.1.0 release page](https://github.com/octopot/indexit/releases/tag/v0.1.0).
+
+</details>
+
+## 2. Add your Telegram credentials
+
+Create an application at [my.telegram.org/apps](https://my.telegram.org/apps) and copy its `api_id` and `api_hash`.
+See [Telegram’s application setup](https://core.telegram.org/api/obtaining_api_id) if you need a hand.
+
+Create a `.env` in the directory where you run indexit:
+
+```dotenv
+TELEGRAM_API_ID=123456
+TELEGRAM_API_HASH=replace_with_your_api_hash
+```
+
+These are placeholders. Use your own values and keep the file private.
+No GitHub token is needed for Telegram.
+
+## 3. Sign in with a QR code
+
+```sh
+indexit telegram auth login --qr
+```
+
+On your phone, open **Telegram → Settings → Devices → Link Desktop Device** and scan the terminal QR. If your account has a 2FA password, enter it when prompted. The session is saved for future runs.
+
+## 4. Open your messages in fx
+
+Install [fx](https://fx.wtf/install), an interactive JSON viewer. On macOS:
+
+```sh
+brew install fx
+```
+
+Replace `@example_channel` with a public channel or group you want to read:
+
+```sh
+indexit -q telegram fetch messages \
+  --dialog @example_channel --limit 200 | fx
+```
+
+You get an interactive view of the latest 200 messages. Expand a record with the arrow keys. Press `/` to search its contents, or `@` to find a JSON path. Nothing needs to be saved first.
+
+A public link works too: `--dialog https://t.me/example_channel`. For a private conversation, list your dialogs first and use the returned `uid`:
+
+```sh
+indexit -q telegram fetch dialogs | fx
+```
+
+Listing dialogs fills the local peer cache. The `-q` flag keeps progress logs out of the interactive view; errors are still shown.
+
+## Try the two workflows
+
+[Explore the interactive examples](/guide/explore/) to see both in action:
+
+- **Explore with fx:** browse message fields and search their contents.
+- **Find with fzf:** type part of a conversation’s name and select it.
+
+Search operates on the records fetched for that run. `--limit 200` keeps the first look small; increase it when you want a wider window.
+
+## Where next?
+
+- [Read a date range or specific messages](/guide/messages/).
+- [Save photos from a forum topic](/guide/media/).
+- [Filter the stream with jq](/guide/jsonl/).
+- [Use a proxy](/guide/proxy/) when a direct connection is unavailable.

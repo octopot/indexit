@@ -1,42 +1,9 @@
 export default {
-  "index": {
-    "title": "🏡 Home",
-    "theme": {
-      "breadcrumb": false,
-      "pagination": false
-    }
+  '*': { theme: { timestamp: false } },
+  index: {
+    title: 'Home', type: 'page', display: 'hidden',
+    theme: { layout: 'full', sidebar: false, toc: false, breadcrumb: false, pagination: false, copyPage: false },
   },
-  "changelog": {
-    "title": "🗒️ Changelog",
-    "theme": {
-      "breadcrumb": false,
-      "pagination": false
-    }
-  },
-  "company": {
-    "title": "OctoLab",
-    "type": "menu",
-    "items": {
-      "about": {
-        "title": "About",
-        "href": "https://github.com/octolab"
-      },
-      "octomation": {
-        "title": "Octomation",
-        "href": "https://github.com/octomation"
-      },
-      "octopods": {
-        "title": "Octopods",
-        "href": "https://github.com/octopot"
-      },
-      "tact-app": {
-        "title": "Tact.app",
-        "href": "https://github.com/tact-app"
-      },
-      "contact": {
-        "title": "Contact us",
-        "href": "mailto:hi@octolab.org"
-      }
-    }
-  }
+  guide: { title: 'Documentation', type: 'page' },
+  changelog: { title: 'Changelog', type: 'page', theme: { pagination: false } },
 }
