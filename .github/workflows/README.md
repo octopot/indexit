@@ -81,7 +81,9 @@ flowchart TB
 - **Guardrails come first and fail in seconds.** The `pre-push` hook
   (`.github/hooks`, wired by `make setup`) runs `.github/scripts/release.mjs check`
   before the push leaves your machine; `make release-check TAG=<tag>` runs it on
-  demand. The first steps here repeat it for pushes that bypassed the hook, then
+  demand, together with the `go mod tidy` + `git-check` that `fast-check` would
+  otherwise fail on only after the tag is out (ci.yml and tools.yml check it on
+  main too). The first steps here repeat it for pushes that bypassed the hook, then
   verify `HOMEBREW_TAP_TOKEN` can read the tap, all before Go is even installed.
 - **The note becomes the release.** `release.mjs render` strips the frontmatter
   and the H1, makes site links absolute from the Pages URL and hands the title

@@ -54,7 +54,7 @@ jobs:
         run: make tools && [ $(ls bin/linux/*/* | wc -l) = $(grep go:gen tools/tools.go | wc -l) ]
 
       - name: Check git state
-        run: make generate git-check
+        run: make go-tools-tidy generate git-check
 
   notify:
     name: Notifying

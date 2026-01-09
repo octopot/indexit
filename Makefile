@@ -314,8 +314,9 @@ doctor:
 .PHONY: doctor
 
 release-check: config-vet
-	$(AT) test -n "$(TAG)" || { echo 'usage: make release-check TAG=vX.Y.Z'; exit 2; }
+	$(AT) test -n "$(TAG)" || { echo 'usage: git tag vX.Y.Z && make release-check TAG=vX.Y.Z'; exit 2; }
 	$(AT) node .github/scripts/release.mjs check $(TAG)
+	$(AT) $(MAKE) go-deps-tidy go-tools-tidy git-check
 	$(AT) goreleaser check
 .PHONY: release-check
 

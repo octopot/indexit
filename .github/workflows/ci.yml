@@ -86,6 +86,9 @@ jobs:
 
       - name: Run fast check source code
         run: make go-check
+      # cd.yml runs fast-check on a tag: an untidy go.mod must fail here first
+      - name: Check that modules are tidy
+        run: make go-deps-tidy git-check
       - name: Run tests
         run: make test TIMEOUT=2m
         if: matrix.go != '1.27.x'
