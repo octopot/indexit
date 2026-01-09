@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   release:
+    name: Releasing
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -325,7 +325,7 @@ go-tools-check: GOTAGS = tools
 go-tools-check:
 	$(AT) cd tools; \
 	go mod verify; \
-	govulncheck -tags $(GOTAGS) -test ./...; \
+	govulncheck -scan module -tags $(GOTAGS); \
 	if command -v egg >/dev/null; then \
 		egg deps check license; \
 		egg deps check version; \

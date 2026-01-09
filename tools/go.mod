@@ -4,12 +4,12 @@ go 1.27.0
 
 toolchain go1.27.1
 
-require (
-	github.com/golang/mock v1.7.0-rc.1
-	github.com/golangci/golangci-lint/v2 v2.13.2
-	github.com/goreleaser/goreleaser/v2 v2.17.1
-	golang.org/x/tools v0.50.0
-	golang.org/x/vuln v1.8.0
+tool (
+	github.com/golang/mock/mockgen
+	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+	github.com/goreleaser/goreleaser/v2
+	golang.org/x/tools/cmd/goimports
+	golang.org/x/vuln/cmd/govulncheck
 )
 
 require (
@@ -237,11 +237,13 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
+	github.com/golang/mock v1.7.0-rc.1 // indirect
 	github.com/golangci/asciicheck v0.5.0 // indirect
 	github.com/golangci/canonicalheader v0.0.0-20260827115959-a25c71c521f6 // indirect
 	github.com/golangci/dupl v0.0.0-20260401084720-c99c5cf5c202 // indirect
 	github.com/golangci/go-printf-func-name v0.1.1 // indirect
 	github.com/golangci/gofmt v0.0.0-20260820135601-e84e05053792 // indirect
+	github.com/golangci/golangci-lint/v2 v2.13.2 // indirect
 	github.com/golangci/golines v0.15.0 // indirect
 	github.com/golangci/misspell v0.8.0 // indirect
 	github.com/golangci/plugin-module-register v0.1.2 // indirect
@@ -265,6 +267,7 @@ require (
 	github.com/goreleaser/chglog v0.7.4 // indirect
 	github.com/goreleaser/fileglob v1.4.0 // indirect
 	github.com/goreleaser/go-shellwords v1.0.13 // indirect
+	github.com/goreleaser/goreleaser/v2 v2.17.1 // indirect
 	github.com/goreleaser/nfpm/v2 v2.47.0 // indirect
 	github.com/goreleaser/quill v0.0.0-20260630015114-8310f3e9a321 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
@@ -485,6 +488,8 @@ require (
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
+	golang.org/x/tools v0.50.0 // indirect
+	golang.org/x/vuln v1.8.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/api v0.288.0 // indirect
 	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect
