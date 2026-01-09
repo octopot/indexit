@@ -4,6 +4,7 @@
 
 package tools
 
+//go:generate go install cuelang.org/go/cmd/cue
 //go:generate go install github.com/golang/mock/mockgen
 //go:generate go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 //go:generate go install github.com/goreleaser/goreleaser/v2
