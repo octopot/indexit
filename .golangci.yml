@@ -6,6 +6,9 @@ linters:
     - exhaustive
     - gocritic
     - noctx
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
   exclusions:
     generated: lax
     presets:

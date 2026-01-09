@@ -171,6 +171,8 @@ func TestFetchMessagesByID_RejectsOtherDialogs(t *testing.T) {
 				correct.PeerID = &tg.PeerUser{UserID: 42}
 			case uid.KindChannel:
 				correct.PeerID = &tg.PeerChannel{ChannelID: 42}
+			default:
+				// userMessage already builds a chat peer.
 			}
 			other := userMessage(2, time.Unix(1700000000, 0), "other dialog")
 			other.PeerID = &tg.PeerChat{ChatID: 999}
