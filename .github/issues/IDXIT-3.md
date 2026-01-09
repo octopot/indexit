@@ -10,12 +10,12 @@ labels:
   - "scope: code"
   - "impact: medium"
   - "effort: medium"
-milestone:
+milestone: "[[IDXIT-M1]]"
 state: CLOSED
 stateReason: COMPLETED
 createdAt: 2026-08-26T06:01:14Z
-updatedAt: 2026-08-26T06:01:28Z
-lastEditedAt:
+updatedAt: 2026-09-23T17:28:37Z
+lastEditedAt: 2026-09-23T17:26:57Z
 closedAt: 2026-09-18T11:53:43Z
 issueType: Feature
 assignees: []
@@ -75,14 +75,14 @@ Run against a real forum supergroup and compare the emitted titles and IDs with
 what the official client shows; feed one emitted `topic_id` into
 `fetch messages` and confirm the same history comes back as with a pasted link.
 
-## Выполнение
+<!-- 2026-09-18T11:53Z https://github.com/octopot/indexit/issues/80#issuecomment-5799588456
+Implemented in `internal/telegram/topics.go` (`FetchTopics`, walking
+`messages.getForumTopics`), `mapper.Topic`, `model.TopicRecord` and the
+`fetch topics` command in `internal/command/telegram/fetch.go`. The method joined
+the `API` interface, so the hand-written test fakes gained it as well.
 
-Реализовано в `internal/telegram/topics.go` (`FetchTopics`, обход
-`messages.getForumTopics`), `mapper.Topic`, `model.TopicRecord` и команде
-`internal/command/telegram/fetch.go`. Метод добавлен в интерфейс `API`, поэтому
-ручные фейки тестов дополнены им же.
-
-Живая проверка: форум «3. Areas / Кот & Утя» (`channel:3879648969`) — 31 топик
-одним прогоном, кириллица и эмодзи в JSONL не экранированы, курсор двигается по
-последнему топику страницы. Юнит: пагинация, остановка по `count`, `--limit`,
-пропуск удалённых топиков, отказ на не-форуме, маппер записи.
+Live check: a private forum supergroup, 31 topics in one run; Cyrillic and emoji
+titles stay unescaped in JSONL; the cursor advances by the last topic of each
+page. Unit tests: pagination, stop on `count`, `--limit`, skipping deleted
+topics, refusal on a non-forum peer, the record mapper.
+-->

@@ -10,12 +10,12 @@ labels:
   - "scope: code"
   - "impact: high"
   - "effort: medium"
-milestone:
+milestone: "[[IDXIT-M1]]"
 state: CLOSED
 stateReason: COMPLETED
 createdAt: 2026-08-26T06:01:20Z
-updatedAt: 2026-08-26T06:01:30Z
-lastEditedAt:
+updatedAt: 2026-09-23T17:28:40Z
+lastEditedAt: 2026-09-23T17:27:00Z
 closedAt: 2026-09-18T11:54:44Z
 issueType: Feature
 assignees: []
@@ -94,21 +94,20 @@ Run against a real forum topic holding 43 photos and compare the file count,
 the byte sizes and the visible frames with the official client; run it twice to
 confirm the second pass is a no-op.
 
-## Выполнение
+<!-- 2026-09-18T11:54Z https://github.com/octopot/indexit/issues/81#issuecomment-5799589130
+Implemented in `internal/telegram/media.go` (`FetchMedia`, building
+`InputPhotoFileLocation`/`InputDocumentFileLocation`, picking the largest photo
+size, file naming), `model.MediaRecord` and the `fetch media` command. The
+history walk moved out of `FetchMessages` into a shared `walkMessages`:
+`fetch messages` and `fetch media` differ in what they do with a message, not in
+how they page through history. A download goes to a temporary `<file>.part` and
+is renamed into place, so an interrupted run never leaves a file the next run
+would take as already downloaded.
 
-Реализовано в `internal/telegram/media.go` (`FetchMedia`, построение
-`InputPhotoFileLocation`/`InputDocumentFileLocation`, выбор наибольшего размера
-фото, имена файлов), `model.MediaRecord` и команде `fetch media`. Обход истории
-вынесен из `FetchMessages` в общий `walkMessages`: `fetch messages` и
-`fetch media` расходятся в том, что делают с сообщением, а не в том, как
-листают историю. Загрузка идёт во временный `<файл>.part` и переименовывается на
-место, поэтому прерванный прогон не оставляет файла, который следующий прогон
-счёл бы скачанным.
-
-Живая проверка: топик «Ваньково, июнь 2025» — 43 фото, 5,8 МБ, повторный прогон
-1,16 с без единой загрузки; выгрузка девятнадцати альбомов подряд — 547 файлов,
-75 МБ, ни одного отказа. Отдельно подтвердилось, что ссылка
-`t.me/c/<peer>/<topic>` без третьего сегмента означает СООБЩЕНИЕ, а не топик:
-такой вызов прошёл по всему диалогу (680 файлов). Поведение верное — это
-семантика ссылок Telegram, — но цена ошибки в мегабайтах, поэтому адресация
-топика через `channel:<id>:<topic>` названа в `--help` команды.
+Live check: one forum topic, 43 photos, 5.8 MB; the repeat run took 1.16 s with
+no downloads. Nineteen albums in a row: 547 files, 75 MB, no failures. It also
+confirmed that a `t.me/c/<peer>/<topic>` link without a third segment addresses
+a MESSAGE, not a topic: such a call walked the whole dialog (680 files). That is
+correct Telegram link semantics, but the mistake costs megabytes, so the
+command's `--help` names `channel:<id>:<topic>` as the way to address a topic.
+-->

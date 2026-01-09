@@ -10,11 +10,11 @@ labels:
   - "scope: code"
   - "impact: high"
   - "effort: medium"
-milestone:
+milestone: "[[IDXIT-M1]]"
 state: CLOSED
 stateReason: COMPLETED
 createdAt: 2026-08-26T04:46:42Z
-updatedAt: 2026-08-26T04:47:43Z
+updatedAt: 2026-09-23T17:28:35Z
 lastEditedAt:
 closedAt: 2026-08-26T04:46:52Z
 issueType: Feature
