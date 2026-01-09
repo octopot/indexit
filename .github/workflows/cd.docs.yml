@@ -4,12 +4,16 @@ on:
   pull_request:
     branches: [ main ]
     paths:
+      - '.github/scripts/release.mjs'
+      - '.github/settings.json'
       - '.github/workflows/cd.docs.yml'
       - 'docs/**'
 
   push:
     branches: [ main ]
     paths:
+      - '.github/scripts/release.mjs'
+      - '.github/settings.json'
       - '.github/workflows/cd.docs.yml'
       - 'docs/**/*'
 
@@ -55,6 +59,12 @@ jobs:
       - name: Set up GitHub Pages
         id: pages
         uses: actions/configure-pages@v6.0.0
+      # the build bakes the base path and the origin in: refuse a domain
+      # that .github/settings.json does not expect
+      - name: Check the Pages domain
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: node .github/scripts/release.mjs pages "${BASE_URL}"
       - name: Install dependencies
         run: ./Taskfile docs npm ci
 
@@ -77,6 +87,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     permissions:
+      contents: read
       id-token: write
       pages: write
 
@@ -84,6 +95,13 @@ jobs:
       - name: Deploy it to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5.0.1
+      - name: Checkout the repository
+        uses: actions/checkout@v7.0.1
+      # Pages may serve the previous deployment for a few minutes: retries 20×15s
+      - name: Smoke-test the site
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: node .github/scripts/release.mjs smoke "${PAGE_URL}"
 
   notify:
     name: Notifying

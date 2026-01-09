@@ -6,6 +6,8 @@
 //   release.mjs render <tag> --site-url <url> --out <file>   (prints the title)
 //   release.mjs preflight                                    (CI: required secrets are present and usable)
 //   release.mjs doctor                                       (on demand: config vs GitHub, with remediation)
+//   release.mjs pages  <base-url>                            (CI: the Pages URL matches settings.json pages)
+//   release.mjs smoke  <site-url> [--retries <n>]            (CI: the deployed site serves pages and assets)
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
@@ -41,7 +43,7 @@ function gh(...args) {
 function settings(sha) {
   const raw = sha ? tryGit('show', `${sha}:${SETTINGS}`) : (existsSync(SETTINGS) ? readFileSync(SETTINGS, 'utf8') : null)
   const cfg = raw ? JSON.parse(raw) : {}
-  return { release: { ...DEFAULTS, ...(cfg['x-release'] || {}) }, secrets: cfg.secrets || {} }
+  return { release: { ...DEFAULTS, ...(cfg['x-release'] || {}) }, secrets: cfg.secrets || {}, pages: cfg.pages || null }
 }
 
 function args(argv) {
@@ -189,6 +191,101 @@ function render(tag, opts) {
   process.stdout.write(meta.title + '\n')
 }
 
+// --- pages and smoke ---------------------------------------------------------
+
+// owner/name from GITHUB_REPOSITORY or the origin remote.
+function repoSlug() {
+  if (process.env.GITHUB_REPOSITORY) return process.env.GITHUB_REPOSITORY
+  const m = tryGit('remote', 'get-url', 'origin')?.trim().match(/github\.com[:/]([^/]+\/[^/]+?)(?:\.git)?$/)
+  return m ? m[1] : null
+}
+
+// The URL the site must be built for: the custom domain, or the default one.
+function expectedSite(pages, slug) {
+  if (pages?.cname) return `https://${pages.cname}/`
+  if (!slug) return null
+  const [owner, name] = slug.toLowerCase().split('/')
+  return name === `${owner}.github.io` ? `https://${name}/` : `https://${owner}.github.io/${name}/`
+}
+
+const slash = (url) => url.replace(/\/*$/, '/')
+
+// The build bakes the base path and the origin in; a domain changed in Settings
+// but not in settings.json (or the reverse) must stop the build, not ship it.
+function pagesCheck(baseUrl) {
+  const expected = expectedSite(settings().pages, repoSlug())
+  if (!baseUrl) return ['no Pages base URL; is actions/configure-pages set up?']
+  if (!expected) return ['cannot resolve the repository; set GITHUB_REPOSITORY or the origin remote']
+  if (slash(baseUrl) === expected) return []
+  return [`Pages serves ${slash(baseUrl)}, ${SETTINGS} expects ${expected}; ` +
+    'update pages.cname there or Settings → Pages → Custom domain so they agree']
+}
+
+async function probe(url, init = {}) {
+  try {
+    const res = await fetch(url, { redirect: 'manual', ...init })
+    return { status: res.status, type: res.headers.get('content-type') || '', location: res.headers.get('location'), text: init.method === 'HEAD' ? '' : await res.text() }
+  } catch (e) {
+    return { status: 0, type: '', location: null, text: '', error: e.cause?.code || e.message }
+  }
+}
+
+async function smokeOnce(site) {
+  const errors = []
+  const expect = (cond, msg) => { if (!cond) errors.push(msg) }
+  const show = (r) => r.error || `HTTP ${r.status}`
+
+  const home = await probe(site)
+  expect(home.status === 200 && home.type.includes('text/html'), `${site}: ${show(home)}, want an HTML page`)
+  if (home.status !== 200) return errors
+
+  // A stale base path is exactly this: the page loads, its assets do not.
+  const assets = [...new Set(home.text.match(/(?:href|src)="([^"]*\/_next\/static\/[^"]+\.(?:css|js))"/g) || [])]
+    .map((a) => new URL(a.replace(/^(?:href|src)="|"$/g, ''), site).href)
+  expect(assets.length > 0, `${site}: no /_next/static assets referenced`)
+  for (const url of [assets.find((a) => a.endsWith('.css')), assets.find((a) => a.endsWith('.js'))].filter(Boolean)) {
+    const r = await probe(url, { method: 'HEAD' })
+    expect(r.status === 200, `${url}: ${show(r)}; the site was built for another base path, rebuild it`)
+  }
+
+  const og = home.text.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/)?.[1]
+  if (og) {
+    expect(og.startsWith(site), `og:image ${og} is outside ${site}; SITE_URL is stale, rebuild the site`)
+    const r = await probe(og, { method: 'HEAD' })
+    expect(r.status === 200 && r.type.startsWith('image/'), `${og}: ${show(r)}, want an image`)
+  } else {
+    errors.push(`${site}: no og:image`)
+  }
+
+  const nested = await probe(new URL('changelog/', site).href)
+  expect(nested.status === 200, `${site}changelog/: ${show(nested)}`)
+
+  const missing = await probe(new URL('smoke-missing-page/', site).href)
+  expect(missing.status === 404 && missing.text.includes('/_next/static/'), `${site}smoke-missing-page/: ${show(missing)}, want the site's own 404`)
+
+  // With a custom domain, the default one only redirects, keeping the path.
+  const slug = repoSlug()
+  const fallback = expectedSite(null, slug)
+  if (fallback && fallback !== site) {
+    const r = await probe(new URL('changelog/', fallback).href)
+    expect([301, 302, 308].includes(r.status) && r.location === new URL('changelog/', site).href,
+      `${fallback}changelog/: ${show(r)} to ${r.location}, want a redirect to ${site}changelog/`)
+  }
+  return errors
+}
+
+// Pages may serve the previous deployment for a while after deploy-pages returns.
+async function smoke(site, retries) {
+  if (!Number.isInteger(retries) || retries < 0) return [`--retries must be a non-negative integer, got ${retries}`]
+  let errors = []
+  for (let i = 0; i <= retries; i++) {
+    errors = await smokeOnce(slash(site))
+    if (!errors.length || i === retries) break
+    await new Promise((r) => setTimeout(r, 15000))
+  }
+  return errors
+}
+
 // --- preflight and doctor ----------------------------------------------------
 
 // Reads the first Homebrew repository block from .goreleaser.yml.
@@ -228,7 +325,7 @@ function preflight() {
   return errors
 }
 
-function doctor() {
+async function doctor() {
   const report = []
   const ok = (m) => report.push(['ok', m])
   const fail = (m) => report.push(['fail', m])
@@ -249,12 +346,28 @@ function doctor() {
   if (local === remote) ok(`default branch ${remote}`)
   else fail(`local origin/HEAD is ${local ?? 'unset'}, GitHub says ${remote}; run: git remote set-head origin --auto`)
 
+  let pages = null
   try {
-    const pages = JSON.parse(gh('api', `repos/${slug}/pages`))
-    if (pages.build_type === 'workflow') ok(`Pages publishes ${pages.html_url} from GitHub Actions`)
-    else fail(`Pages builds from a branch; set Settings → Pages → Source: GitHub Actions (https://github.com/${slug}/settings/pages)`)
+    pages = JSON.parse(gh('api', `repos/${slug}/pages`))
   } catch {
-    skip(`Pages is not enabled or not readable; enable it in https://github.com/${slug}/settings/pages if docs are published`)
+    // declared in settings.json means the site must exist: an outage, not a choice
+    if (settings().pages) fail(`Pages is not enabled or not readable, but ${SETTINGS} declares it; check https://github.com/${slug}/settings/pages`)
+    else skip(`Pages is not enabled or not readable; enable it in https://github.com/${slug}/settings/pages if docs are published`)
+  }
+  if (pages) {
+    const want = settings().pages || {}
+    const where = `https://github.com/${slug}/settings/pages`
+    if (pages.build_type === (want.build_type || 'workflow')) ok(`Pages publishes ${pages.html_url} from GitHub Actions`)
+    else fail(`Pages builds from a branch; set Settings → Pages → Source: GitHub Actions (${where})`)
+    if ((pages.cname || null) === (want.cname || null)) ok(`Pages domain ${pages.cname || 'default'} matches ${SETTINGS}`)
+    else fail(`Pages domain is ${pages.cname || 'default'}, ${SETTINGS} says ${want.cname || 'default'}; align them (${where}), then rebuild the docs: gh workflow run cd.docs.yml`)
+    if (want.https_enforced !== undefined) {
+      if (pages.https_enforced === want.https_enforced) ok(`Pages HTTPS enforcement is ${pages.https_enforced ? 'on' : 'off'}`)
+      else fail(`Pages HTTPS enforcement is ${pages.https_enforced ? 'on' : 'off'}, ${SETTINGS} wants ${want.https_enforced ? 'on' : 'off'}; toggle Enforce HTTPS (${where})`)
+    }
+    const errors = await smoke(pages.html_url, 0)
+    if (errors.length) errors.forEach((e) => fail(`site: ${e}`))
+    else ok(`site ${pages.html_url} serves its pages and assets`)
   }
 
   const t = tap()
@@ -310,12 +423,22 @@ try {
       process.exit(errors.length ? 1 : 0)
     }
     case 'doctor': {
-      const report = doctor()
+      const report = await doctor()
       for (const [status, msg] of report) console.log(`${status.padEnd(10)} ${msg}`)
       process.exit(report.some(([s]) => s === 'fail') ? 1 : 0)
     }
+    case 'pages': {
+      const errors = pagesCheck(opts._[0])
+      errors.forEach((e) => console.error(`pages: ${e}`))
+      process.exit(errors.length ? 1 : 0)
+    }
+    case 'smoke': {
+      const errors = await smoke(opts._[0], Number(opts.retries ?? 20))
+      errors.forEach((e) => console.error(`smoke: ${e}`))
+      process.exit(errors.length ? 1 : 0)
+    }
     default:
-      console.error('usage: release.mjs check|render|preflight|doctor ...')
+      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke ...')
       process.exit(2)
   }
 } catch (e) {

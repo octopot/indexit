@@ -43,6 +43,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         id: pages
         uses: actions/configure-pages@v6.0.0
+      - name: Check the Pages domain
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: node .github/scripts/release.mjs pages "${BASE_URL}"
       - name: Render the release note
         if: startsWith(github.ref, 'refs/tags/v')
         env:

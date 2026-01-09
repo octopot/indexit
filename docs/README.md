@@ -27,10 +27,10 @@ For a production server:
 For GitHub Pages:
 
 ```sh
-TARGET=static BASE_PATH=/indexit SITE_URL=https://octopot.github.io/indexit/ ./Taskfile docs build
+TARGET=static SITE_URL=https://indexit.octolab.org/ ./Taskfile docs build
 ```
 
-Static output is written to `docs/dist/`. Omit `BASE_PATH` for hosting at the domain root. The [Pages workflow](../.github/workflows/cd.docs.yml) supplies the path automatically. Local development remains available while the static build runs.
+Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH=/indexit` only when hosting under a path, as on the default `octopot.github.io/indexit/`. The [Pages workflow](../.github/workflows/cd.docs.yml) supplies both automatically. Local development remains available while the static build runs.
 
 ## Edit the content
 
@@ -48,7 +48,17 @@ Static output is written to `docs/dist/`. Omit `BASE_PATH` for hosting at the do
 | `app/[[...mdxPath]]/page.jsx` | Page-specific titles and social metadata |
 | `public/` | Favicon and social preview |
 
-The public origin in metadata comes from `SITE_URL` (see `site.mjs`); the Pages workflow sets it from the Pages configuration, so a domain change needs no edits. Internal links use Next.js/Nextra and keep the configured base path.
+The public origin in metadata comes from `SITE_URL` (see `site.mjs`); the Pages workflow sets it from the Pages configuration. Internal links use Next.js/Nextra and keep the configured base path.
+
+## Change the domain
+
+The site is served from the custom domain `indexit.octolab.org`; `octopot.github.io/indexit/` redirects to it, keeping the path. The build bakes the domain into asset paths and metadata, and changing it in Settings → Pages triggers no rebuild. To change it:
+
+1. Update `pages.cname` in [`.github/settings.json`](../.github/settings.json) (remove it for the default domain) and push.
+2. Change Settings → Pages → Custom domain to match.
+3. Rebuild: `gh workflow run cd.docs.yml -f reason="domain change"`.
+
+The docs build stops while the two disagree, the deployment is smoke-tested, and the daily [doctor](../.github/workflows/doctor.yml) reports a stale site.
 
 ## Keep the release accurate
 

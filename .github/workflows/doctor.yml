@@ -1,6 +1,10 @@
 name: Repository doctor
 
 on:
+  # a Pages domain change triggers nothing: catch the drift daily
+  schedule:
+    - cron: 0 6 * * * # at 06:00 every day, UTC
+
   workflow_dispatch:
     inputs:
       reason:
@@ -24,6 +28,10 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v7.0.1
         with: { fetch-depth: 0 }
+      # a scheduled run has no repository in its payload, so no default branch:
+      # take it from the remote, as a local clone would
+      - name: Resolve the default branch
+        run: git remote set-head origin --auto
 
       # the workflow token cannot list secrets: they are reported as unverified,
       # the preflight below checks the ones that matter for a release

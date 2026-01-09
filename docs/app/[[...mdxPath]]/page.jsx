@@ -18,6 +18,7 @@ export async function generateMetadata({ params }) {
   }]
   return {
     ...page.metadata,
+    alternates: { canonical: url },
     openGraph: { title, description, url, siteName: 'indexit', type: 'website', images },
     twitter: { card: path ? 'summary' : 'summary_large_image', title, description, images },
   }

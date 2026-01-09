@@ -6,5 +6,10 @@
   },
   "secrets": {
     "HOMEBREW_TAP_TOKEN": { "scope": "organization" }
+  },
+  "pages": {
+    "cname": "indexit.octolab.org",
+    "https_enforced": true,
+    "build_type": "workflow"
   }
 }

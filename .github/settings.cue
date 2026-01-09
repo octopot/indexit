@@ -3,7 +3,8 @@
 //
 // Derived, never stored here: owner/name (git remote, GITHUB_REPOSITORY),
 // the default branch (origin/HEAD, the event payload, the API), the site URL
-// (actions/configure-pages), the Homebrew tap (.goreleaser.yml).
+// (actions/configure-pages, checked against pages), the Homebrew tap
+// (.goreleaser.yml).
 //
 // The top level stays open for GitHub REST shaped sections, e.g. repository,
 // pages or rulesets, once they are managed from this file.
@@ -18,6 +19,11 @@ package settings
 	// `make doctor` checks that each one exists and is passed by a workflow,
 	// and prints how to create a missing one.
 	secrets?: [Name=string & =~"^[A-Z_][A-Z0-9_]*$"]: #Secret
+
+	// GitHub Pages as the REST API reports it (GET /repos/{owner}/{repo}/pages).
+	// The docs build bakes the site URL in, so cd.docs.yml and cd.yml refuse
+	// to build when Pages disagrees, and `make doctor` reports the drift.
+	pages?: #Pages
 
 	...
 }
@@ -38,6 +44,18 @@ package settings
 		match:  string
 		branch: string
 	}] | *[]
+}
+
+#Pages: {
+	// The custom domain; absent means https://<owner>.github.io/<repo>/.
+	// Settings → Pages → Custom domain, not a CNAME file: a workflow
+	// deployment ignores it.
+	cname?: string & =~"^[a-z0-9.-]+$"
+
+	https_enforced?: bool
+
+	// The docs are built by cd.docs.yml, not from a branch.
+	build_type?: "workflow"
 }
 
 #Secret: {

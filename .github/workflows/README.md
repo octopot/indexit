@@ -100,17 +100,22 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  build[build: npm ci, static export with BASE_PATH and SITE_URL from Pages] --> deploy{main, not a PR?}
-  deploy -- yes --> pages[(GitHub Pages)]
+  check[Pages URL matches settings.json pages] --> build[build: npm ci, static export with BASE_PATH and SITE_URL from Pages] --> deploy{main, not a PR?}
+  deploy -- yes --> pages[(GitHub Pages)] --> smoke[smoke test: pages, assets, og:image, 404, redirect]
   deploy -- no --> skip([artifact only])
   build & pages --> notify[notify]
 ```
 
-- Runs on PRs and pushes to main that touch `docs/`; monthly; manually; as a
-  reusable workflow.
+- Runs on PRs and pushes to main that touch `docs/`, `.github/settings.json`
+  or `release.mjs`; monthly; manually; as a reusable workflow.
 - Pages must use **GitHub Actions** as its source, and the `github-pages`
   environment must allow deployments from main. No `CNAME` file is needed: a
-  custom domain is set in Settings → Pages, and `SITE_URL` follows it.
+  custom domain is set in Settings → Pages and declared as `pages.cname` in
+  `.github/settings.json`; the build stops while they disagree. The domain is
+  baked into the build, so rebuild after changing it (see docs/README.md):
+  switch Settings → Pages first, then merge the new `pages.cname`; the site
+  serves stale asset paths until that deploy finishes. A fork deploying its
+  own Pages must drop or change `pages.cname`.
 - Independent of releases: merge a note and its new pages before tagging if the
   release must link to them from the first minute.
 
@@ -132,10 +137,12 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  doctor[compare with GitHub: default branch, Pages, secrets, goreleaser check] --> preflight[check release secrets]
+  doctor[compare with GitHub: default branch, Pages, site smoke test, secrets, goreleaser check] --> preflight[check release secrets]
 ```
 
-- Manual only. Each problem is printed with what to fix and where.
+- Daily and manual: a Pages domain change triggers no workflow, so a site
+  built for the old domain is caught here. Each problem is printed with what
+  to fix and where.
 - The workflow token cannot list secrets, so they show as `unverified` there;
   the preflight step checks the ones a release needs. Locally, `gh` needs
   `admin:org` to see organization secrets.
