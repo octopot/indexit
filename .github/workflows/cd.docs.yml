@@ -36,7 +36,7 @@ permissions:
 jobs:
   build:
     name: Building
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pages: read
@@ -71,7 +71,7 @@ jobs:
     name: Deploying
     needs: [ build ]
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -87,7 +87,7 @@ jobs:
   notify:
     name: Notifying
     needs: [ build, deploy ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: failure() || success()
 
     steps:

@@ -20,7 +20,7 @@ permissions:
 jobs:
   delete:
     name: Deleting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       actions: write
     env:
@@ -33,7 +33,7 @@ jobs:
   notify:
     name: Notifying
     needs: [ delete ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: failure() || success()
 
     steps:

@@ -19,7 +19,7 @@ permissions:
 jobs:
   deps:
     name: Caching deps
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -43,7 +43,7 @@ jobs:
 
   docs:
     name: Caching docs deps
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout the repository
@@ -61,7 +61,7 @@ jobs:
 
   tools:
     name: Caching tools
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout the repository
@@ -80,7 +80,7 @@ jobs:
   notify:
     name: Notifying
     needs: [ deps, docs, tools ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: failure() || success()
 
     steps:

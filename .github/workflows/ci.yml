@@ -43,7 +43,7 @@ permissions:
 jobs:
   lint:
     name: Linting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout the repository
@@ -63,7 +63,7 @@ jobs:
 
   test:
     name: Testing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -108,7 +108,7 @@ jobs:
       contents: read
       id-token: write
     needs: [ test ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout the repository
@@ -127,7 +127,7 @@ jobs:
   notify:
     name: Notifying
     needs: [ lint, report ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request'
       && (failure() || success())
 

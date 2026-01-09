@@ -20,7 +20,7 @@ permissions:
 jobs:
   check:
     name: Checking
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       issues: write
@@ -60,7 +60,7 @@ jobs:
   notify:
     name: Notifying
     needs: [ check ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: failure() || success()
 
     steps:

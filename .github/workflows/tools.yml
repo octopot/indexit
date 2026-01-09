@@ -37,7 +37,7 @@ permissions:
 jobs:
   check:
     name: Checking
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout the repository
@@ -59,7 +59,7 @@ jobs:
   notify:
     name: Notifying
     needs: [ check ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' && (failure() || success())
 
     steps:
