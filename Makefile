@@ -203,7 +203,7 @@ go-generate:
 #
 # For more experience see https://jqplay.org, https://stedolan.github.io/jq/.
 go-lint:
-	$(AT) golangci-lint run --enable looppointer ./...
+	$(AT) golangci-lint run ./...
 .PHONY: go-lint
 
 go-pkg:
@@ -301,7 +301,7 @@ go-install-clean:
 .PHONY: go-install-clean
 
 go-dist-check:
-	$(AT) goreleaser --clean --skip-publish --snapshot
+	$(AT) goreleaser --clean --skip=publish --snapshot
 .PHONY: go-dist-check
 
 go-dist-clean:
@@ -321,6 +321,7 @@ go-tools-env:
 
 ifneq (, $(wildcard ./tools/))
 go-tools-check: GOFLAGS = $(TOOLFLAGS)
+go-tools-check: GOTAGS = tools
 go-tools-check:
 	$(AT) cd tools; \
 	go mod verify; \

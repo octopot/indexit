@@ -6,16 +6,14 @@ package tools
 
 import (
 	_ "github.com/golang/mock/mockgen"
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/goreleaser/godownloader"
-	_ "github.com/goreleaser/goreleaser"
+	_ "github.com/golangci/golangci-lint/v2/cmd/golangci-lint"
+	_ "github.com/goreleaser/goreleaser/v2"
 	_ "golang.org/x/tools/cmd/goimports"
 	_ "golang.org/x/vuln/cmd/govulncheck"
 )
 
 //go:generate go install github.com/golang/mock/mockgen
-//go:generate go install github.com/golangci/golangci-lint/cmd/golangci-lint
-//go:generate go install github.com/goreleaser/godownloader
-//go:generate go install github.com/goreleaser/goreleaser
+//go:generate go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+//go:generate go install github.com/goreleaser/goreleaser/v2
 //go:generate go install golang.org/x/tools/cmd/goimports
 //go:generate go install golang.org/x/vuln/cmd/govulncheck
