@@ -29,7 +29,7 @@ flowchart LR
 ## Common ground
 
 - All external actions use concrete release tags. The version history, migration
-  notes and verification results are in [the audit report](../reports/20260918-actions-audit.md).
+  notes and verification results are in [the audit report](../reports/20260918T132440Z.md).
   Dependabot checks the `github-actions` ecosystem daily; review upstream changes
   and the action contract before accepting an update.
 - GitHub-hosted Ubuntu runners (`ubuntu-24.04`) supply the runtime the actions need.
