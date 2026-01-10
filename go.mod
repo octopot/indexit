@@ -2,6 +2,12 @@ module go.octolab.org/toolset/indexit
 
 go 1.27.0
 
+ignore (
+	./bin
+	./dist
+	./docs
+)
+
 require (
 	github.com/fatih/color v1.19.0
 	github.com/golang/mock v1.6.0
