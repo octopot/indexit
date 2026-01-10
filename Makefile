@@ -337,11 +337,10 @@ go-tools-env:
 
 ifneq (, $(wildcard ./tools/))
 go-tools-check: GOFLAGS = $(TOOLFLAGS)
-go-tools-check: GOTAGS = tools
 go-tools-check:
 	$(AT) cd tools; \
 	go mod verify; \
-	govulncheck -scan module -tags $(GOTAGS); \
+	govulncheck tool; \
 	if command -v egg >/dev/null; then \
 		egg deps check license; \
 		egg deps check version; \
@@ -355,9 +354,8 @@ go-tools-fetch:
 .PHONY: go-tools-fetch
 
 go-tools-install: GOFLAGS = $(TOOLFLAGS)
-go-tools-install: GOTAGS = tools
 go-tools-install: go-tools-fetch
-	$(AT) cd tools; go generate -tags $(GOTAGS) tools.go
+	$(AT) cd tools; go install tool
 .PHONY: go-tools-install
 
 go-tools-tidy: GOFLAGS = $(TOOLFLAGS)
@@ -366,20 +364,11 @@ go-tools-tidy:
 	if [[ "`go env GOFLAGS`" =~ -mod=vendor ]]; then go mod vendor; fi
 .PHONY: go-tools-tidy
 
+# modules behind the tool directive are required as indirect,
+# so the tool pattern is the only way to select them
 go-tools-update: GOFLAGS = $(TOOLFLAGS)
-go-tools-update: selector = '{{if not (or .Main .Indirect)}}{{.Path}}{{end}}'
 go-tools-update:
-	$(AT) cd tools; \
-	if command -v egg >/dev/null; then \
-		packages="`egg deps list | tr ' ' '\n'`"; \
-	else \
-		packages="`go list -f $(selector) -m -mod=readonly all`"; \
-	fi; \
-	if [ -z "$$packages" ]; then exit; fi; \
-	for package in $$packages; do \
-		go mod edit -require=$$package@latest; \
-		go mod tidy; \
-	done
+	$(AT) cd tools; go get tool
 	$(AT) $(MAKE) go-tools-tidy go-tools-install
 .PHONY: go-tools-update
 else

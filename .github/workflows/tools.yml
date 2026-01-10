@@ -51,7 +51,7 @@ jobs:
           check-latest: true
 
       - name: Install and check tools
-        run: make tools && [ $(ls bin/linux/*/* | wc -l) = $(grep go:gen tools/tools.go | wc -l) ]
+        run: make tools && [ "$(find bin/linux -mindepth 2 -type f | wc -l)" = "$(cd tools && go list tool | wc -l)" ]
 
       - name: Check git state
         run: make go-tools-tidy generate git-check
