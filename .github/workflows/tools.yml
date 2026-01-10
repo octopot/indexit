@@ -55,6 +55,8 @@ jobs:
 
       - name: Check git state
         run: make go-tools-tidy generate git-check
+      - name: Check tools
+        run: make go-tools-check
 
   notify:
     name: Notifying
