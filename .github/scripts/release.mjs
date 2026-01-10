@@ -8,6 +8,7 @@
 //   release.mjs doctor                                       (on demand: config vs GitHub, with remediation)
 //   release.mjs pages  <base-url>                            (CI: the Pages URL matches settings.json pages)
 //   release.mjs smoke  <site-url> [--retries <n>]            (CI: the deployed site serves pages and assets)
+//   release.mjs vanity                                       (vanity imports in go.mod resolve over verified HTTPS)
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
@@ -286,6 +287,50 @@ async function smoke(site, retries) {
   return errors
 }
 
+// --- vanity imports ----------------------------------------------------------
+
+// GOPRIVATE sends these hosts past the proxy: `go` fetches ?go-get=1 over
+// verified HTTPS itself, so a lapsed certificate or a missing go-import tag
+// breaks every fresh runner while warm caches keep hiding it.
+const VANITY = ['go.octolab.org']
+
+function vanityModules(files = ['go.mod', 'tools/go.mod']) {
+  const own = new Set()
+  const deps = new Set()
+  for (const file of files.filter((f) => existsSync(f))) {
+    const text = readFileSync(file, 'utf8')
+    const mod = text.match(/^module\s+(\S+)/m)?.[1]
+    if (mod) own.add(mod)
+    for (const [, path] of text.matchAll(/^\s*(?:require\s+)?([a-z0-9.-]+\.[a-z]+(?:\/\S*)?)\s+v\S+/gm)) {
+      if (VANITY.some((h) => path === h || path.startsWith(`${h}/`))) deps.add(path)
+    }
+  }
+  return [...deps].filter((p) => !own.has(p)).sort()
+}
+
+async function vanityCheck(path) {
+  let res
+  try {
+    res = await fetch(`https://${path}?go-get=1`, { redirect: 'follow' })
+  } catch (e) {
+    return `https://${path}: ${e.cause?.code || e.message}; the host serves no valid certificate for its name, ` +
+      'check Custom domain and Enforce HTTPS in the Pages settings of the repository that hosts it'
+  }
+  if (res.status !== 200) return `https://${path}?go-get=1: HTTP ${res.status}, want 200`
+  const html = await res.text()
+  const metas = [...html.matchAll(/<meta\s+name="go-import"\s+content="([^"]+)"/g)].map((m) => m[1].trim().split(/\s+/))
+  const hit = metas.find(([prefix]) => path === prefix || path.startsWith(`${prefix}/`))
+  if (!hit) return `https://${path}?go-get=1: no go-import meta tag for ${path}`
+  const [prefix, vcs, repo] = hit
+  if (vcs !== 'git' || !/^https:\/\//.test(repo || '')) return `${path}: go-import "${hit.join(' ')}", want "${prefix} git https://..."`
+  return null
+}
+
+// [[path, error or null], ...] for every vanity module go.mod and tools/go.mod require.
+async function vanity() {
+  return Promise.all(vanityModules().map(async (p) => [p, await vanityCheck(p)]))
+}
+
 // --- preflight and doctor ----------------------------------------------------
 
 // Reads the first Homebrew repository block from .goreleaser.yml.
@@ -370,6 +415,11 @@ async function doctor() {
     else ok(`site ${pages.html_url} serves its pages and assets`)
   }
 
+  for (const [path, error] of await vanity()) {
+    if (error) fail(`vanity import ${error}`)
+    else ok(`vanity import ${path} resolves over HTTPS`)
+  }
+
   const t = tap()
   const { secrets } = settings()
   const names = new Set([...Object.keys(secrets), ...(t?.token ? [t.token] : [])])
@@ -437,8 +487,16 @@ try {
       errors.forEach((e) => console.error(`smoke: ${e}`))
       process.exit(errors.length ? 1 : 0)
     }
+    case 'vanity': {
+      const results = await vanity()
+      for (const [path, error] of results) {
+        if (error) console.error(`vanity: ${error}`)
+        else console.log(`vanity: ${path} ok`)
+      }
+      process.exit(results.some(([, e]) => e) ? 1 : 0)
+    }
     default:
-      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke ...')
+      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke|vanity ...')
       process.exit(2)
   }
 } catch (e) {

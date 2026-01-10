@@ -139,12 +139,17 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  doctor[compare with GitHub: default branch, Pages, site smoke test, secrets, goreleaser check] --> preflight[check release secrets]
+  doctor[compare with GitHub: default branch, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets]
 ```
 
 - Daily and manual: a Pages domain change triggers no workflow, so a site
   built for the old domain is caught here. Each problem is printed with what
   to fix and where.
+- `go.octolab.org` is in `GOPRIVATE`, so `go` resolves it directly: every
+  vanity module in `go.mod` and `tools/go.mod` must answer `?go-get=1` over
+  verified HTTPS with a `go-import` tag. A lapsed certificate fails here before
+  a fresh runner hits it; `node .github/scripts/release.mjs vanity` checks
+  only that.
 - The workflow token cannot list secrets, so they show as `unverified` there;
   the preflight step checks the ones a release needs. Locally, `gh` needs
   `admin:org` to see organization secrets.
