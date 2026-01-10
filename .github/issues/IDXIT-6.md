@@ -14,7 +14,7 @@ milestone:
 state: OPEN
 stateReason:
 createdAt: 2026-09-22T17:12:29Z
-updatedAt: 2026-09-22T17:12:30Z
+updatedAt: 2026-09-24T15:56:41Z
 lastEditedAt:
 closedAt:
 ---
@@ -92,3 +92,22 @@ sources, so the decision below is a licensing one, not a configuration one.
 - [ ] Adding a target is a matrix entry only — no change to memory ceilings.
 - [ ] A tagged release and a snapshot run both pass, with no job exceeding the
       runner's memory.
+
+<!-- 2026-09-24T15:56Z https://github.com/octopot/indexit/issues/105#issuecomment-5817549098
+Status 2026-09-24: the split is parked; a warm build cache comes first.
+
+Why: the release job almost always cross-compiled cold. setup-go restores only on an exact key (it hashed `go.sum` + `tools/go.sum`), warmup never produced that key, and the monthly cleanup drops everything. Locally, one target cold takes 21s and 4.3 GB RSS; warm with only `-X` ldflags changed, 1.6s and 0.6 GB. With a warm cache, four parallel targets fit the runner easily.
+
+Pending commit:
+- `cd.yml` restores `~/.cache/go-build` and `~/go/pkg/mod` with fallback keys and saves them after a successful run; `--parallelism 2` applies only when no cache matched at all.
+- `warmup.caches.yml` builds all release targets with the same key.
+
+Splitting across runners works with OSS GoReleaser (`--single-target` builds plus a prebuilt `tool:` shim in the release job), but it saves about a minute on top of the cache, at the cost of three jobs and a shim. Worth revisiting only for a target that a hosted Linux runner cannot build.
+
+How to decide, on the next tag (baseline v0.1.0, run 35891180728: job 9m14s, "building binaries" 2m43s):
+1. "Restore the release build cache" logs a matched key, and "Limit build parallelism on a cold cache" is skipped.
+2. "building binaries" in the GoReleaser step takes under 30s with default parallelism, and no OOM.
+3. After a cleanup, the warmup "Caching release builds" job succeeds and the next release still hits.
+
+If all three hold, close this issue as not planned. If 2 fails with a matched key, reopen the split.
+-->
