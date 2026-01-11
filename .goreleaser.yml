@@ -27,6 +27,14 @@ homebrew_casks:
       executable: indexit
       shell_parameter_format: cobra
       shells: [bash, zsh, fish]
+    # Homebrew 7 deprecates the preflight hook that `hooks` renders. Clear the
+    # quarantine before completions run the unsigned binary.
+    custom_block: |
+      preflight_steps do
+        on_macos do
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/indexit"]
+        end
+      end
 
 builds:
   - id: indexit

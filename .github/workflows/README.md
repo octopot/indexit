@@ -93,7 +93,9 @@ flowchart TB
 - The release uses the workflow token; the Cask goes to the tap named in
   `.goreleaser.yml` with `HOMEBREW_TAP_TOKEN`. After the first Cask release,
   install with `brew install --cask octolab/tap/indexit`. macOS signing and
-  notarization are not configured yet; Gatekeeper may block the binary.
+  notarization are not configured yet, so the Cask preflight clears the
+  quarantine attribute. It has to run before the completions are generated,
+  which execute the binary, so a `postflight` hook would be too late.
 - A manual run on a branch builds a snapshot and publishes nothing.
 
 ## docs
