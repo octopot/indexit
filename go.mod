@@ -10,7 +10,6 @@ ignore (
 
 require (
 	github.com/fatih/color v1.19.0
-	github.com/golang/mock v1.6.0
 	github.com/gotd/log/logzap v0.1.1
 	github.com/gotd/td v0.162.0
 	github.com/spf13/cobra v1.8.0
@@ -18,6 +17,7 @@ require (
 	go.octolab.org v0.12.2
 	go.octolab.org/toolkit/cli v0.6.4
 	go.octolab.org/toolkit/config v0.0.5
+	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.59.0
 	golang.org/x/term v0.46.0

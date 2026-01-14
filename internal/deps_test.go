@@ -1,4 +1,4 @@
 package internal_test
 
 // required for `make go-generate`
-import _ "github.com/golang/mock/mockgen/model"
+import _ "go.uber.org/mock/mockgen/model"
