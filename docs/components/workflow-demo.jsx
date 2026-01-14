@@ -6,9 +6,24 @@ import { dialogs, fuzzyMatch, leaves, messages } from './demo-data.mjs'
 const nodes = leaves(messages)
 
 function Frame({ name, command, children, footer }) {
+  const [copyStatus, setCopyStatus] = useState('')
+
+  async function copyCommand() {
+    try {
+      await navigator.clipboard.writeText(command)
+      setCopyStatus('copied')
+    } catch {
+      setCopyStatus('error')
+    }
+  }
+
   return <div className="workflow-terminal">
     <div className="workflow-title"><span><span aria-hidden="true">● ● ●</span> {name}</span><span>TRY IT HERE</span></div>
-    <pre className="workflow-command"><span aria-hidden="true">$ </span>{command}</pre>
+    <div className="workflow-command-row">
+      <pre className="workflow-command"><span aria-hidden="true">$ </span>{command}</pre>
+      <button type="button" className="workflow-copy" aria-label={`Copy ${name} command`} onClick={copyCommand}>{copyStatus === 'copied' ? 'Copied' : 'Copy'}</button>
+      <span className={copyStatus === 'error' ? 'workflow-copy-error' : 'demo-sr-only'} role="status">{copyStatus === 'copied' ? 'Command copied.' : copyStatus === 'error' ? 'Could not copy. Select and copy the command manually.' : ''}</span>
+    </div>
     {children}
     <div className="workflow-footer">{footer}</div>
     <div className="workflow-disclaimer">Simplified browser illustration · fictional data · no Telegram connection</div>

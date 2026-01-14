@@ -1,5 +1,4 @@
 export default {
-  index: 'Quick start',
   workflows: { type: 'separator', title: 'Make it useful' },
   explore: 'Explore & find',
   messages: 'Explore conversations',

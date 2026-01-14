@@ -39,7 +39,10 @@ Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH
 | `content/index.mdx` | Product introduction and paths into the guides |
 | `components/workflow-demo.jsx` | Interactive fx and fzf illustrations using fictional sample data |
 | `components/demo-data.mjs` | Sample records and simple matching helpers for the illustrations |
-| `content/guide/` | Quick start, practical workflows, setup, and troubleshooting |
+| `content/quick-start.mdx` | Agent setup entry point and manual quick start |
+| `public/quick-start.md` | Plain Markdown instructions for agents; keep commands in sync with the quick start |
+| `components/agent-setup.jsx` | Copyable prompt linking to the agent instructions at the configured site URL |
+| `content/guide/` | Practical workflows, setup, and troubleshooting |
 | `content/changelog/index.mdx` | Release overview |
 | `content/changelog/v0.1.0.md` | Stable v0.1.0 release notes |
 | `content/**/_meta.js` | Navigation order and labels |
@@ -49,6 +52,8 @@ Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH
 | `public/` | Favicon and social preview |
 
 The public origin in metadata comes from `SITE_URL` (see `site.mjs`); the Pages workflow sets it from the Pages configuration. Internal links use Next.js/Nextra and keep the configured base path.
+
+Quick start lives at `/quick-start/`. The sidebar groups the quick start with the guide pages through `_meta.js`.
 
 ## Change the domain
 

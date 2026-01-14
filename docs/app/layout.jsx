@@ -26,7 +26,7 @@ export default async function RootLayout({ children }) {
       <Head color={{ hue: 164, saturation: 62, lightness: { light: 30, dark: 66 } }} backgroundColor={{ light: 'rgb(250, 249, 246)', dark: 'rgb(20, 24, 23)' }} />
       <body>
         <Layout
-          navbar={<Navbar logo={<span className="wordmark"><span className="brand-mark" aria-hidden="true">i<span>↗</span></span>indexit<span className="nav-version">v0.1.0</span></span>} projectLink="https://github.com/octopot/indexit" />}
+          navbar={<Navbar logo={<span className="wordmark"><span className="brand-emoji" aria-hidden="true">🗃️</span>indexit</span>} projectLink="https://github.com/octopot/indexit" />}
           pageMap={withExportLinks(await getPageMap())}
           docsRepositoryBase="https://github.com/octopot/indexit/tree/main/docs"
           footer={<Footer><div className="site-footer"><span><b>indexit</b> <span>It’s all indexed.</span></span><span>MIT © {new Date().getFullYear()} <a href="https://github.com/octolab">OctoLab</a></span></div></Footer>}

@@ -1,12 +1,25 @@
 ---
 title: Quick start
-description: Install indexit, sign in, and explore your Telegram messages interactively.
+description: Give your agent the setup instructions, connect Telegram, and explore your first conversation.
 ---
+
+import { AgentSetup } from '../components/agent-setup'
+import { siteUrl } from '../site.mjs'
 
 # Your first useful result
 
-Connect your Telegram account and explore a conversation right in your terminal.
-You need a Telegram account and your own API credentials. indexit works as a user client; a bot token is not used.
+Let your coding agent set up indexit and help you explore a Telegram conversation.
+You’ll need an existing Telegram account and your own API credentials.
+
+## Start with your agent
+
+Copy this instruction into an agent that can read the web and run commands on your computer:
+
+<AgentSetup url={`${siteUrl}quick-start.md`} />
+
+Your agent handles installation and checks the setup. You create your Telegram API credentials, enter them locally, and confirm the login on your phone.
+
+Prefer to run the commands yourself? Follow the steps below.
 
 ## 1. Install indexit
 
@@ -42,6 +55,8 @@ indexit version
 ```
 
 Add the `export PATH` line to your shell configuration to keep `indexit` available in new terminals. All archives and checksums are on the [v0.1.0 release page](https://github.com/octopot/indexit/releases/tag/v0.1.0).
+
+`install` is a standard macOS/Linux command that copies a file and sets its permissions. Here, `-m 755` makes the copied binary executable; it is not a package manager. The destination is your own `~/.local/bin`, so this step does not need `sudo`.
 
 </details>
 
