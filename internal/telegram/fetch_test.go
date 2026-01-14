@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log/slog"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.octolab.org/toolset/indexit/internal/telegram/model"
 	"go.octolab.org/toolset/indexit/internal/telegram/peers"
 	"go.octolab.org/toolset/indexit/internal/telegram/uid"
 )
@@ -289,6 +291,66 @@ func TestFetchDialogs_LimitHonoured(t *testing.T) {
 	err := FetchDialogs(t.Context(), api, peers.New(), w, DialogsOptions{Limit: 2}, RateGuard{})
 	require.NoError(t, err)
 	assert.Len(t, w.records, 2)
+}
+
+func TestFetchDialogs_PaginationDeduplicatesPeers(t *testing.T) {
+	for _, limit := range []int{0, 4} {
+		t.Run(fmt.Sprintf("limit_%d", limit), func(t *testing.T) {
+			pinned := &tg.Dialog{Peer: &tg.PeerChannel{ChannelID: 42}, TopMessage: 104, Pinned: true}
+			other := &tg.Dialog{Peer: &tg.PeerChat{ChatID: 7}, TopMessage: 103}
+			api := &scriptedAPI{
+				dialogsPages: []tg.MessagesDialogsClass{
+					&tg.MessagesDialogsSlice{
+						Count:   4,
+						Dialogs: []tg.DialogClass{pinned, other},
+						Chats: []tg.ChatClass{
+							&tg.Channel{ID: 42, AccessHash: 12345, Title: "Sparkle"},
+							&tg.Chat{ID: 7, Title: "Other"},
+						},
+					},
+					// Overlapping pages may repeat both pinned and ordinary dialogs.
+					// Even a page of duplicates must not consume the output limit
+					// or prevent us from reading later pages.
+					&tg.MessagesDialogsSlice{
+						Count:   4,
+						Dialogs: []tg.DialogClass{pinned, other},
+						Chats: []tg.ChatClass{
+							&tg.Channel{ID: 42, AccessHash: 12345, Title: "Sparkle"},
+							&tg.Chat{ID: 7, Title: "Other"},
+						},
+					},
+					&tg.MessagesDialogs{
+						Dialogs: []tg.DialogClass{
+							&tg.Dialog{Peer: &tg.PeerChat{ChatID: 42}, TopMessage: 102},
+							&tg.Dialog{Peer: &tg.PeerChat{ChatID: 9}, TopMessage: 101},
+						},
+						Chats: []tg.ChatClass{
+							&tg.Chat{ID: 42, Title: "Sparkle"},
+							&tg.Chat{ID: 9, Title: "Last"},
+						},
+					},
+				},
+			}
+			w := &recWriter{}
+			err := FetchDialogs(t.Context(), api, peers.New(), w, DialogsOptions{Limit: limit, PageSize: 2}, RateGuard{})
+			require.NoError(t, err)
+			var ids, titles []string
+			for _, record := range w.records {
+				dialog := record.(model.DialogRecord)
+				ids = append(ids, dialog.UID)
+				titles = append(titles, dialog.Title)
+			}
+			assert.Equal(t, []string{"channel:42", "chat:7", "chat:42", "chat:9"}, ids)
+			assert.Equal(t, []string{"Sparkle", "Other", "Sparkle", "Last"}, titles,
+				"distinct peers with identical titles must be preserved")
+			require.GreaterOrEqual(t, len(api.dialogsReqs), 3)
+			assert.False(t, api.dialogsReqs[0].ExcludePinned, "include pinned dialogs on the first page")
+			for _, req := range api.dialogsReqs[1:] {
+				assert.True(t, req.ExcludePinned, "exclude pinned dialogs on subsequent pages")
+			}
+			assert.Equal(t, 2, api.dialogsReqs[2].Limit, "duplicates must not count towards the limit")
+		})
+	}
 }
 
 func TestFetchDialogs_PopulatesPeerCache(t *testing.T) {

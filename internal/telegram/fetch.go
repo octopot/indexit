@@ -53,6 +53,7 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 	offsetDate := 0
 	emitted := 0
 	page := 0
+	seen := make(map[string]struct{})
 
 	for {
 		if limit > 0 && emitted >= limit {
@@ -66,10 +67,11 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 		err := guard.Do(ctx, func(ctx context.Context) error {
 			var err error
 			result, err = api.MessagesGetDialogs(ctx, &tg.MessagesGetDialogsRequest{
-				OffsetDate: offsetDate,
-				OffsetID:   offsetID,
-				OffsetPeer: offsetPeer,
-				Limit:      reqLimit,
+				ExcludePinned: page > 0,
+				OffsetDate:    offsetDate,
+				OffsetID:      offsetID,
+				OffsetPeer:    offsetPeer,
+				Limit:         reqLimit,
 			})
 			return err
 		})
@@ -101,9 +103,14 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 			if !ok {
 				continue
 			}
+			// Dialogs can move between pages while the list is being fetched.
+			if _, exists := seen[rec.UID]; exists {
+				continue
+			}
 			if err := out.Write(rec); err != nil {
 				return err
 			}
+			seen[rec.UID] = struct{}{}
 			emitted++
 			pageGot++
 			if limit > 0 && emitted >= limit {
