@@ -1,10 +1,10 @@
 # Set up indexit with your user
 
-Help the user install indexit v0.1.0, connect their Telegram account, and explore one conversation they choose. indexit is a macOS/Linux CLI that exports Telegram data as JSONL. It uses a user account, not a bot token. Go and GitHub credentials are not required for installation from a release.
+Help the user install indexit v0.1.1, connect their Telegram account, and explore one conversation they choose. indexit is a macOS/Linux CLI that exports Telegram data as JSONL. It uses a user account, not a bot token. Go and GitHub credentials are not required for installation from a release.
 
 ## 1. Check the machine and install
 
-Check `uname -s`, `uname -m`, and whether `indexit` is already available. If it is, run `indexit version` before deciding whether installation is needed. This guide describes v0.1.0; consult the installed command's `--help` if the version differs.
+Check `uname -s`, `uname -m`, and whether `indexit` is already available. If it is, run `indexit version` before deciding whether installation is needed. This guide describes v0.1.1; consult the installed command's `--help` if the version differs.
 
 On macOS with Homebrew:
 
@@ -13,19 +13,19 @@ brew install --cask octolab/tap/indexit
 indexit version
 ```
 
-Otherwise, use the official release: https://github.com/octopot/indexit/releases/tag/v0.1.0
+Otherwise, use the official release: https://github.com/octopot/indexit/releases/tag/v0.1.1
 
 Map `Darwin` to `darwin`, `Linux` to `linux`, `x86_64` to `amd64`, and `arm64` or `aarch64` to `arm64`. The four supported archives are:
 
-- `indexit_0.1.0_darwin-arm64.tar.gz`
-- `indexit_0.1.0_darwin-amd64.tar.gz`
-- `indexit_0.1.0_linux-amd64.tar.gz`
-- `indexit_0.1.0_linux-arm64.tar.gz`
+- `indexit_0.1.1_darwin-arm64.tar.gz`
+- `indexit_0.1.1_darwin-amd64.tar.gz`
+- `indexit_0.1.1_linux-amd64.tar.gz`
+- `indexit_0.1.1_linux-arm64.tar.gz`
 
-Download the matching archive and `checksums.txt` from `https://github.com/octopot/indexit/releases/download/v0.1.0/`. Verify the archive's SHA-256 against its entry in `checksums.txt` using `shasum -a 256` on macOS or `sha256sum` on Linux. Stop if they differ. Extract in a temporary directory, then copy the binary into a user-owned directory on PATH. For Linux x86-64, after downloading and verifying:
+Download the matching archive and `checksums.txt` from `https://github.com/octopot/indexit/releases/download/v0.1.1/`. Verify the archive's SHA-256 against its entry in `checksums.txt` using `shasum -a 256` on macOS or `sha256sum` on Linux. Stop if they differ. Extract in a temporary directory, then copy the binary into a user-owned directory on PATH. For Linux x86-64, after downloading and verifying:
 
 ```sh
-tar -xzf indexit_0.1.0_linux-amd64.tar.gz
+tar -xzf indexit_0.1.1_linux-amd64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 755 indexit "$HOME/.local/bin/indexit"
 export PATH="$HOME/.local/bin:$PATH"
@@ -95,4 +95,4 @@ Resolve these paths against the documentation site that served this file (includ
 - `guide/explore/`: fx and fzf workflows.
 - `guide/reference/`: flags, address formats, configuration, and exit codes.
 
-Search in fx or fzf only covers the fetched records. v0.1.0 exports data; built-in indexing and search are future work.
+Search in fx or fzf only covers the fetched records. v0.1.1 exports data; built-in indexing and search are future work.
