@@ -35,26 +35,26 @@ For Linux or a manual installation, use a ready-to-run archive below. Go is not 
 <details>
 <summary>Linux & manual installation</summary>
 
-Download the **v0.1.1** archive for your machine:
+Download the **v0.1.2** archive for your machine:
 
 | Platform | Download |
 | --- | --- |
-| macOS · Apple Silicon | [darwin-arm64](https://github.com/octopot/indexit/releases/download/v0.1.1/indexit_0.1.1_darwin-arm64.tar.gz) |
-| macOS · Intel | [darwin-amd64](https://github.com/octopot/indexit/releases/download/v0.1.1/indexit_0.1.1_darwin-amd64.tar.gz) |
-| Linux · x86-64 | [linux-amd64](https://github.com/octopot/indexit/releases/download/v0.1.1/indexit_0.1.1_linux-amd64.tar.gz) |
-| Linux · ARM64 | [linux-arm64](https://github.com/octopot/indexit/releases/download/v0.1.1/indexit_0.1.1_linux-arm64.tar.gz) |
+| macOS · Apple Silicon | [darwin-arm64](https://github.com/octopot/indexit/releases/download/v0.1.2/indexit_0.1.2_darwin-arm64.tar.gz) |
+| macOS · Intel | [darwin-amd64](https://github.com/octopot/indexit/releases/download/v0.1.2/indexit_0.1.2_darwin-amd64.tar.gz) |
+| Linux · x86-64 | [linux-amd64](https://github.com/octopot/indexit/releases/download/v0.1.2/indexit_0.1.2_linux-amd64.tar.gz) |
+| Linux · ARM64 | [linux-arm64](https://github.com/octopot/indexit/releases/download/v0.1.2/indexit_0.1.2_linux-arm64.tar.gz) |
 
 In the directory containing your download, extract the archive and install the binary. This example uses Linux x86-64; substitute your archive's filename:
 
 ```sh
-tar -xzf indexit_0.1.1_linux-amd64.tar.gz
+tar -xzf indexit_0.1.2_linux-amd64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 755 indexit "$HOME/.local/bin/indexit"
 export PATH="$HOME/.local/bin:$PATH"
 indexit version
 ```
 
-Add the `export PATH` line to your shell configuration to keep `indexit` available in new terminals. All archives and checksums are on the [v0.1.1 release page](https://github.com/octopot/indexit/releases/tag/v0.1.1).
+Add the `export PATH` line to your shell configuration to keep `indexit` available in new terminals. All archives and checksums are on the [v0.1.2 release page](https://github.com/octopot/indexit/releases/tag/v0.1.2).
 
 `install` is a standard macOS/Linux command that copies a file and sets its permissions. Here, `-m 755` makes the copied binary executable; it is not a package manager. The destination is your own `~/.local/bin`, so this step does not need `sudo`.
 

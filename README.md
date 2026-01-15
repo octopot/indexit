@@ -15,7 +15,7 @@ brew install --cask octolab/tap/indexit
 indexit version
 ```
 
-For Linux or a manual installation, download a [v0.1.1 release archive](https://github.com/octopot/indexit/releases/tag/v0.1.1) for your platform. Ready-to-run binaries are available for macOS and Linux on `amd64` and `arm64`; Go is not required. See the [installation steps](docs/content/quick-start.mdx#1-install-indexit).
+For Linux or a manual installation, download a [v0.1.2 release archive](https://github.com/octopot/indexit/releases/tag/v0.1.2) for your platform. Ready-to-run binaries are available for macOS and Linux on `amd64` and `arm64`; Go is not required. See the [installation steps](docs/content/quick-start.mdx#1-install-indexit).
 
 ## Quick start
 
@@ -31,9 +31,9 @@ Set up your API credentials first and replace the example channel with your own.
 - [Explore & find](docs/content/guide/explore.mdx) — interactive fx and fzf workflows, with browser demos.
 - [Messages](docs/content/guide/messages.mdx) — history, date windows, and exact links.
 - [Topics & media](docs/content/guide/media.mdx) — bring a trip archive home.
-- [v0.1.1 release notes](docs/content/changelog/v0.1.1.md) — unique dialogs across pages and updated Telegram protocol support.
+- [v0.1.2 release notes](docs/content/changelog/v0.1.2.md) — unique message and media exports, accurate limits, and protection against stalled pagination.
 
-v0.1.1 focuses on Telegram ingestion. Built-in search, contacts, Stories, and automatic synchronization are future work.
+v0.1.2 focuses on Telegram ingestion. Built-in search, contacts, Stories, and automatic synchronization are future work.
 
 ## Development
 
