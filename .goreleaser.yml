@@ -16,6 +16,7 @@ homebrew_casks:
     commit_author:
       name: Kamil Samigullin
       email: kamil@samigullin.info
+      use_github_app_token: true
     description: CLI for indexing personal data.
     directory: Casks
     homepage: https://github.com/octopot/indexit
