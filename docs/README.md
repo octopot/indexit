@@ -47,6 +47,7 @@ Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH
 | `content/changelog/v0.1.1.md` | Latest release notes |
 | `content/changelog/v0.1.0.md` | First stable release notes |
 | `content/**/_meta.js` | Navigation order and labels |
+| `navigation.mjs` | Release groups in the sidebar; keeps published release URLs unchanged |
 | `app/globals.css` | Shared colors, responsive layouts, and landing page styles |
 | `app/layout.jsx` | Site identity and Nextra theme |
 | `app/[[...mdxPath]]/page.jsx` | Page-specific titles and social metadata |
@@ -55,6 +56,8 @@ Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH
 The public origin in metadata comes from `SITE_URL` (see `site.mjs`); the Pages workflow sets it from the Pages configuration. Internal links use Next.js/Nextra and keep the configured base path.
 
 Quick start lives at `/quick-start/`. The sidebar groups the quick start with the guide pages through `_meta.js`.
+
+Changelog is a section of the same sidebar, with All releases first. `navigation.mjs` groups release pages into expandable `v0.1.x`, `v0.2.x`, and later branches, newest first. Add each release note and its label to `content/changelog/_meta.js` as before; the version group is created automatically. Keep the notes at `content/changelog/{tag}.md` so published links and the release workflow stay valid. Top-level navbar links use separate `type: 'page'` aliases; content folders use `display: 'children'` to keep the full sidebar available across guides and releases.
 
 ## Change the domain
 

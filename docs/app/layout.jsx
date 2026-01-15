@@ -4,6 +4,7 @@ import { getPageMap } from 'nextra/page-map'
 import 'nextra-theme-docs/style.css'
 import './globals.css'
 import { siteUrl } from '../site.mjs'
+import { groupReleases } from '../navigation.mjs'
 
 export const metadata = {
   title: { default: 'indexit — Your Telegram. Your data.', template: '%s · indexit' },
@@ -27,7 +28,7 @@ export default async function RootLayout({ children }) {
       <body>
         <Layout
           navbar={<Navbar logo={<span className="wordmark"><span className="brand-emoji" aria-hidden="true">🗃️</span>indexit</span>} projectLink="https://github.com/octopot/indexit" />}
-          pageMap={withExportLinks(await getPageMap())}
+          pageMap={withExportLinks(groupReleases(await getPageMap()))}
           docsRepositoryBase="https://github.com/octopot/indexit/tree/main/docs"
           footer={<Footer><div className="site-footer"><span><b>indexit</b> <span>It’s all indexed.</span></span><span>MIT © {new Date().getFullYear()} <a href="https://github.com/octolab">OctoLab</a></span></div></Footer>}
           search={null}
