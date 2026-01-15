@@ -19,6 +19,9 @@
     },
     "nextra-theme-docs": {
       "zod": "4.1.12"
+    },
+    "speech-rule-engine": {
+      "@xmldom/xmldom": "0.9.12"
     }
   }
 }
