@@ -81,6 +81,8 @@ Maintain these details near the relevant examples:
 
 No live-account export is needed to build the docs. Check examples against command help, the UID parser, and existing Go tests; keep real account data out of examples.
 
-`package.json` pins Zod to `4.1.12` for Nextra and its theme to avoid [a validation regression](https://github.com/shuding/nextra/issues/5036). Revisit those overrides when upgrading Nextra. See [Nextra’s docs theme guide](https://nextra.site/docs/docs-theme/start) for the underlying structure.
+`package.json` pins Zod to `4.1.12` under `nextra-theme-docs` to avoid [a validation regression](https://github.com/shuding/nextra/issues/5036). In the current dependency tree, this also covers the theme's Nextra peer dependency. Keep the exact Zod version: a caret range allows incompatible releases. When upgrading Nextra and its theme, check whether the site builds without this override. See [Nextra’s docs theme guide](https://nextra.site/docs/docs-theme/start) for the underlying structure.
+
+For `speech-rule-engine@4.1.4`, an override replaces its pinned xmldom dependency with `@xmldom/xmldom@^0.9.12` to include the security fixes while allowing later `0.9.x` patches. The lockfile records the resolved version. This override stops applying when speech-rule-engine changes version; run `npm audit` after that update and remove or revise the rule as needed.
 
 The interactive illustrations run entirely in the browser on fictional data. They demonstrate exploration and selection, not an embedded copy of fx or fzf. The fx illustration uses literal text search and simple subsequence path matching; the native tools provide the full search syntax. No CLI commands or account connections are executed by these components.

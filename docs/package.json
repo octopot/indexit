@@ -14,14 +14,11 @@
     "react-dom": "^19.3.0"
   },
   "overrides": {
-    "nextra": {
-      "zod": "4.1.12"
-    },
     "nextra-theme-docs": {
       "zod": "4.1.12"
     },
-    "speech-rule-engine": {
-      "@xmldom/xmldom": "0.9.12"
+    "speech-rule-engine@4.1.4": {
+      "@xmldom/xmldom": "^0.9.12"
     }
   }
 }
