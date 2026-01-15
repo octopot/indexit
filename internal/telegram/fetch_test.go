@@ -225,6 +225,157 @@ func TestFetchMessages_PaginatesUntilExhausted(t *testing.T) {
 	assert.Equal(t, 19, api.historyReqs[1].OffsetID)
 }
 
+func TestFetchMessages_PaginationDeduplicatesMessages(t *testing.T) {
+	page := func(ids ...int) tg.MessagesMessagesClass {
+		messages := make([]tg.MessageClass, 0, len(ids))
+		for _, id := range ids {
+			messages = append(messages, userMessage(id, time.Unix(1700000000, 0), "same text"))
+		}
+		return msgPage(messages...)
+	}
+	for _, tc := range []struct {
+		name        string
+		pages       []tg.MessagesMessagesClass
+		limit       int
+		wantIDs     []int
+		wantOffsets []int
+		wantLimits  []int
+		wantErr     string
+	}{
+		{
+			name:        "overlapping pages and repeated IDs within a page",
+			pages:       []tg.MessagesMessagesClass{page(20, 20, 19), page(20, 19, 18), page(20, 18, 17)},
+			wantIDs:     []int{20, 19, 18, 17},
+			wantOffsets: []int{0, 19, 18, 17},
+			wantLimits:  []int{3, 3, 3, 3},
+		},
+		{
+			name:        "limit counts unique messages",
+			pages:       []tg.MessagesMessagesClass{page(20, 20, 19), page(19, 18), page(17)},
+			limit:       4,
+			wantIDs:     []int{20, 19, 18, 17},
+			wantOffsets: []int{0, 19, 18},
+			wantLimits:  []int{3, 2, 1},
+		},
+		{
+			name:        "cursor uses the smallest ID regardless of page order",
+			pages:       []tg.MessagesMessagesClass{page(20, 18, 19), page(18, 17)},
+			wantIDs:     []int{20, 18, 19, 17},
+			wantOffsets: []int{0, 18, 17},
+			wantLimits:  []int{3, 3, 3},
+		},
+		{
+			name:        "repeated page fails without another request",
+			pages:       []tg.MessagesMessagesClass{page(20, 19), page(20, 19), page(18)},
+			wantIDs:     []int{20, 19},
+			wantOffsets: []int{0, 19},
+			wantLimits:  []int{3, 3},
+			wantErr:     "messages: pagination did not advance past message ID 19",
+		},
+		{
+			name:        "cursor cannot move backwards",
+			pages:       []tg.MessagesMessagesClass{page(20, 19), page(21, 20)},
+			wantIDs:     []int{20, 19},
+			wantOffsets: []int{0, 19},
+			wantLimits:  []int{3, 3},
+			wantErr:     "messages: pagination did not advance past message ID 19",
+		},
+		{
+			name:        "nonempty page without usable IDs fails",
+			pages:       []tg.MessagesMessagesClass{page(0, -1)},
+			wantOffsets: []int{0},
+			wantLimits:  []int{3},
+			wantErr:     "messages: pagination did not advance past message ID 0",
+		},
+	} {
+		for _, topic := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/topic_%t", tc.name, topic), func(t *testing.T) {
+				api := &scriptedAPI{}
+				ref := uid.PeerRef{Kind: uid.KindChat, ID: 42}
+				if topic {
+					ref.HasTopic, ref.TopicID = true, 7
+					api.repliesPages = tc.pages
+				} else {
+					api.historyPages = tc.pages
+				}
+				out := &recWriter{}
+				err := FetchMessages(t.Context(), api, peers.New(), out, MessagesOptions{
+					Peer: ref, Limit: tc.limit, PageSize: 3,
+				}, RateGuard{})
+				if tc.wantErr != "" {
+					require.EqualError(t, err, tc.wantErr)
+				} else {
+					require.NoError(t, err)
+				}
+				var ids, offsets, limits []int
+				for _, record := range out.records {
+					ids = append(ids, record.(model.MessageRecord).ID)
+				}
+				for _, req := range api.historyReqs {
+					offsets = append(offsets, req.OffsetID)
+					limits = append(limits, req.Limit)
+					assert.Zero(t, req.OffsetDate, "ID pagination must not exclude messages from the same second")
+				}
+				for _, req := range api.repliesReqs {
+					offsets = append(offsets, req.OffsetID)
+					limits = append(limits, req.Limit)
+					assert.Zero(t, req.OffsetDate)
+					assert.Equal(t, 7, req.MsgID)
+				}
+				assert.Equal(t, tc.wantIDs, ids)
+				assert.Equal(t, tc.wantOffsets, offsets)
+				assert.Equal(t, tc.wantLimits, limits)
+				if topic {
+					assert.Empty(t, api.historyReqs)
+				} else {
+					assert.Empty(t, api.repliesReqs)
+				}
+			})
+		}
+	}
+}
+
+func TestFetchMessages_FilteredPagesAdvance(t *testing.T) {
+	base := time.Unix(1700000000, 0).UTC()
+	for _, topic := range []bool{false, true} {
+		t.Run(fmt.Sprintf("topic_%t", topic), func(t *testing.T) {
+			pages := []tg.MessagesMessagesClass{
+				msgPage(&tg.MessageEmpty{ID: 24}, &tg.MessageService{ID: 23}),
+				msgPage(userMessage(22, base.Add(time.Hour), "after --to")),
+				msgPage(userMessage(21, base, "within the window")),
+				msgPage(userMessage(20, base.Add(-time.Hour), "before --from")),
+				msgPage(userMessage(19, base.Add(-2*time.Hour), "must not request this page")),
+			}
+			api := &scriptedAPI{}
+			ref := uid.PeerRef{Kind: uid.KindChat, ID: 42}
+			if topic {
+				ref.HasTopic, ref.TopicID = true, 7
+				api.repliesPages = pages
+			} else {
+				api.historyPages = pages
+			}
+			out := &recWriter{}
+			err := FetchMessages(t.Context(), api, peers.New(), out, MessagesOptions{
+				Peer: ref, From: base.Add(-time.Minute), To: base.Add(time.Minute),
+			}, RateGuard{})
+			require.NoError(t, err)
+			require.Len(t, out.records, 1)
+			assert.Equal(t, 21, out.records[0].(model.MessageRecord).ID)
+			var offsets, dates []int
+			for _, req := range api.historyReqs {
+				offsets = append(offsets, req.OffsetID)
+				dates = append(dates, req.OffsetDate)
+			}
+			for _, req := range api.repliesReqs {
+				offsets = append(offsets, req.OffsetID)
+				dates = append(dates, req.OffsetDate)
+			}
+			assert.Equal(t, []int{0, 23, 22, 21}, offsets)
+			assert.Equal(t, []int{int(base.Add(time.Minute).Unix()), 0, 0, 0}, dates)
+		})
+	}
+}
+
 func TestFetchMessages_TopicGoesThroughGetReplies(t *testing.T) {
 	api := &scriptedAPI{
 		repliesPages: []tg.MessagesMessagesClass{

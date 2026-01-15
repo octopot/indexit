@@ -40,6 +40,8 @@ indexit -q telegram fetch media \
 
 Up to 20 matching file records are processed. Photos go into `trip/`; the manifest opens in fx so you can inspect paths and results. Remove `--limit 20` to walk all matching photos in the topic.
 
+Within one run, each message ID is processed at most once, even with `--overwrite`. Overlapping pages cannot repeat downloads or manifest records, or consume the limit twice. History pagination uses the same [duplicate and progress checks as messages](/guide/messages/#open-a-conversation).
+
 Photos use the largest available Telegram size, which may differ from an original compressed by Telegram. Names use the message ID, such as `1042.jpg`. A document uses its message ID plus the original extension when available.
 
 Each result carries `message_id`, `path`, `type`, date, size, and available topic/album information. `grouped_id` links frames from the same album. Sort by numeric message ID when reconstructing their order.

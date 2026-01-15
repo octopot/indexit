@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -176,6 +177,88 @@ func TestFetchMediaLimitCountsFiles(t *testing.T) {
 		MediaOptions{Peer: ref, Dir: dir, Limit: 1}, RateGuard{}))
 	require.Len(t, out.records, 1, "the text message must not consume the budget")
 	assert.Equal(t, 11, out.records[0].(model.MediaRecord).MessageID)
+}
+
+func TestFetchMediaPaginationDeduplicatesMessages(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		overwrite bool
+		existing  bool
+		fail      bool
+	}{
+		{name: "download"},
+		{name: "overwrite", overwrite: true},
+		{name: "existing files", existing: true},
+		{name: "failed downloads", fail: true},
+	} {
+		for _, topic := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/topic_%t", tc.name, topic), func(t *testing.T) {
+				dir := t.TempDir()
+				api, cache, ref := mediaFixture(t)
+				api.fail = tc.fail
+				pages := []tg.MessagesMessagesClass{
+					msgPage(&tg.Message{ID: 30, Message: "no media"}),
+					msgPage(photoMessage(29, 900), photoMessage(29, 900)),
+					msgPage(photoMessage(29, 900), photoMessage(28, 900)),
+					msgPage(photoMessage(27, 900)),
+				}
+				if topic {
+					ref.HasTopic, ref.TopicID = true, 7
+					api.repliesPages = pages
+					api.historyPages = nil
+				} else {
+					api.historyPages = pages
+				}
+				if tc.existing {
+					for _, id := range []int{29, 28, 27} {
+						require.NoError(t, os.WriteFile(filepath.Join(dir, fmt.Sprintf("%d.jpg", id)), []byte("saved"), 0o600))
+					}
+				}
+				out := &recWriter{}
+				err := FetchMedia(t.Context(), api, cache, out, MediaOptions{
+					Peer: ref, Dir: dir, Kinds: []string{"photo"}, Limit: 3, PageSize: 3, Overwrite: tc.overwrite,
+				}, RateGuard{})
+				require.NoError(t, err)
+				var ids []int
+				for _, value := range out.records {
+					record := value.(model.MediaRecord)
+					ids = append(ids, record.MessageID)
+					assert.Equal(t, tc.existing, record.Skipped)
+					assert.Equal(t, tc.fail, record.Error != "")
+					assert.EqualValues(t, 900, record.GroupedID, "album frames with different IDs remain separate")
+				}
+				assert.Equal(t, []int{29, 28, 27}, ids, "only unique files consume the limit")
+				if tc.existing {
+					assert.Empty(t, api.reqs)
+				} else {
+					assert.Len(t, api.reqs, 3, "each message is downloaded at most once, including failures and --overwrite")
+				}
+				if topic {
+					assert.Empty(t, api.historyReqs)
+					assert.Len(t, api.repliesReqs, 4)
+				} else {
+					assert.Empty(t, api.repliesReqs)
+					assert.Len(t, api.historyReqs, 4)
+				}
+			})
+		}
+	}
+}
+
+func TestFetchMediaRepeatedPageFails(t *testing.T) {
+	api, cache, ref := mediaFixture(t)
+	api.historyPages = []tg.MessagesMessagesClass{
+		msgPage(photoMessage(20, 0)),
+		msgPage(photoMessage(20, 0)),
+	}
+	out := &recWriter{}
+	err := FetchMedia(t.Context(), api, cache, out, MediaOptions{
+		Peer: ref, Dir: t.TempDir(), Overwrite: true,
+	}, RateGuard{})
+	require.EqualError(t, err, "media: pagination did not advance past message ID 20")
+	assert.Len(t, out.records, 1)
+	assert.Len(t, api.reqs, 1)
+	assert.Len(t, api.historyReqs, 2)
 }
 
 func TestFetchMediaRequiresDir(t *testing.T) {

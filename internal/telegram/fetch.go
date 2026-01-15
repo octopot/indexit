@@ -178,7 +178,8 @@ type walkOptions struct {
 // first. The bool visit returns says whether the message counted against
 // Limit: a message the caller skipped must not consume the budget, otherwise
 // `--limit 10` on a media fetch would stop after ten *messages* rather than
-// ten files.
+// ten files. Each ID is visited at most once: page boundaries strictly decrease,
+// and a page-local set handles duplicates without retaining the whole history.
 func walkMessages(
 	ctx context.Context,
 	api API,
@@ -252,12 +253,24 @@ func walkMessages(
 		entities := entitiesFromLists(modified.GetUsers(), modified.GetChats())
 		mapper.CacheEntities(cache, entities)
 		stop := false
-		lastPageID := 0
+		nextOffsetID := 0
+		seen := make(map[int]struct{}, len(messages))
 		page++
 		pageGot := 0
 		for _, msg := range messages {
-			if id := msg.GetID(); id > 0 {
-				lastPageID = id
+			id := msg.GetID()
+			// Keep the request's boundary fixed throughout the page. Overlap
+			// cannot re-emit older pages or move the cursor back towards newer IDs.
+			if id <= 0 || (offsetID > 0 && id >= offsetID) {
+				continue
+			}
+			if _, exists := seen[id]; exists {
+				continue
+			}
+			seen[id] = struct{}{}
+			// Even empty, service and filtered messages advance pagination.
+			if nextOffsetID == 0 || id < nextOffsetID {
+				nextOffsetID = id
 			}
 			notEmpty, ok := msg.AsNotEmpty()
 			if !ok {
@@ -282,8 +295,6 @@ func walkMessages(
 			if err != nil {
 				return err
 			}
-			offsetID = notEmpty.GetID()
-			offsetDate = notEmpty.GetDate()
 			if !counted {
 				continue
 			}
@@ -295,15 +306,16 @@ func walkMessages(
 				return nil
 			}
 		}
+		if nextOffsetID == 0 {
+			return fmt.Errorf("%s: pagination did not advance past message ID %d", scope, offsetID)
+		}
+		offsetID = nextOffsetID
+		// --to locates the first page; IDs alone locate subsequent pages,
+		// including messages sent in the same second as the page boundary.
+		offsetDate = 0
 		slog.Default().Info(scope+": page",
 			"n", page, "got", pageGot, "total", emitted, "offset_id", offsetID)
 		if stop {
-			return nil
-		}
-		if lastPageID > 0 {
-			offsetID = lastPageID
-		}
-		if offsetID == 0 {
 			return nil
 		}
 	}

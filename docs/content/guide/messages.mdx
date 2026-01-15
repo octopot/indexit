@@ -20,6 +20,8 @@ Messages arrive **newest first**, with text, dates, available sender information
 
 Remove `--limit` to walk all available history, or add `--timeout 5m` to bound the operation. Service events such as “member joined” or “topic created” are skipped.
 
+Each message ID is emitted at most once per run, including for forum topics. Repeated IDs do not consume `--limit`; distinct messages with the same text remain separate. If a nonempty page provides no older IDs, the command exits with an error rather than reporting an incomplete export as successful.
+
 ## Find a private conversation
 
 ```sh
