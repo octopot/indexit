@@ -89,6 +89,14 @@ func TestCollectMessageRefs_UsernameCaseSharesGroup(t *testing.T) {
 	assert.Equal(t, []int{11, 12}, groups[0].ids)
 }
 
+func TestCollectMessageRefs_FourLetterUsername(t *testing.T) {
+	groups, err := collectMessageRefs([]string{"https://t.me/beta/11", "https://t.me/s/beta/12"}, "@beta", []int{13})
+	require.NoError(t, err)
+	require.Len(t, groups, 1)
+	assert.Equal(t, "@beta", groups[0].ref.String())
+	assert.Equal(t, []int{11, 12, 13}, groups[0].ids)
+}
+
 func TestFetchMessageInvalidInputIsUsageError(t *testing.T) {
 	for _, args := range [][]string{
 		{},

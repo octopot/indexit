@@ -84,6 +84,7 @@ Required credentials are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`. Proxy settin
 | `https://t.me/example_forum/42/46` | Public topic with message anchor |
 | `https://t.me/c/<id>/<message>` | Private dialog with message anchor |
 | `https://t.me/c/<id>/<topic>/<message>` | Private topic with message anchor |
+| `https://t.me/s/example_channel` | Public channel preview, same as the username |
 
 Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks.
 

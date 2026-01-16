@@ -28,6 +28,8 @@ func FuzzParse(f *testing.F) {
 		"https://t.me/c/77/123",
 		"https://t.me/c/77/7/123",
 		"http://t.me/foo",
+		"https://t.me/s/telegram",
+		"https://t.me/s/telegram/123",
 		"@",
 		"::",
 		":",

@@ -124,8 +124,12 @@ func parseURL(raw string) (PeerRef, error) {
 		return PeerRef{}, acceptedErr(raw)
 	}
 
-	if parts[0] == "c" {
+	switch {
+	case parts[0] == "c":
 		return parseInternalURL(raw, parts)
+	case parts[0] == "s" && len(parts) > 1:
+		// t.me/s/<nick> is the web preview of a public channel.
+		return parsePublicURL(raw, parts[1:])
 	}
 	return parsePublicURL(raw, parts)
 }

@@ -27,9 +27,12 @@ func TestParseAccepted(t *testing.T) {
 		{"public url topic", "https://t.me/telegram/7/123", PeerRef{Kind: KindUsername, Username: "telegram", TopicID: 7, HasTopic: true, AnchorID: 123, HasAnchor: true}},
 		{"internal url anchor", "https://t.me/c/77/123", PeerRef{Kind: KindChannel, ID: 77, AnchorID: 123, HasAnchor: true}},
 		{"internal url topic", "https://t.me/c/77/7/123", PeerRef{Kind: KindChannel, ID: 77, TopicID: 7, HasTopic: true, AnchorID: 123, HasAnchor: true}},
+		{"preview url", "https://t.me/s/telegram", PeerRef{Kind: KindUsername, Username: "telegram"}},
+		{"preview url anchor", "https://t.me/s/telegram/123", PeerRef{Kind: KindUsername, Username: "telegram", AnchorID: 123, HasAnchor: true}},
 		{"four-letter username", "@beta", PeerRef{Kind: KindUsername, Username: "beta"}},
 		{"four-letter user", "user:@beta", PeerRef{Kind: KindUser, Username: "beta"}},
 		{"four-letter url", "https://t.me/beta", PeerRef{Kind: KindUsername, Username: "beta"}},
+		{"four-letter preview url", "https://t.me/s/beta", PeerRef{Kind: KindUsername, Username: "beta"}},
 		{"four-letter url anchor", "https://t.me/beta/12", PeerRef{Kind: KindUsername, Username: "beta", AnchorID: 12, HasAnchor: true}},
 		{"trim wrappers", " <`@telegram`> ", PeerRef{Kind: KindUsername, Username: "telegram"}},
 	}
@@ -45,7 +48,7 @@ func TestParseAccepted(t *testing.T) {
 
 func TestParseRejects(t *testing.T) {
 	for _, raw := range []string{"", "123", "telegram", "bot:1", "https://example.com/x", "https://t.me/c/1", "channel:x",
-		"@abc", "https://t.me/abc", "user:@abc"} {
+		"https://t.me/s", "@abc", "https://t.me/abc", "user:@abc"} {
 		t.Run(raw, func(t *testing.T) {
 			_, err := Parse(raw)
 			assert.Error(t, err)
