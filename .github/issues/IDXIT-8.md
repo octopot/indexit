@@ -11,12 +11,12 @@ labels:
   - "impact: medium"
   - "effort: medium"
 milestone: "[[IDXIT-M1]]"
-state: OPEN
-stateReason:
+state: CLOSED
+stateReason: COMPLETED
 createdAt: 2026-10-04T12:47:22Z
-updatedAt: 2026-10-04T12:55:14Z
+updatedAt: 2026-10-04T13:29:53Z
 lastEditedAt: 2026-10-04T12:55:14Z
-closedAt:
+closedAt: 2026-10-04T13:29:53Z
 issueType: Feature
 assignees: []
 parent: null
