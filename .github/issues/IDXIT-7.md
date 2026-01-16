@@ -6,16 +6,16 @@ number: 108
 url: https://github.com/octopot/indexit/issues/108
 title: "ci/cd: sign the Cask commits in the Homebrew tap"
 labels:
-  - "effort: medium"
-  - "impact: low"
-  - "scope: inventory"
   - "type: improvement"
+  - "scope: inventory"
+  - "impact: low"
+  - "effort: medium"
 milestone:
 state: OPEN
 stateReason:
 createdAt: 2026-10-02T09:37:34Z
-updatedAt: 2026-10-02T10:12:25Z
-lastEditedAt:
+updatedAt: 2026-10-04T13:03:15Z
+lastEditedAt: 2026-10-04T13:03:15Z
 closedAt:
 ---
 
@@ -23,9 +23,7 @@ closedAt:
 
 ## Motivation
 
-Every release pushes a Cask update to [octolab/homebrew-tap](https://github.com/octolab/homebrew-tap/commits/main/),
-and every such commit is shown as unverified, while the commits made by hand
-in the same repository are verified:
+Every release pushes a Cask update to [octolab/homebrew-tap](https://github.com/octolab/homebrew-tap/commits/main/), and every such commit is shown as unverified, while the commits made by hand in the same repository are verified:
 
 ```sh
 gh api 'repos/octolab/homebrew-tap/commits?per_page=5' \
@@ -37,23 +35,14 @@ gh api 'repos/octolab/homebrew-tap/commits?per_page=5' \
 # 05386550 valid    chore: dump github projects
 ```
 
-GoReleaser v2.18.2 writes the Cask through the GitHub contents API with
-`HOMEBREW_TAP_TOKEN`, a personal access token, and passes `commit_author` as
-the committer. GitHub signs an API commit only when the request carries no
-custom committer, and the documentation promises it for bots, that is GitHub
-Apps ([signature verification for bots](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification#signature-verification-for-bots)).
+GoReleaser v2.18.2 writes the Cask through the GitHub contents API with `HOMEBREW_TAP_TOKEN`, a personal access token, and passes `commit_author` as the committer. GitHub signs an API commit only when the request carries no custom committer, and the documentation promises it for bots, that is GitHub Apps ([signature verification for bots](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification#signature-verification-for-bots)).
 
 GoReleaser offers two ways out:
 
-- `commit_author.use_github_app_token: true` (v2.13+) omits the committer, so
-  GitHub signs the commit as the authenticated GitHub App. The author becomes
-  the app's bot account.
-- `repository.git` with `commit_author.signing` (v2.11+) clones the tap over SSH
-  and signs the commit with a GPG, SSH or x509 key. The author stays a person,
-  but CI holds a write deploy key and a signing key valid for that person.
+- `commit_author.use_github_app_token: true` (v2.13+) omits the committer, so GitHub signs the commit as the authenticated GitHub App. The author becomes the app's bot account.
+- `repository.git` with `commit_author.signing` (v2.11+) clones the tap over SSH and signs the commit with a GPG, SSH or x509 key. The author stays a person, but CI holds a write deploy key and a signing key valid for that person.
 
-The same tap receives octomation/maintainer releases, so the decision applies
-to both.
+The same tap receives octomation/maintainer releases, so the decision applies to both.
 
 ## Out of scope
 
@@ -63,10 +52,8 @@ to both.
 ## Acceptance criteria
 
 - [ ] The Cask commit of the next release is `verified: true` on GitHub.
-- [ ] The tap token is scoped to `octolab/homebrew-tap` with contents write
-      and no longer outlives the release job.
-- [ ] `release.mjs preflight` and `doctor` check the new credentials and say
-      how to create them.
+- [ ] The tap token is scoped to `octolab/homebrew-tap` with contents write and no longer outlives the release job.
+- [ ] `release.mjs preflight` and `doctor` check the new credentials and say how to create them.
 - [ ] `.github/workflows/README.md` documents the secrets.
 
 <!-- 2026-10-02T09:28Z https://github.com/octopot/indexit/issues/108#issuecomment-5949368603

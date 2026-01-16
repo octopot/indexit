@@ -14,8 +14,8 @@ milestone:
 state: CLOSED
 stateReason: COMPLETED
 createdAt: 2026-09-18T17:43:51Z
-updatedAt: 2026-09-24T16:39:33Z
-lastEditedAt: 2026-09-24T15:56:26Z
+updatedAt: 2026-10-04T13:03:10Z
+lastEditedAt: 2026-10-04T13:03:10Z
 closedAt: 2026-09-24T16:39:33Z
 ---
 
@@ -23,9 +23,7 @@ closedAt: 2026-09-24T16:39:33Z
 
 ## Motivation
 
-Fresh CI runners must be able to resolve and download public `go.octolab.org`
-modules directly over verified HTTPS. Dependency installation must not depend
-on a warm cache or on a module proxy retaining previously published versions.
+Fresh CI runners must be able to resolve and download public `go.octolab.org` modules directly over verified HTTPS. Dependency installation must not depend on a warm cache or on a module proxy retaining previously published versions.
 
 Failure reference: [Continuous integration, September 18, 2026](https://github.com/octopot/indexit/actions/runs/35373271231).
 
@@ -40,14 +38,9 @@ github.io, githubusercontent.com, not go.octolab.org
 ## Acceptance criteria
 
 - [x] HTTPS serves a trusted certificate valid for `go.octolab.org`.
-- [x] Requests with `?go-get=1` at `/`, `/toolkit/cli`, and `/toolkit/config`
-      return valid `go-import` metadata pointing to the intended repositories.
-- [x] Direct downloads of the versions below succeed with an empty module cache
-      and normal TLS and checksum verification enabled. `toolkit/config@v0.0.4`
-      will not be restored: its tag is lost upstream, so the criterion is met
-      by moving to `v0.0.5`, which the project already requires.
-- [ ] CI dependency setup and the Go dependency jobs in cache warmup pass on
-      both configured Go versions without the certificate/discovery error.
+- [x] Requests with `?go-get=1` at `/`, `/toolkit/cli`, and `/toolkit/config` return valid `go-import` metadata pointing to the intended repositories.
+- [x] Direct downloads of the versions below succeed with an empty module cache and normal TLS and checksum verification enabled. `toolkit/config@v0.0.4` will not be restored: its tag is lost upstream, so the criterion is met by moving to `v0.0.5`, which the project already requires.
+- [ ] CI dependency setup and the Go dependency jobs in cache warmup pass on both configured Go versions without the certificate/discovery error.
 - [ ] Record the verification commands and results in an issue comment.
 
 ## Verification PoC
@@ -74,10 +67,8 @@ GOMODCACHE="$(mktemp -d)" GOPROXY=direct GOINSECURE= GOSUMDB=sum.golang.org \
 ## Out of scope
 
 - Changing the project's proxy policy or bypassing TLS verification.
-- Repairing the independent `github.com/caarlos0/go-shellwords@v1.0.12`
-  download failure in tools installation.
-- Upgrading Go tools or application dependencies, or requiring unrelated
-  workflow stages to pass before accepting domain recovery.
+- Repairing the independent `github.com/caarlos0/go-shellwords@v1.0.12` download failure in tools installation.
+- Upgrading Go tools or application dependencies, or requiring unrelated workflow stages to pass before accepting domain recovery.
 
 <!-- 2026-09-24T15:39Z https://github.com/octopot/indexit/issues/102#issuecomment-5817271097
 Status 2026-09-24.

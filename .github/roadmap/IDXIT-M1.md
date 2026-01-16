@@ -6,11 +6,11 @@ number: 1
 url: https://github.com/octopot/indexit/milestone/1
 title: "Telegram fetcher PoC implementation"
 state: OPEN
-openIssueCount: 0
+openIssueCount: 1
 closedIssueCount: 4
 dueOn:
 createdAt: 2026-09-23T17:27:44Z
-updatedAt: 2026-09-23T17:53:34Z
+updatedAt: 2026-10-04T13:03:24Z
 closedAt:
 creator: kamilsk
 tags:
@@ -22,21 +22,16 @@ tags:
 
 Read-only Telegram fetcher in the indexit CLI — dialogs, messages, topics, contacts, multi-account — delivered in four phases.
 
-Milestone of [[IDXIT-P1]]. Tracks the four-phase PoC defined in
-[[Telegram fetcher, PoC implementation plan]] (see its `PoC phases` section and
-§12 milestones). Tasks below map 1:1 to the §12 milestone IDs.
+Milestone of [[IDXIT-P1]]. Tracks the four-phase PoC defined in [[Telegram fetcher, PoC implementation plan]] (see its `PoC phases` section and §12 milestones). Tasks below map 1:1 to the §12 milestone IDs.
 
 ## Progress
 
-**10 / 17 tasks closed.** Phase 1 is functionally complete and shipped in
-v0.1.0; the remaining Phase-1 work is robustness/polish tracked in
-`.github/reports/` and `.github/reviews/`. Phase 2 is done. Phases 3–4 are not
-started.
+**10 / 18 tasks closed.** Phase 1 is functionally complete and shipped in v0.1.0; the remaining Phase-1 work is robustness/polish tracked in `.github/reports/` and `.github/reviews/`. Phase 2 is done but for peer cards (2.4, [[IDXIT-8]]). Phases 3–4 are not started.
 
 | Phase | Scope                       | State       | Done  |
 | ----- | --------------------------- | ----------- | ----- |
 | 1     | Dialogs & messages          | in progress | 6 / 9 |
-| 2     | Topics & single message     | done        | 4 / 4 |
+| 2     | Topics & single message     | in progress | 4 / 5 |
 | 3     | Contacts & Stories          | not started | 0 / 2 |
 | 4     | Multiple accounts & proxies | not started | 0 / 2 |
 
@@ -60,6 +55,7 @@ Legend: `[x]` done · `[ ] 🔄` in progress · `[ ]` not started.
 - [x] 2.1 Topic discovery — `fetch topics --dialog=<uid>` (`messages.getForumTopics`) — [[IDXIT-3]]
 - [x] 2.2 Single message — `fetch message <msg-uid>` (URL anchor applied)
 - [x] 2.3 Media download — `fetch media --dialog=<uid> --dir <path>` (`gotd` downloader) — [[IDXIT-4]]
+- [ ] 🔄 2.4 Peer cards — `fetch peer <ref>…`: channels, groups, users and invite links described without joining — [[IDXIT-8]]
 
 ### Phase 3 — Contacts & Stories
 
@@ -84,3 +80,4 @@ Functional behaviour is in place; these are tracked, not blocking:
 - [x] #79 — auth: QR login as a working path when phone codes are not delivered ([[IDXIT-2]])
 - [x] #80 — fetch: list forum topics of a dialog ([[IDXIT-3]])
 - [x] #81 — fetch: download message media from a dialog or topic ([[IDXIT-4]])
+- [ ] #109 — fetch: describe channels, groups and invite links as peer cards ([[IDXIT-8]])

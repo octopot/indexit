@@ -14,8 +14,8 @@ milestone: "[[IDXIT-M1]]"
 state: CLOSED
 stateReason: COMPLETED
 createdAt: 2026-08-26T06:01:20Z
-updatedAt: 2026-09-23T17:28:40Z
-lastEditedAt: 2026-09-23T17:27:00Z
+updatedAt: 2026-10-04T13:03:08Z
+lastEditedAt: 2026-10-04T13:03:08Z
 closedAt: 2026-09-18T11:54:44Z
 issueType: Feature
 assignees: []
@@ -27,72 +27,38 @@ issueFields: []
 
 ## Why
 
-`fetch messages` describes media but cannot hand over the bytes, and by
-construction never will: `mapper.Media`
-(`internal/telegram/mapper/mapper.go:228`) keeps `type`, `mime`, `size` and
-`duration` and drops the file location — `id`, `access_hash`, `file_reference`,
-DC — while `model.MediaDescriptor` has no fields to hold them. Even if it did,
-`file_reference` is short-lived, so the two-phase shape "emit JSONL now,
-download later" is not sound: the bytes have to be fetched in the same pass that
-walked the history.
+`fetch messages` describes media but cannot hand over the bytes, and by construction never will: `mapper.Media` (`internal/telegram/mapper/mapper.go:228`) keeps `type`, `mime`, `size` and `duration` and drops the file location — `id`, `access_hash`, `file_reference`, DC — while `model.MediaDescriptor` has no fields to hold them. Even if it did, `file_reference` is short-lived, so the two-phase shape "emit JSONL now, download later" is not sound: the bytes have to be fetched in the same pass that walked the history.
 
-The practical case is a photo archive kept as one forum topic per trip. Today
-the only way to get those frames out is to save them by hand from an official
-client, one album at a time.
+The practical case is a photo archive kept as one forum topic per trip. Today the only way to get those frames out is to save them by hand from an official client, one album at a time.
 
 ## What changes
 
-`indexit telegram fetch media --dialog=<uid> --dir <path>` walks the same
-history as `fetch messages` (including `messages.getReplies` for a topic), and
-downloads every media message into a file through the `gotd` downloader, while
-`-o` keeps emitting JSONL — one manifest record per file.
+`indexit telegram fetch media --dialog=<uid> --dir <path>` walks the same history as `fetch messages` (including `messages.getReplies` for a topic), and downloads every media message into a file through the `gotd` downloader, while `-o` keeps emitting JSONL — one manifest record per file.
 
-- `--dir` is the destination directory. `-o/--output` keeps its existing
-  meaning (manifest to a file or stdout), so no flag changes type between
-  commands.
-- A manifest record carries `message_id`, `topic_id`, `date`, `grouped_id` (the
-  album a frame belongs to), `type`, `mime`, `size`, the file `path` and whether
-  the file was downloaded or skipped as already present.
-- File names are deterministic: `<message-id>.<ext>`, extension taken from
-  `DocumentAttributeFilename` or the MIME type (`.jpg` for photos). A second run
-  therefore neither duplicates nor renames, and lexicographic order matches
-  chronological order.
-- Photos are downloaded at the largest available size; `--media=photo,video,…`
-  narrows what is fetched.
+- `--dir` is the destination directory. `-o/--output` keeps its existing meaning (manifest to a file or stdout), so no flag changes type between commands.
+- A manifest record carries `message_id`, `topic_id`, `date`, `grouped_id` (the album a frame belongs to), `type`, `mime`, `size`, the file `path` and whether the file was downloaded or skipped as already present.
+- File names are deterministic: `<message-id>.<ext>`, extension taken from `DocumentAttributeFilename` or the MIME type (`.jpg` for photos). A second run therefore neither duplicates nor renames, and lexicographic order matches chronological order.
+- Photos are downloaded at the largest available size; `--media=photo,video,…` narrows what is fetched.
 - Already-downloaded files are skipped by default; `--overwrite` re-fetches.
-- The windows of `fetch messages` apply unchanged: `--from`, `--to`, `--min-id`,
-  `--max-id`, `--limit`, `--page-size`; flood waits stay with `RateGuard`.
-- Downloading needs the `upload.*` RPCs, which the narrow `API` interface does
-  not carry. A `MediaAPI` (`API` plus `downloader.Client`) is introduced; the
-  concrete `*tg.Client` already satisfies it, so the hand-written fakes in the
-  existing tests keep compiling.
+- The windows of `fetch messages` apply unchanged: `--from`, `--to`, `--min-id`, `--max-id`, `--limit`, `--page-size`; flood waits stay with `RateGuard`.
+- Downloading needs the `upload.*` RPCs, which the narrow `API` interface does not carry. A `MediaAPI` (`API` plus `downloader.Client`) is introduced; the concrete `*tg.Client` already satisfies it, so the hand-written fakes in the existing tests keep compiling.
 
 ## Acceptance criteria
 
-- [x] `fetch media --dialog=<t.me/c link with a topic anchor> --dir <dir>`
-      writes every photo of that topic into `<dir>` and one manifest record per
-      file;
+- [x] `fetch media --dialog=<t.me/c link with a topic anchor> --dir <dir>` writes every photo of that topic into `<dir>` and one manifest record per file;
 - [x] the same command against a non-forum dialog downloads that dialog's media;
 - [x] a repeat run downloads nothing and reports every file as skipped;
 - [x] `--overwrite` re-downloads them;
 - [x] `--media=photo` excludes documents and video, and vice versa;
-- [x] `--limit`, `--from`/`--to` and `--min-id`/`--max-id` bound the run exactly
-      as they do for `fetch messages`;
-- [x] a photo arrives at its largest size, not a thumbnail — verified against
-      the size Telegram reports;
-- [x] `grouped_id` is present for messages that belong to an album, so frame
-      order inside an album is recoverable;
-- [x] a failed download of one message does not abort the run: it is reported
-      and the walk continues;
-- [x] unit coverage for location building (photo size selection, document
-      location, file naming) and for the skip/overwrite decision, using the
-      hand-written fake style of `internal/telegram/fetch_test.go`.
+- [x] `--limit`, `--from`/`--to` and `--min-id`/`--max-id` bound the run exactly as they do for `fetch messages`;
+- [x] a photo arrives at its largest size, not a thumbnail — verified against the size Telegram reports;
+- [x] `grouped_id` is present for messages that belong to an album, so frame order inside an album is recoverable;
+- [x] a failed download of one message does not abort the run: it is reported and the walk continues;
+- [x] unit coverage for location building (photo size selection, document location, file naming) and for the skip/overwrite decision, using the hand-written fake style of `internal/telegram/fetch_test.go`.
 
 ## Verification
 
-Run against a real forum topic holding 43 photos and compare the file count,
-the byte sizes and the visible frames with the official client; run it twice to
-confirm the second pass is a no-op.
+Run against a real forum topic holding 43 photos and compare the file count, the byte sizes and the visible frames with the official client; run it twice to confirm the second pass is a no-op.
 
 <!-- 2026-09-18T11:54Z https://github.com/octopot/indexit/issues/81#issuecomment-5799589130
 Implemented in `internal/telegram/media.go` (`FetchMedia`, building

@@ -23,11 +23,7 @@ tags:
 
 # project: Telegram integration
 
-Bring Telegram into the `indexit` ingest pipeline as a first-class, read-only
-source for the Sparkle index. The `indexit telegram` subcommand streams the
-user's own Telegram data (dialogs, message history, forum topics, contacts, and
-Story viewers) as stable JSONL that a downstream Sparkle indexer can consume
-without re-fetching.
+Bring Telegram into the `indexit` ingest pipeline as a first-class, read-only source for the Sparkle index. The `indexit telegram` subcommand streams the user's own Telegram data (dialogs, message history, forum topics, contacts, and Story viewers) as stable JSONL that a downstream Sparkle indexer can consume without re-fetching.
 
 Design and scope live in the spec: [[Telegram fetcher, PoC implementation plan]].
 
@@ -37,9 +33,7 @@ Design and scope live in the spec: [[Telegram fetcher, PoC implementation plan]]
 | --------------------------------------- | ----- | -------------------------------------------------- |
 | [[IDXIT-M1]] | open  | Phase 1 functionally complete; 7 / 16 tasks closed |
 
-Later milestones (not yet opened) will graduate the PoC into the wider pipeline —
-e.g. durable peer/message store, and wiring the JSONL stream into the Sparkle
-indexer itself.
+Later milestones (not yet opened) will graduate the PoC into the wider pipeline — e.g. durable peer/message store, and wiring the JSONL stream into the Sparkle indexer itself.
 
 ## Tracking
 
