@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.octolab.org/toolset/indexit/internal/exitcode"
+	tgsvc "go.octolab.org/toolset/indexit/internal/telegram"
 )
 
 func TestCollectMessageRefs_GroupsLinksByPeer(t *testing.T) {
@@ -119,4 +120,51 @@ func TestFetchMessageInvalidInputIsUsageError(t *testing.T) {
 			assert.Equal(t, exitcode.Usage, usage.Code)
 		})
 	}
+}
+
+func TestFetchPeerAllBadRefsIsUsageErrorWithRecords(t *testing.T) {
+	var out bytes.Buffer
+	command := New()
+	command.SetOut(&out)
+	command.SetErr(&bytes.Buffer{})
+	command.SetArgs([]string{"fetch", "peer", "example", "123"})
+	command.SilenceUsage = true // as the root command does
+
+	err := command.Execute()
+	var usage *exitcode.Error
+	require.ErrorAs(t, err, &usage)
+	assert.Equal(t, exitcode.Usage, usage.Code)
+
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	require.Len(t, lines, 2, "every bad ref still yields a record")
+	assert.Contains(t, lines[0], `"ref":"example"`)
+	assert.Contains(t, lines[0], `"code":"bad_ref"`)
+	assert.Contains(t, lines[1], `"ref":"123"`)
+}
+
+func TestFetchPeerWithoutRefsIsUsageError(t *testing.T) {
+	command := New()
+	command.SetOut(&bytes.Buffer{})
+	command.SetErr(&bytes.Buffer{})
+	command.SetArgs([]string{"fetch", "peer"})
+	err := command.Execute()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "requires at least 1 arg")
+}
+
+func TestPeerOutcome(t *testing.T) {
+	assert.NoError(t, peerOutcome(tgsvc.PeerStats{Fetched: 1, Failed: 3}), "one fetched record is success")
+	assert.NoError(t, peerOutcome(tgsvc.PeerStats{}))
+
+	err := peerOutcome(tgsvc.PeerStats{Failed: 2, BadRefs: 1})
+	require.Error(t, err)
+	assert.Equal(t, exitcode.Fail, exitcode.FromError(err))
+
+	err = peerOutcome(tgsvc.PeerStats{Failed: 2, BadRefs: 2})
+	assert.Equal(t, exitcode.Usage, exitcode.FromError(err))
+}
+
+func TestAnyPeerRef(t *testing.T) {
+	assert.False(t, anyPeerRef([]string{"example", "123"}))
+	assert.True(t, anyPeerRef([]string{"example", "https://t.me/+AbCd"}))
 }

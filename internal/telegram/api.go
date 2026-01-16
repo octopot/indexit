@@ -19,6 +19,7 @@ import (
 )
 
 type API interface {
+	ChannelsGetFullChannel(context.Context, tg.InputChannelClass) (*tg.MessagesChatFull, error)
 	ChannelsGetMessages(context.Context, *tg.ChannelsGetMessagesRequest) (tg.MessagesMessagesClass, error)
 	ContactsResolveUsername(context.Context, *tg.ContactsResolveUsernameRequest) (*tg.ContactsResolvedPeer, error)
 	MessagesGetDialogs(context.Context, *tg.MessagesGetDialogsRequest) (tg.MessagesDialogsClass, error)
@@ -26,6 +27,10 @@ type API interface {
 	MessagesGetMessages(context.Context, []tg.InputMessageClass) (tg.MessagesMessagesClass, error)
 	MessagesGetReplies(context.Context, *tg.MessagesGetRepliesRequest) (tg.MessagesMessagesClass, error)
 	MessagesGetForumTopics(context.Context, *tg.MessagesGetForumTopicsRequest) (*tg.MessagesForumTopics, error)
+	MessagesGetFullChat(context.Context, int64) (*tg.MessagesChatFull, error)
+	// MessagesCheckChatInvite only previews an invite link. The join call is
+	// deliberately absent from this surface: indexit never joins a chat.
+	MessagesCheckChatInvite(context.Context, string) (tg.ChatInviteClass, error)
 	AuthLogOut(context.Context) (*tg.AuthLoggedOut, error)
 }
 

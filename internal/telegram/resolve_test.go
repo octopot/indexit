@@ -104,6 +104,18 @@ func (f fakeAPI) MessagesGetMessages(context.Context, []tg.InputMessageClass) (t
 	return nil, errors.New("unexpected MessagesGetMessages call")
 }
 
+func (f fakeAPI) ChannelsGetFullChannel(context.Context, tg.InputChannelClass) (*tg.MessagesChatFull, error) {
+	return nil, errors.New("unexpected ChannelsGetFullChannel call")
+}
+
+func (f fakeAPI) MessagesGetFullChat(context.Context, int64) (*tg.MessagesChatFull, error) {
+	return nil, errors.New("unexpected MessagesGetFullChat call")
+}
+
+func (f fakeAPI) MessagesCheckChatInvite(context.Context, string) (tg.ChatInviteClass, error) {
+	return nil, errors.New("unexpected MessagesCheckChatInvite call")
+}
+
 func TestResolvePeerFourLetterUsername(t *testing.T) {
 	ref, err := uid.Parse("https://t.me/beta")
 	require.NoError(t, err)

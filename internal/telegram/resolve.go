@@ -31,6 +31,10 @@ func ResolvePeer(ctx context.Context, api API, cache *peers.Cache, ref uid.PeerR
 		}, nil
 	}
 
+	if ref.Kind == uid.KindInvite {
+		return ResolvedPeer{}, fmt.Errorf("invite link %s names no dialog here: run 'indexit telegram fetch peer' to inspect it", ref.String())
+	}
+
 	if ref.Username != "" {
 		return resolveUsername(ctx, api, cache, ref, guard)
 	}

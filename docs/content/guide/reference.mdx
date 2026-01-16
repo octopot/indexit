@@ -16,6 +16,7 @@ Use `indexit <command> --help` for help at any level. All examples describe the 
 | `auth logout` | Revoke the session and remove its local file |
 | `fetch dialogs` | List dialogs and populate the peer cache |
 | `fetch topics --dialog UID` | List a forum’s topics |
+| `fetch peer REF…` | Describe channels, groups, users, and invite links, one record per ref |
 | `fetch messages --dialog UID` | Walk conversation or topic history |
 | `fetch message LINK…` | Fetch exact messages; also accepts `--dialog UID --id 11,46` |
 | `fetch media --dialog UID --dir PATH` | Download files and emit a JSONL manifest |
@@ -32,7 +33,7 @@ Use `indexit <command> --help` for help at any level. All examples describe the 
 | `-o`, `--output` | `-` | stdout, or a file opened in append mode |
 | `--format` | `jsonl` | Only JSONL is supported |
 
-For `fetch message`, `--page-size` has no effect. Requests contain at most 100 IDs.
+For `fetch message`, `--page-size` has no effect. Requests contain at most 100 IDs. `fetch peer` ignores both `--limit` and `--page-size`.
 
 For `messages` and `media`, use `--from` / `--to` for RFC3339 dates, and `--min-id` / `--max-id` for exclusive ID bounds. Media adds `--media photo,video` and `--overwrite`. See [export conversations](/guide/messages/) and [save media](/guide/media/) for behavior and examples.
 
@@ -85,11 +86,51 @@ Required credentials are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`. Proxy settin
 | `https://t.me/c/<id>/<message>` | Private dialog with message anchor |
 | `https://t.me/c/<id>/<topic>/<message>` | Private topic with message anchor |
 | `https://t.me/s/example_channel` | Public channel preview, same as the username |
+| `https://t.me/+<hash>`, `https://t.me/joinchat/<hash>` | Invite link; only `fetch peer` accepts it |
 
 Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks.
+
+## Peer cards
+
+`fetch peer` turns each ref into one `peer` record, in the order of the refs:
+
+```sh
+indexit -q telegram fetch peer @example_channel https://t.me/+<hash> | fx
+```
+
+A ref is any address above, a bare `https://t.me/c/<id>`, or an invite link; links work without `https://`. Channels and supergroups are read with `channels.getFullChannel`, basic groups with `messages.getFullChat`. Users and bots get no full request: their record carries the identity and the error `not_channel`.
+
+Refs are processed in order, so a username or an invite placed before the numeric ID of the same channel warms the peer cache for it.
+
+| Field | Meaning |
+| --- | --- |
+| `ref` | The ref as passed |
+| `uid`, `peer_id` | `channel:<id>`, `chat:<id>`, or `user:<id>`, and the numeric ID |
+| `peer_type` | `channel`, `supergroup` (gigagroups included), `chat`, `user`, or `bot` |
+| `title`, `username`, `usernames` | Name, main username, other active usernames |
+| `about`, `participants_count` | Description and member count |
+| `linked_chat_uid`, `linked_chat` | The discussion group of a channel, or the channel of a discussion group, with `uid`, `title`, `username` |
+| `verified`, `scam`, `fake`, `restricted` | Telegram flags; `restricted` carries the restriction text |
+| `date` | Telegram’s date of the channel or group: when the account joined it, or when it was created |
+| `invite` | For invite links: `hash`, `member`, and optional `peek`, `expires`, `request_needed` |
+| `error` | `code` and `message` when the ref could not be described in full |
+
+indexit never joins a chat. An invite to a chat the account is in, or may peek into, yields the full card. An invite to any other chat yields only Telegram’s preview — title, description, member count, type — without an ID, and the error `invite_not_member`.
+
+A failed ref does not stop the run; its record carries `error.code`:
+
+| Code | Cause |
+| --- | --- |
+| `bad_ref` | The ref is not a Telegram address |
+| `not_found` | The username is free or invalid |
+| `cold_peer` | A numeric ID is not in the peer cache; run `fetch dialogs` or pass a username |
+| `invite_not_member` | The invite leads to a chat the account is not in |
+| `invite_expired` | The invite link is expired or revoked |
+| `not_channel` | The ref is a user or a bot; `uid`, `peer_type`, `title`, and `username` are still filled |
+| `rpc` | Any other Telegram error, such as a private channel |
 
 ## Exit status
 
 `0` means the command completed, including empty or partial results. `1` is a runtime failure. `2` covers flagged usage/configuration errors, such as invalid fetch UIDs, missing required flags, or malformed proxy settings.
 
-For specific-message exports, inspect stderr for skipped IDs. For media, inspect records with `error`: individual download failures can coexist with exit code `0`.
+`fetch peer` exits with `0` when at least one record has no `error` (a user or a bot counts as an error); when every ref fails, it exits with `1`, or `2` if every ref was malformed. For specific-message exports, inspect stderr for skipped IDs. For media, inspect records with `error`: individual download failures can coexist with exit code `0`.

@@ -29,6 +29,8 @@ func TestParseAccepted(t *testing.T) {
 		{"internal url topic", "https://t.me/c/77/7/123", PeerRef{Kind: KindChannel, ID: 77, TopicID: 7, HasTopic: true, AnchorID: 123, HasAnchor: true}},
 		{"preview url", "https://t.me/s/telegram", PeerRef{Kind: KindUsername, Username: "telegram"}},
 		{"preview url anchor", "https://t.me/s/telegram/123", PeerRef{Kind: KindUsername, Username: "telegram", AnchorID: 123, HasAnchor: true}},
+		{"invite plus", "https://t.me/+AbC-d_9", PeerRef{Kind: KindInvite, Invite: "AbC-d_9"}},
+		{"invite joinchat", "https://telegram.me/joinchat/AbC-d_9", PeerRef{Kind: KindInvite, Invite: "AbC-d_9"}},
 		{"four-letter username", "@beta", PeerRef{Kind: KindUsername, Username: "beta"}},
 		{"four-letter user", "user:@beta", PeerRef{Kind: KindUser, Username: "beta"}},
 		{"four-letter url", "https://t.me/beta", PeerRef{Kind: KindUsername, Username: "beta"}},
@@ -48,7 +50,7 @@ func TestParseAccepted(t *testing.T) {
 
 func TestParseRejects(t *testing.T) {
 	for _, raw := range []string{"", "123", "telegram", "bot:1", "https://example.com/x", "https://t.me/c/1", "channel:x",
-		"https://t.me/s", "@abc", "https://t.me/abc", "user:@abc"} {
+		"https://t.me/+", "https://t.me/+79991234567", "https://t.me/+abc/1", "https://t.me/joinchat", "https://t.me/joinchat/a/b", "https://t.me/+a%20b", "https://t.me/s", "@abc", "https://t.me/abc", "user:@abc"} {
 		t.Run(raw, func(t *testing.T) {
 			_, err := Parse(raw)
 			assert.Error(t, err)
@@ -67,6 +69,7 @@ func TestString(t *testing.T) {
 		{PeerRef{Kind: KindChat, ID: 55}, "chat:55"},
 		{PeerRef{Kind: KindChannel, ID: 77}, "channel:77"},
 		{PeerRef{Kind: KindChannel, ID: 77, TopicID: 12, HasTopic: true}, "channel:77:12"},
+		{PeerRef{Kind: KindInvite, Invite: "AbC"}, "https://t.me/+AbC"},
 	}
 
 	for _, tt := range tests {

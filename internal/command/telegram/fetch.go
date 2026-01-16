@@ -77,6 +77,7 @@ func fetchCommand(opt *options) *cobra.Command {
 		fetchMessageCommand(opt, &fetchOpt),
 		fetchMessagesCommand(opt, &fetchOpt),
 		fetchTopicsCommand(opt, &fetchOpt),
+		fetchPeerCommand(opt, &fetchOpt),
 		fetchMediaCommand(opt, &fetchOpt),
 	)
 	return &command
@@ -442,6 +443,107 @@ func fetchTopicsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 	command.Flags().StringVar(&topicOpt.dialog, "dialog", "", "dialog UID")
 	_ = command.MarkFlagRequired("dialog")
 	return &command
+}
+
+func fetchPeerCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
+	return &cobra.Command{
+		Use:   "peer <ref>...",
+		Short: "Fetch the cards of Telegram channels, groups, and users",
+		Long: "Fetch the cards of Telegram channels, groups, and users as JSONL.\n\n" +
+			"Emits one peer record per ref, in the order of the refs. A ref is any\n" +
+			"dialog address, a t.me/c/<id> link, or a t.me/+<hash> or t.me/joinchat/<hash>\n" +
+			"invite link. Channels and groups are read in full: description, members,\n" +
+			"and the linked discussion group or channel. Invite links are only\n" +
+			"previewed: indexit never joins a chat.\n\n" +
+			"A ref that cannot be parsed or fetched yields a record with an error\n" +
+			"instead of stopping the run. The command fails only when no record was\n" +
+			"fetched. --limit and --page-size do not apply to this command.",
+		Example: `  indexit telegram fetch peer @example_channel https://t.me/example_chat
+  indexit telegram fetch peer channel:<id> https://t.me/+<hash>`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := validateFormat(fetchOpt.format); err != nil {
+				return usageErr(err)
+			}
+			if !anyPeerRef(args) {
+				// Every ref is malformed: report each one without connecting.
+				writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
+				if err != nil {
+					return err
+				}
+				defer writer.Close()
+				stats, err := tgsvc.FetchPeers(cmd.Context(), nil, peers.New(), writer, tgsvc.PeerOptions{Refs: args}, tgsvc.RateGuard{})
+				if err != nil {
+					return err
+				}
+				return peerOutcome(stats)
+			}
+			paths, err := pathsFromFlags(opt)
+			if err != nil {
+				return err
+			}
+			ctx, cancel, err := contextFromFlags(cmd, opt)
+			if err != nil {
+				return err
+			}
+			defer cancel()
+			client, err := newClient(cmd, paths)
+			if err != nil {
+				return err
+			}
+			log := indexlog.FromContext(cmd.Context()).Logger
+			cache, err := peers.Load(paths.Peers)
+			if err != nil {
+				return err
+			}
+			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
+			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
+			if err != nil {
+				return err
+			}
+			defer writer.Close()
+			start := time.Now()
+			var stats tgsvc.PeerStats
+			err = client.Run(ctx, func(ctx context.Context, api tgsvc.API, _ *auth.Client) error {
+				var err error
+				stats, err = tgsvc.FetchPeers(ctx, api, cache, writer, tgsvc.PeerOptions{Refs: args}, tgsvc.RateGuard{})
+				return err
+			})
+			if saveErr := cache.Save(paths.Peers); err == nil {
+				err = saveErr
+				if saveErr == nil {
+					log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
+				}
+			}
+			log.Info("done", "peers", stats.Fetched, "failed", stats.Failed, "elapsed", time.Since(start).Round(time.Millisecond))
+			if err != nil {
+				return err
+			}
+			return peerOutcome(stats)
+		},
+	}
+}
+
+// peerOutcome fails the run only when no ref was fetched. A run in which every
+// ref was malformed is a usage error.
+func peerOutcome(stats tgsvc.PeerStats) error {
+	if stats.Fetched > 0 || stats.Failed == 0 {
+		return nil
+	}
+	err := fmt.Errorf("no peer fetched: all %d refs failed, see the error records", stats.Failed)
+	if stats.BadRefs == stats.Failed {
+		return usageErr(err)
+	}
+	return err
+}
+
+func anyPeerRef(args []string) bool {
+	for _, arg := range args {
+		if _, err := tgsvc.ParsePeerRef(arg); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func fetchMediaCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {

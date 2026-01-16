@@ -15,12 +15,16 @@ const (
 	KindUser     Kind = "user"
 	KindChat     Kind = "chat"
 	KindChannel  Kind = "channel"
+	// KindInvite is a t.me/+<hash> or t.me/joinchat/<hash> invite link. It
+	// names a chat without revealing its ID; Invite carries the hash.
+	KindInvite Kind = "invite"
 )
 
 type PeerRef struct {
 	Kind     Kind
 	ID       int64
 	Username string
+	Invite   string `json:",omitempty"`
 
 	TopicID   int
 	HasTopic  bool
@@ -28,8 +32,12 @@ type PeerRef struct {
 	HasAnchor bool
 }
 
-// Four-letter usernames exist: Fragment sells them and t.me serves them.
-var usernameRE = regexp.MustCompile(`^[A-Za-z0-9_]{4,32}$`)
+var (
+	// Four-letter usernames exist: Fragment sells them and t.me serves them.
+	usernameRE = regexp.MustCompile(`^[A-Za-z0-9_]{4,32}$`)
+	inviteRE   = regexp.MustCompile(`^[A-Za-z0-9_-]{1,64}$`)
+	digitsRE   = regexp.MustCompile(`^[0-9]+$`)
+)
 
 func Parse(raw string) (PeerRef, error) {
 	s := clean(raw)
@@ -74,6 +82,8 @@ func Parse(raw string) (PeerRef, error) {
 func (r PeerRef) String() string {
 	base := ""
 	switch {
+	case r.Kind == KindInvite:
+		return "https://t.me/+" + r.Invite
 	case r.Username != "" && r.Kind == KindUser:
 		base = "user:@" + r.Username
 	case r.Username != "":
@@ -127,6 +137,16 @@ func parseURL(raw string) (PeerRef, error) {
 	switch {
 	case parts[0] == "c":
 		return parseInternalURL(raw, parts)
+	case parts[0] == "joinchat":
+		if len(parts) != 2 {
+			return PeerRef{}, acceptedErr(raw)
+		}
+		return parseInvite(raw, parts[1])
+	case strings.HasPrefix(parts[0], "+"):
+		if len(parts) != 1 {
+			return PeerRef{}, acceptedErr(raw)
+		}
+		return parseInvite(raw, strings.TrimPrefix(parts[0], "+"))
 	case parts[0] == "s" && len(parts) > 1:
 		// t.me/s/<nick> is the web preview of a public channel.
 		return parsePublicURL(raw, parts[1:])
@@ -157,6 +177,15 @@ func parsePublicURL(raw string, parts []string) (PeerRef, error) {
 		ref.HasTopic = true
 	}
 	return ref, nil
+}
+
+// parseInvite accepts the hash of an invite link. A t.me/+<digits> link is a
+// phone number, not an invite, and is rejected.
+func parseInvite(raw, hash string) (PeerRef, error) {
+	if !inviteRE.MatchString(hash) || digitsRE.MatchString(hash) {
+		return PeerRef{}, acceptedErr(raw)
+	}
+	return PeerRef{Kind: KindInvite, Invite: hash}, nil
 }
 
 func parseInternalURL(raw string, parts []string) (PeerRef, error) {
@@ -278,5 +307,5 @@ func validUsername(s string) bool {
 }
 
 func acceptedErr(s string) error {
-	return fmt.Errorf("unsupported telegram uid %q: accepted forms include @nick, user:<id>, user:@nick, chat:<id>, channel:<id>, -<id>, -100<id>, and t.me links", s)
+	return fmt.Errorf("unsupported telegram uid %q: accepted forms include @nick, user:<id>, user:@nick, chat:<id>, channel:<id>, -<id>, -100<id>, t.me links, and t.me/+<hash> invites", s)
 }

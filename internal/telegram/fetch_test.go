@@ -111,6 +111,18 @@ func (f *scriptedAPI) AuthLogOut(context.Context) (*tg.AuthLoggedOut, error) {
 	return &tg.AuthLoggedOut{}, nil
 }
 
+func (f *scriptedAPI) ChannelsGetFullChannel(context.Context, tg.InputChannelClass) (*tg.MessagesChatFull, error) {
+	return nil, fmt.Errorf("unexpected ChannelsGetFullChannel call")
+}
+
+func (f *scriptedAPI) MessagesGetFullChat(context.Context, int64) (*tg.MessagesChatFull, error) {
+	return nil, fmt.Errorf("unexpected MessagesGetFullChat call")
+}
+
+func (f *scriptedAPI) MessagesCheckChatInvite(context.Context, string) (tg.ChatInviteClass, error) {
+	return nil, fmt.Errorf("unexpected MessagesCheckChatInvite call")
+}
+
 // recWriter captures emitted records for assertion.
 type recWriter struct{ records []any }
 
