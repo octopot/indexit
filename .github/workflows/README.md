@@ -41,7 +41,8 @@ flowchart LR
 
 | Secret | Used by | Purpose |
 | --- | --- | --- |
-| `HOMEBREW_TAP_TOKEN` | cd, doctor | Push the Cask to the tap named in `.goreleaser.yml` |
+| `HOMEBREW_TAP_APP_CLIENT_ID` | cd, doctor | Client ID of the GitHub App that pushes the Cask to the tap named in `.goreleaser.yml` |
+| `HOMEBREW_TAP_APP_KEY` | cd, doctor | Private key of that App |
 | `SLACK_WEBHOOK` | all but doctor | Notifications, optional |
 
 ## ci
@@ -67,7 +68,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  tag([push v* tag]) --> check[check the tag and its note] --> secrets[check release secrets] --> pages[resolve the Pages URL] --> render[render the note]
+  tag([push v* tag]) --> check[check the tag and its note] --> secrets[check release secrets] --> token[mint the tap token] --> pages[resolve the Pages URL] --> render[render the note]
   render --> go[set up Go, make tools] --> test[fast check and tests] --> publish[goreleaser release]
   publish --> release[(GitHub release: body and title from the note)]
   publish --> tap[(Cask in the tap)]
@@ -84,14 +85,18 @@ flowchart TB
   demand, together with the `go mod tidy` + `git-check` that `fast-check` would
   otherwise fail on only after the tag is out (ci.yml and tools.yml check it on
   main too). The first steps here repeat it for pushes that bypassed the hook, then
-  verify `HOMEBREW_TAP_TOKEN` can read the tap, all before Go is even installed.
+  mint the tap token, all before Go is even installed.
 - **The note becomes the release.** `release.mjs render` strips the frontmatter
   and the H1, makes site links absolute from the Pages URL and hands the title
   to goreleaser (`release.name_template`).
 - **Policy lives in `.github/settings.json`**, documented by `.github/settings.cue`:
   tag pattern, maintenance branches (e.g. `v5.*` tags on branch `v5`), note path.
-- The release uses the workflow token; the Cask goes to the tap named in
-  `.goreleaser.yml` with `HOMEBREW_TAP_TOKEN`. After the first Cask release,
+- The release uses the workflow token. The Cask goes to the tap named in
+  `.goreleaser.yml` with a token minted per run by `actions/create-github-app-token`
+  from a GitHub App installed on the tap only, with Contents: Read and write.
+  goreleaser then omits the committer (`commit_author.use_github_app_token`),
+  so GitHub signs the Cask commit as the App; a personal token does not get
+  signed commits, see [#108](https://github.com/octopot/indexit/issues/108). After the first Cask release,
   install with `brew install --cask octolab/tap/indexit`. macOS signing and
   notarization are not configured yet, so the Cask preflight clears the
   quarantine attribute. It has to run before the completions are generated,
@@ -141,7 +146,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  doctor[compare with GitHub: default branch, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets]
+  doctor[compare with GitHub: default branch, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets] --> token[mint the tap token]
 ```
 
 - Daily and manual: a Pages domain change triggers no workflow, so a site
@@ -153,8 +158,9 @@ flowchart LR
   a fresh runner hits it; `node .github/scripts/release.mjs vanity` checks
   only that.
 - The workflow token cannot list secrets, so they show as `unverified` there;
-  the preflight step checks the ones a release needs. Locally, `gh` needs
-  `admin:org` to see organization secrets.
+  the preflight step checks the ones a release needs, and minting the tap
+  token proves the App is still installed on the tap with write access.
+  Locally, `gh` needs `admin:org` to see organization secrets.
 
 ## caches
 

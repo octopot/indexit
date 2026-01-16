@@ -5,7 +5,8 @@
     "branches": []
   },
   "secrets": {
-    "HOMEBREW_TAP_TOKEN": { "scope": "organization" }
+    "HOMEBREW_TAP_APP_CLIENT_ID": { "scope": "organization" },
+    "HOMEBREW_TAP_APP_KEY": { "scope": "organization" }
   },
   "pages": {
     "cname": "indexit.octolab.org",

@@ -4,14 +4,14 @@
 //
 //   release.mjs check  <tag> [--sha <commit>] [--pushed <branch>=<sha>]...
 //   release.mjs render <tag> --site-url <url> --out <file>   (prints the title)
-//   release.mjs preflight                                    (CI: required secrets are present and usable)
+//   release.mjs preflight                                    (CI: required secrets are present; outputs the tap)
 //   release.mjs doctor                                       (on demand: config vs GitHub, with remediation)
 //   release.mjs pages  <base-url>                            (CI: the Pages URL matches settings.json pages)
 //   release.mjs smoke  <site-url> [--retries <n>]            (CI: the deployed site serves pages and assets)
 //   release.mjs vanity                                       (vanity imports in go.mod resolve over verified HTTPS)
 
 import { execFileSync } from 'node:child_process'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 
 const SETTINGS = '.github/settings.json'
 const DEFAULTS = {
@@ -343,29 +343,33 @@ function tap() {
   return { owner: field('owner'), name: field('name'), token }
 }
 
+// The tap token is not a secret: cd.yml mints it per run from a GitHub App
+// installed on the tap, so GitHub signs the commits goreleaser makes there.
+const TAP_APP = { id: 'HOMEBREW_TAP_APP_CLIENT_ID', key: 'HOMEBREW_TAP_APP_KEY' }
+
 function secretGuide(name, t) {
-  if (t && t.token === name) {
-    return `create a fine-grained PAT with resource owner ${t.owner}, repository ${t.owner}/${t.name}, ` +
-      `permission Contents: Read and write; save it as secret ${name} ` +
-      `(gh secret set ${name} -o <org> or -R <owner>/<repo>)`
+  const save = `(gh secret set ${name} -o <org> or -R <owner>/<repo>)`
+  if (t && (name === TAP_APP.id || name === TAP_APP.key)) {
+    const app = `a GitHub App owned by ${t.owner} with no webhook and Repository permissions → Contents: Read and write, ` +
+      `installed on ${t.owner}/${t.name} only`
+    return name === TAP_APP.id
+      ? `create ${app}; save its Client ID as secret ${name} ${save}`
+      : `generate a private key for ${app}; save the .pem file as secret ${name} ${save}`
   }
-  return `save it as secret ${name} (gh secret set ${name} -o <org> or -R <owner>/<repo>)`
+  return `save it as secret ${name} ${save}`
 }
 
+// Checks the App credentials before anything is built and hands the tap to
+// the step that mints the token; that step fails if the App is not installed
+// on the tap or lacks Contents: write.
 function preflight() {
   const t = tap()
-  const errors = []
-  if (t?.token) {
-    const token = process.env[t.token]
-    if (!token) {
-      errors.push(`secret ${t.token} is empty or not passed to this step; ${secretGuide(t.token, t)}`)
-    } else {
-      try {
-        gh('api', `repos/${t.owner}/${t.name}`, '--silent', { GH_TOKEN: token })
-      } catch (e) {
-        errors.push(`${t.token} cannot read ${t.owner}/${t.name} (${e.message}); ${secretGuide(t.token, t)}`)
-      }
-    }
+  if (!t?.token) return []
+  const errors = Object.values(TAP_APP)
+    .filter((name) => !process.env[name])
+    .map((name) => `secret ${name} is empty or not passed to this step; ${secretGuide(name, t)}`)
+  if (!errors.length && process.env.GITHUB_OUTPUT) {
+    appendFileSync(process.env.GITHUB_OUTPUT, `tap-owner=${t.owner}\ntap-name=${t.name}\n`)
   }
   return errors
 }
@@ -422,7 +426,7 @@ async function doctor() {
 
   const t = tap()
   const { secrets } = settings()
-  const names = new Set([...Object.keys(secrets), ...(t?.token ? [t.token] : [])])
+  const names = Object.keys(secrets)
   const workflows = existsSync('.github/workflows')
     ? git('ls-files', '.github/workflows').trim().split('\n').filter(Boolean)
     : []

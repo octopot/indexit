@@ -14,8 +14,6 @@ homebrew_casks:
     ids: [indexit]
     binaries: [indexit]
     commit_author:
-      name: Kamil Samigullin
-      email: kamil@samigullin.info
       use_github_app_token: true
     description: CLI for indexing personal data.
     directory: Casks

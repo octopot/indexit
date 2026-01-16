@@ -42,6 +42,17 @@ jobs:
         run: node .github/scripts/release.mjs doctor
       - name: Check release secrets
         if: success() || failure()
+        id: preflight
         env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_APP_CLIENT_ID: ${{ secrets.HOMEBREW_TAP_APP_CLIENT_ID }}
+          HOMEBREW_TAP_APP_KEY: ${{ secrets.HOMEBREW_TAP_APP_KEY }}
         run: node .github/scripts/release.mjs preflight
+      - name: Mint the tap token
+        if: steps.preflight.outcome == 'success'
+        uses: actions/create-github-app-token@v3.2.0
+        with:
+          client-id: ${{ secrets.HOMEBREW_TAP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.HOMEBREW_TAP_APP_KEY }}
+          owner: ${{ steps.preflight.outputs.tap-owner }}
+          repositories: ${{ steps.preflight.outputs.tap-name }}
+          permission-contents: write
