@@ -103,3 +103,16 @@ func (f fakeAPI) ChannelsGetMessages(context.Context, *tg.ChannelsGetMessagesReq
 func (f fakeAPI) MessagesGetMessages(context.Context, []tg.InputMessageClass) (tg.MessagesMessagesClass, error) {
 	return nil, errors.New("unexpected MessagesGetMessages call")
 }
+
+func TestResolvePeerFourLetterUsername(t *testing.T) {
+	ref, err := uid.Parse("https://t.me/beta")
+	require.NoError(t, err)
+	resolved, err := ResolvePeer(context.Background(), fakeAPI{
+		resolved: &tg.ContactsResolvedPeer{
+			Peer:  &tg.PeerChannel{ChannelID: 70},
+			Chats: []tg.ChatClass{&tg.Channel{ID: 70, AccessHash: 170, Username: "beta"}},
+		},
+	}, peers.New(), ref, RateGuard{})
+	require.NoError(t, err)
+	assert.Equal(t, "channel:70", resolved.UID)
+}

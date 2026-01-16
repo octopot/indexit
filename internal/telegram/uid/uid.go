@@ -28,7 +28,8 @@ type PeerRef struct {
 	HasAnchor bool
 }
 
-var usernameRE = regexp.MustCompile(`^[A-Za-z0-9_]{5,32}$`)
+// Four-letter usernames exist: Fragment sells them and t.me serves them.
+var usernameRE = regexp.MustCompile(`^[A-Za-z0-9_]{4,32}$`)
 
 func Parse(raw string) (PeerRef, error) {
 	s := clean(raw)

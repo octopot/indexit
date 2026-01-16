@@ -12,6 +12,8 @@ func FuzzParse(f *testing.F) {
 		"",
 		"   ",
 		"@telegram",
+		"@beta",
+		"@abc",
 		"user:@kamilsk",
 		"user:42",
 		"chat:42",
