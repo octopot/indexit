@@ -14,7 +14,7 @@ milestone:
 state: OPEN
 stateReason:
 createdAt: 2026-10-02T09:37:34Z
-updatedAt: 2026-10-02T09:59:57Z
+updatedAt: 2026-10-02T10:12:25Z
 lastEditedAt:
 closedAt:
 ---
@@ -112,4 +112,10 @@ Checked locally: `goreleaser check`, `cue vet`, `actionlint`, and `preflight` wi
 **Next:** after the commit lands on main, `gh workflow run doctor.yml` must mint the token; the next release's Cask commit must be `verified: true` with `octolab-releaser[bot]` as its author.
 
 The PAT `HOMEBREW_TAP_TOKEN` stays: octomation/maintainer still pushes its Cask and formula with it and moves to the App separately.
+-->
+
+<!-- 2026-10-02T10:12Z https://github.com/octopot/indexit/issues/108#issuecomment-5950060132
+The App is installed on octolab/homebrew-tap only (`repository_selection: selected`, Contents: write, Metadata: read), and the workflows landed in ff367f5. [Doctor run 36994117563](https://github.com/octopot/indexit/actions/runs/36994117563) on that commit passed "Check release secrets" and "Mint the tap token": the secrets are set and the App can get a write token for the tap.
+
+Left for the acceptance: the Cask commit of the next release is `verified: true`, authored by `octolab-releaser[bot]`.
 -->
