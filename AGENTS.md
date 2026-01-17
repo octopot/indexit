@@ -58,9 +58,16 @@ Then, in the same release commit:
 - `docs/content/index.mdx`: description, release pill, release band, scope note.
 - The current version in `README.md`, `docs/README.md`, both quick starts
   (archive names included) and `docs/content/guide/*.mdx`.
+- `skills/indexit/SKILL.md`: `metadata.version` is the tag without `v`;
+  `tool-version-range`, the `compatibility` line and the ranges in the skill's
+  text become `>=0.Y.Z <0.(Y+1).0` before 1.0, `>=X.Y.Z <(X+1).0.0` after,
+  and `=X.Y.Z-rc.N` for a prerelease.
+  `make release-check` rejects another version, `go test ./skills` mismatched
+  ranges.
 
 ```sh
-grep -rn 'X\.Y\.W' README.md docs/README.md docs/content docs/public  # only old notes and cards may remain
+grep -rn 'X\.Y\.W' README.md docs/README.md docs/content docs/public skills  # only old notes and cards may remain
+go test ./skills
 node .github/scripts/release.mjs render vX.Y.Z --site-url https://indexit.octolab.org/ --out "$(mktemp -d)/notes.md"
 (cd docs && SITE_URL=https://indexit.octolab.org/ npx next build)
 ```
