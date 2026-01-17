@@ -16,6 +16,7 @@ import (
 
 	"go.octolab.org/toolset/indexit/internal/command"
 	"go.octolab.org/toolset/indexit/internal/skill"
+	"go.octolab.org/toolset/indexit/skills"
 )
 
 const reference = "references/cli.md"
@@ -26,6 +27,15 @@ func TestSkill(t *testing.T) {
 	for _, err := range skill.Check("indexit", indexit) {
 		t.Error(err)
 	}
+}
+
+// TestEmbedded makes sure the binary carries every file of the skill.
+func TestEmbedded(t *testing.T) {
+	want, err := skill.Digest(indexit)
+	require.NoError(t, err)
+	got, err := skill.Digest(skills.Indexit())
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
 }
 
 func TestReference(t *testing.T) {
@@ -59,12 +69,11 @@ func TestCoverage(t *testing.T) {
 		text.Write(data)
 	}
 	for _, cmd := range skill.Leaves(command.New()) {
-		// telegram fetch messages is mentioned as fetch messages, version as
-		// indexit version.
-		path := strings.Fields(cmd.CommandPath())
-		name := strings.Join(path[min(2, len(path)-1):], " ")
-		if len(path) == 2 {
-			name = cmd.CommandPath()
+		// indexit telegram fetch messages is mentioned as fetch messages,
+		// indexit skill status as skill status, and indexit version in full.
+		name := strings.TrimPrefix(cmd.CommandPath(), "indexit telegram ")
+		if path := strings.Fields(name); len(path) > 2 {
+			name = strings.Join(path[1:], " ")
 		}
 		mentioned := regexp.MustCompile(`\b` + regexp.QuoteMeta(name) + `\b`)
 		if !mentioned.MatchString(text.String()) {

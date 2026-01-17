@@ -19,12 +19,20 @@ const DigestAlgorithm = "octolab-skill-sha256-v1"
 // and dotfiles are errors: they don't survive every channel, and dotfiles
 // are reserved for installers' ownership markers.
 func Files(fsys fs.FS) ([]string, error) {
+	return walk(fsys, false)
+}
+
+func walk(fsys fs.FS, skipDotfiles bool) ([]string, error) {
 	var files []string
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		switch {
 		case err != nil:
 			return err
 		case path == ".":
+			return nil
+		case strings.HasPrefix(d.Name(), ".") && skipDotfiles && d.IsDir():
+			return fs.SkipDir
+		case strings.HasPrefix(d.Name(), ".") && skipDotfiles:
 			return nil
 		case strings.HasPrefix(d.Name(), "."):
 			return fmt.Errorf("%s: dotfiles are not allowed in a skill", path)
@@ -48,6 +56,20 @@ func Digest(fsys fs.FS) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return digest(fsys, files)
+}
+
+// CopyDigest returns the digest of an installed copy, leaving out dotfiles
+// such as the ownership marker or .DS_Store.
+func CopyDigest(fsys fs.FS) (string, error) {
+	files, err := walk(fsys, true)
+	if err != nil {
+		return "", err
+	}
+	return digest(fsys, files)
+}
+
+func digest(fsys fs.FS, files []string) (string, error) {
 	h := sha256.New()
 	for _, path := range files {
 		data, err := fs.ReadFile(fsys, path)

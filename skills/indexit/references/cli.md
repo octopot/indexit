@@ -18,6 +18,103 @@ Global flags, accepted by every command in any position:
 - `-q, --quiet`: suppress everything below error level (stdout payload unaffected)
 - `-v, --verbose count`: increase log verbosity (-v debug, -vvv enables gotd internals)
 
+## indexit skill
+
+Show or install the agent skill for this release.
+
+The skill teaches coding agents such as Claude Code and Codex to use indexit.
+It ships inside the binary and matches its version. These commands work
+offline and never read .env.
+
+```text
+indexit skill [command]
+```
+
+## indexit skill export
+
+Write the skill into a directory, with an ownership marker next to SKILL.md.
+
+A new or empty directory is written. --replace replaces a copy that indexit
+installed and nobody changed since; any other directory is left alone.
+
+```text
+indexit skill export [flags]
+```
+
+Flags:
+
+- `-o, --output string` (required): directory to write the skill into
+- `--replace`: replace a copy that indexit installed earlier
+
+## indexit skill info
+
+Print the skill's version, compatible range and digest
+
+```text
+indexit skill info [flags]
+```
+
+Flags:
+
+- `--json`: print one JSON object
+
+## indexit skill install
+
+Install the skill for Claude Code or Codex.
+
+Writes ~/.claude/skills/indexit (or $CLAUDE_CONFIG_DIR/skills/indexit) for
+Claude Code and ~/.agents/skills/indexit for Codex; with --project, the same
+under the current directory. After upgrading indexit, run it again with
+--replace. A directory from another installer is left alone.
+
+```text
+indexit skill install [flags]
+```
+
+Flags:
+
+- `--agent strings` (required): agents to install for: claude-code, codex
+- `--project`: install into the current directory instead of the user's skills
+- `--replace`: replace a copy that indexit installed earlier
+
+Examples:
+
+```sh
+indexit skill install --agent claude-code
+indexit skill install --agent claude-code,codex --replace
+```
+
+## indexit skill show
+
+Print the skill's SKILL.md or one of its files
+
+```text
+indexit skill show [flags]
+```
+
+Flags:
+
+- `--file string`: file to print, e.g. references/cli.md (default "SKILL.md")
+
+## indexit skill status
+
+Check the installed copies of the skill against this binary.
+
+Looks in the user's and the project's skills of Claude Code and Codex, and
+in Claude Code plugins. Fails when a copy is incompatible with this binary,
+was changed after indexit installed it, or no copy exists for a requested
+--agent; with --exact, also when a copy differs from this release.
+
+```text
+indexit skill status [flags]
+```
+
+Flags:
+
+- `--agent strings`: agents to check: claude-code, codex (default all)
+- `--exact`: also fail when a copy differs from this release
+- `--json`: print one JSON record per copy
+
 ## indexit telegram
 
 Fetch Telegram dialogs and message history

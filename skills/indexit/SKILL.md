@@ -35,7 +35,8 @@ This skill describes indexit `>=0.2.0 <0.3.0`. Before anything else:
    - Older or newer: don't rely on the recipes here. Read the skill that ships
      with the binary, `indexit skill show`, and tell the user the versions
      differ; suggest upgrading indexit (`brew upgrade --cask octolab/tap/indexit`)
-     or reinstalling the skill (`indexit skill install --replace`).
+     or reinstalling the skill from the binary
+     (`indexit skill install --agent claude-code --replace`, or `codex`).
    - `dev` or unknown: treat compatibility as unknown and rely on `--help`.
    - `indexit skill` missing: the binary predates it; rely on `--help` only.
    - `indexit` not found: explain how to install it

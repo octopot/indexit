@@ -12,6 +12,7 @@ import (
 	"go.octolab.org/toolset/indexit/internal/config"
 	"go.octolab.org/toolset/indexit/internal/exitcode"
 	indexlog "go.octolab.org/toolset/indexit/internal/log"
+	"go.octolab.org/toolset/indexit/skills"
 )
 
 // New returns the new root command with the whole command tree. Call
@@ -75,6 +76,7 @@ func New() *cobra.Command {
 	/* configure instance */
 	command.AddCommand(
 		telegram.New(),
+		skillCommand(skills.Indexit()),
 		cli.NewVersionCommand(buildinfo.Version, buildinfo.Date, buildinfo.Commit),
 	)
 

@@ -6,6 +6,7 @@ archives:
   - id: indexit
     files:
       - LICENSE
+      - skills/indexit/**
     formats: [tar.gz]
     name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
 

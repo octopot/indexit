@@ -137,3 +137,20 @@ INDEXIT_PROXY_URL="http://proxy.example:3128"
 Check with `indexit telegram auth status --timeout 30s`. `HTTP_PROXY` and
 friends don't apply; a configured proxy never falls back to a direct
 connection.
+
+## Install and update this skill
+
+The binary carries the skill for its own version:
+
+```sh
+indexit skill info
+indexit skill install --agent claude-code,codex
+indexit skill status
+```
+
+`install` writes `~/.claude/skills/indexit` for Claude Code and
+`~/.agents/skills/indexit` for Codex, or the same under the current directory
+with `--project`, and leaves directories of other installers alone. After
+upgrading indexit, run it again with `--replace`. `status` lists every copy the
+agents load, flags incompatible, changed and duplicate ones, and exits `1` on a
+problem. `indexit skill export -o <dir>` writes the skill anywhere else.
