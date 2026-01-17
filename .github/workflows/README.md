@@ -41,8 +41,8 @@ flowchart LR
 
 | Secret | Used by | Purpose |
 | --- | --- | --- |
-| `HOMEBREW_TAP_APP_CLIENT_ID` | cd, doctor | Client ID of the GitHub App that pushes the Cask to the tap named in `.goreleaser.yml` |
-| `HOMEBREW_TAP_APP_KEY` | cd, doctor | Private key of that App |
+| `OCTOLAB_RELEASER_CLIENT_ID` | cd, doctor | Client ID of the GitHub App "OctoLab Releaser" that pushes the Cask to the tap named in `.goreleaser.yml` |
+| `OCTOLAB_RELEASER_KEY` | cd, doctor | Private key of that App |
 | `SLACK_WEBHOOK` | all but doctor | Notifications, optional |
 
 ## ci

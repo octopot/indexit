@@ -343,16 +343,17 @@ function tap() {
   return { owner: field('owner'), name: field('name'), token }
 }
 
-// The tap token is not a secret: cd.yml mints it per run from a GitHub App
-// installed on the tap, so GitHub signs the commits goreleaser makes there.
-const TAP_APP = { id: 'HOMEBREW_TAP_APP_CLIENT_ID', key: 'HOMEBREW_TAP_APP_KEY' }
+// The tap token is not a secret: cd.yml mints it per run from the OctoLab
+// Releaser GitHub App installed on the tap, so GitHub signs the commits
+// goreleaser makes there.
+const RELEASER_APP = { id: 'OCTOLAB_RELEASER_CLIENT_ID', key: 'OCTOLAB_RELEASER_KEY' }
 
 function secretGuide(name, t) {
   const save = `(gh secret set ${name} -o <org> or -R <owner>/<repo>)`
-  if (t && (name === TAP_APP.id || name === TAP_APP.key)) {
+  if (t && (name === RELEASER_APP.id || name === RELEASER_APP.key)) {
     const app = `a GitHub App owned by ${t.owner} with no webhook and Repository permissions → Contents: Read and write, ` +
       `installed on ${t.owner}/${t.name} only`
-    return name === TAP_APP.id
+    return name === RELEASER_APP.id
       ? `create ${app}; save its Client ID as secret ${name} ${save}`
       : `generate a private key for ${app}; save the .pem file as secret ${name} ${save}`
   }
@@ -365,7 +366,7 @@ function secretGuide(name, t) {
 function preflight() {
   const t = tap()
   if (!t?.token) return []
-  const errors = Object.values(TAP_APP)
+  const errors = Object.values(RELEASER_APP)
     .filter((name) => !process.env[name])
     .map((name) => `secret ${name} is empty or not passed to this step; ${secretGuide(name, t)}`)
   if (!errors.length && process.env.GITHUB_OUTPUT) {
