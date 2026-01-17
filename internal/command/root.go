@@ -5,14 +5,17 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	cli "go.octolab.org/toolkit/cli/cobra"
 
+	"go.octolab.org/toolset/indexit/internal/buildinfo"
 	"go.octolab.org/toolset/indexit/internal/command/telegram"
 	"go.octolab.org/toolset/indexit/internal/config"
 	"go.octolab.org/toolset/indexit/internal/exitcode"
 	indexlog "go.octolab.org/toolset/indexit/internal/log"
 )
 
-// New returns the new root command.
+// New returns the new root command with the whole command tree. Call
+// buildinfo.Set first: the version command reports what it holds.
 func New() *cobra.Command {
 	var (
 		envFile   string
@@ -72,6 +75,7 @@ func New() *cobra.Command {
 	/* configure instance */
 	command.AddCommand(
 		telegram.New(),
+		cli.NewVersionCommand(buildinfo.Version, buildinfo.Date, buildinfo.Commit),
 	)
 
 	return &command

@@ -11,7 +11,6 @@ import (
 	"github.com/fatih/color"
 	"go.octolab.org/errors"
 	"go.octolab.org/safe"
-	"go.octolab.org/toolkit/cli/cobra"
 	"go.octolab.org/unsafe"
 
 	"go.octolab.org/toolset/indexit/internal/buildinfo"
@@ -54,9 +53,6 @@ func main() {
 	root := command.New()
 	root.SetErr(stderr)
 	root.SetOut(stdout)
-	root.AddCommand(
-		cobra.NewVersionCommand(version, date, commit),
-	)
 
 	safe.Do(func() error { return root.ExecuteContext(ctx) }, shutdown)
 }

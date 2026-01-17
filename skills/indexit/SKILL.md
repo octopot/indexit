@@ -96,6 +96,8 @@ Key distinctions:
   in, it returns only Telegram's preview.
 
 Step-by-step recipes: [references/workflows.md](references/workflows.md).
+Every command and flag of this release:
+[references/cli.md](references/cli.md).
 
 ## 4. Read the results
 

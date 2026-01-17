@@ -12,6 +12,7 @@ on:
       - 'go.sum'
       - 'Makefile'
       - 'Taskfile'
+      - 'skills/**'
 
   push:
     branches: [ main ]
@@ -24,6 +25,7 @@ on:
       - 'go.sum'
       - 'Makefile'
       - 'Taskfile'
+      - 'skills/**'
     tags: [ 'v*' ]
 
   schedule:

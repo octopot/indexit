@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process'
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 
 const SETTINGS = '.github/settings.json'
+const SKILL = 'skills/indexit/SKILL.md'
 const DEFAULTS = {
   tag_pattern: '^v\\d+\\.\\d+\\.\\d+(-[0-9A-Za-z.-]+)?$',
   notes: 'docs/content/changelog/{tag}.md',
@@ -93,6 +94,14 @@ function mapProse(body, fn) {
   }).join('\n')
 }
 
+// Reads metadata.version from the SKILL.md frontmatter; go test checks the rest of it.
+function skillVersion(text) {
+  const { body } = frontmatter(text)
+  const head = text.slice(0, text.length - body.length)
+  const m = head.match(/^metadata:\r?\n(?: {2}.*\r?\n)*? {2}version:[ ]*(.*?)\s*$/m)
+  return m ? m[1].replace(/^(["'])(.*)\1$/, '$2') : null
+}
+
 function releaseBranch(tag, release, defaultBranch) {
   for (const { match, branch } of release.branches) {
     const m = tag.match(new RegExp(match))
@@ -130,6 +139,12 @@ function check(tag, opts) {
       errors.push(`${note}: has changes not in ${tag}; commit them and move the tag`)
     }
     errors.push(...lint(note, committed))
+  }
+
+  const skill = tryGit('show', `${sha}:${SKILL}`)
+  const version = tag.replace(/^v/, '')
+  if (skill !== null && skillVersion(skill) !== version) {
+    errors.push(`${SKILL}: metadata.version is ${skillVersion(skill)}, not ${version}; update the version and the ranges in the release commit and move the tag`)
   }
 
   const base = defaultBranch()
