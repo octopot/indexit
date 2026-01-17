@@ -24,6 +24,16 @@ Use `indexit <command> --help` for help at any level. All examples describe the 
 
 `indexit version` shows the build version. `indexit completion bash`, `zsh`, `fish`, or `powershell` generates shell completion scripts.
 
+| Command prefix: `indexit skill` | Purpose |
+| --- | --- |
+| `install --agent claude-code,codex [--project] [--replace]` | Install the [agent skill](/guide/agents/) that ships with this binary |
+| `status [--agent NAME] [--exact]` | Check every installed copy against this binary |
+| `show [--file PATH]` | Print the skill or one of its files |
+| `info` | Print the skill’s version, compatible range, and digest |
+| `export -o DIR [--replace]` | Write the skill into any directory |
+
+The `skill` commands work offline and do not read `.env`. `info` and `status` accept `--json`.
+
 ## Fetch flags
 
 | Flag | Default | Meaning |

@@ -2,8 +2,8 @@
 
 | Workflow | Name | Runs on | Does |
 | --- | --- | --- | --- |
-| [ci](#ci) | Continuous integration | PR and push to main (Go files), `v*` tag, monthly, manual | Lint, tests, coverage to Codecov |
-| [cd](#cd) | Continuous delivery | `v*` tag, manual | Check the tag, test, publish the release and the Homebrew Cask; a snapshot on manual runs |
+| [ci](#ci) | Continuous integration | PR and push to main (Go files, `skills/`), `v*` tag, monthly, manual | Lint, tests, coverage to Codecov |
+| [cd](#cd) | Continuous delivery | `v*` tag, manual | Check the tag, test, publish the release, the Homebrew Cask and the agent skill; a snapshot on manual runs |
 | [docs](#docs) | Documentation delivery | PR and push to main (`docs/`), monthly, manual, reusable | Build the site; deploy it to Pages from main |
 | [tools](#tools) | Tools validation | PR and push to main (`tools/`), monthly, manual | Install the tools module and check generated code |
 | [doctor](#doctor) | Repository doctor | manual | Compare the repository with GitHub and explain fixes |
@@ -22,7 +22,7 @@ flowchart LR
   cron([schedule]) --> ci & docs & tools & caches & runs & stale
   caches -- completed --> warmup
   you([maintainer]) -- manual --> doctor
-  cd --> release[(GitHub release)] & tap[(Homebrew tap)]
+  cd --> release[(GitHub release)] & tap[(Homebrew tap)] & catalog[(octolab/skills)]
   docs --> pages[(GitHub Pages)]
 ```
 
@@ -41,7 +41,7 @@ flowchart LR
 
 | Secret | Used by | Purpose |
 | --- | --- | --- |
-| `OCTOLAB_RELEASER_CLIENT_ID` | cd, doctor | Client ID of the GitHub App "OctoLab Releaser" that pushes the Cask to the tap named in `.goreleaser.yml` |
+| `OCTOLAB_RELEASER_CLIENT_ID` | cd, doctor | Client ID of the GitHub App "OctoLab Releaser" that pushes the Cask to the tap named in `.goreleaser.yml` and the skill to `octolab/skills` |
 | `OCTOLAB_RELEASER_KEY` | cd, doctor | Private key of that App |
 | `SLACK_WEBHOOK` | all but doctor | Notifications, optional |
 
@@ -57,7 +57,7 @@ flowchart LR
 ```
 
 - Runs on PRs and pushes to main that touch Go code, `go.mod`, `Makefile`,
-  `Taskfile` or the workflow itself; on `v*` tags; monthly; manually.
+  `Taskfile`, the agent skill in `skills/` or the workflow itself; on `v*` tags; monthly; manually.
 - Codecov uses GitHub OIDC (`id-token: write`). The repository must be activated
   in Codecov; no `CODECOV_TOKEN` is needed.
 - PRs get no notification.
@@ -72,7 +72,8 @@ flowchart TB
   render --> go[set up Go, make tools] --> test[fast check and tests] --> publish[goreleaser release]
   publish --> release[(GitHub release: body and title from the note)]
   publish --> tap[(Cask in the tap)]
-  publish --> notify[notify]
+  publish --> archives[check the skill in the archives] --> skill[publish the skill, stable tags only] --> catalog[(octolab/skills)]
+  skill --> notify[notify]
 ```
 
 - **A release is a curated note plus a tag.** Write `docs/content/changelog/<tag>.md`:
@@ -101,7 +102,18 @@ flowchart TB
   notarization are not configured yet, so the Cask preflight clears the
   quarantine attribute. It has to run before the completions are generated,
   which execute the binary, so a `postflight` hook would be too late.
-- A manual run on a branch builds a snapshot and publishes nothing.
+- **The agent skill ships with the release.** `skills/indexit/` is embedded in
+  the binary and packed into every archive; `release.mjs skill` checks that the
+  source, the archives and `indexit skill info` agree on its digest. For a
+  stable tag, the pinned `octolab/skills` publish action then copies the skill
+  from the tag into the catalog, with a commit signed as the App and a tag
+  `indexit--vX.Y.Z`, and the digest it published is compared once more. The
+  catalog token is minted separately, from the same App installed on
+  `octolab/skills`: the tap token is scoped to the tap. Prerelease tags are
+  not published to the catalog. Update the action's pin only after reviewing
+  the catalog's changes.
+- A manual run on a branch builds a snapshot and publishes nothing; it still
+  checks the skill in the archives.
 
 ## docs
 
@@ -146,7 +158,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  doctor[compare with GitHub: default branch, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets] --> token[mint the tap token]
+  doctor[compare with GitHub: default branch, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets] --> token[mint the tap token] & catalog[mint the catalog token]
 ```
 
 - Daily and manual: a Pages domain change triggers no workflow, so a site
@@ -158,8 +170,9 @@ flowchart LR
   a fresh runner hits it; `node .github/scripts/release.mjs vanity` checks
   only that.
 - The workflow token cannot list secrets, so they show as `unverified` there;
-  the preflight step checks the ones a release needs, and minting the tap
-  token proves the App is still installed on the tap with write access.
+  the preflight step checks the ones a release needs, and minting the tap and
+  catalog tokens proves the App is still installed on the tap and on
+  `octolab/skills` with write access.
   Locally, `gh` needs `admin:org` to see organization secrets.
 
 ## caches

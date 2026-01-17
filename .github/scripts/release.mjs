@@ -9,9 +9,13 @@
 //   release.mjs pages  <base-url>                            (CI: the Pages URL matches settings.json pages)
 //   release.mjs smoke  <site-url> [--retries <n>]            (CI: the deployed site serves pages and assets)
 //   release.mjs vanity                                       (vanity imports in go.mod resolve over verified HTTPS)
+//   release.mjs skill [--published <digest>]                 (CI: one agent skill in the source, archives, binary and catalog)
 
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { appendFileSync, existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const SETTINGS = '.github/settings.json'
 const SKILL = 'skills/indexit/SKILL.md'
@@ -346,6 +350,63 @@ async function vanity() {
   return Promise.all(vanityModules().map(async (p) => [p, await vanityCheck(p)]))
 }
 
+// --- skill -------------------------------------------------------------------
+
+// The octolab-skill-sha256-v1 digest, as internal/skill and octolab/skills
+// compute it: for every file in byte order of its relative path, sha256 takes
+// the path, NUL, the decimal size, NUL and the contents.
+function skillDigest(dir) {
+  const files = []
+  const walk = (rel) => {
+    for (const entry of readdirSync(join(dir, rel), { withFileTypes: true })) {
+      const path = rel ? `${rel}/${entry.name}` : entry.name
+      if (entry.name.startsWith('.') || lstatSync(join(dir, path)).isSymbolicLink()) {
+        throw new Error(`${join(dir, path)}: dotfiles and symbolic links are not allowed in a skill`)
+      }
+      if (entry.isDirectory()) walk(path)
+      else files.push(path)
+    }
+  }
+  walk('')
+  const hash = createHash('sha256')
+  for (const path of files.sort((a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)))) {
+    const data = readFileSync(join(dir, path))
+    hash.update(path).update('\0').update(String(data.length)).update('\0').update(data)
+  }
+  return `sha256:${hash.digest('hex')}`
+}
+
+// Compares the skill in the source with every release archive, with the copy
+// embedded in the binary for this machine and, after publication, with the
+// catalog's payload digest.
+function skill(opts) {
+  const dir = SKILL.slice(0, SKILL.lastIndexOf('/'))
+  const want = skillDigest(dir)
+  const errors = []
+  const archives = existsSync('dist') ? readdirSync('dist').filter((f) => f.endsWith('.tar.gz')) : []
+  if (!archives.length) return [`dist: no release archives; run goreleaser first`]
+  const arch = { x64: 'amd64', ia32: '386' }[process.arch] || process.arch
+  let binary = null
+  for (const archive of archives) {
+    const out = mkdtempSync(join(tmpdir(), 'skill-'))
+    execFileSync('tar', ['-xzf', join('dist', archive), '-C', out])
+    const got = existsSync(join(out, dir)) ? skillDigest(join(out, dir)) : 'missing'
+    if (got !== want) errors.push(`${archive}: the skill is ${got}, the source ${want}`)
+    if (archive.endsWith(`_${process.platform}-${arch}.tar.gz`)) binary = join(out, 'indexit')
+  }
+  if (binary) {
+    const { digest } = JSON.parse(execFileSync(binary, ['skill', 'info', '--json'], { encoding: 'utf8' }))
+    if (digest !== want) errors.push(`indexit skill info: the embedded skill is ${digest}, the source ${want}`)
+  } else {
+    errors.push(`dist: no archive for ${process.platform}-${arch} to check the embedded skill`)
+  }
+  if (opts.published !== undefined && opts.published !== want) {
+    errors.push(`octolab/skills: published ${opts.published || 'nothing'}, the source is ${want}`)
+  }
+  if (!errors.length) console.log(`skill ${want} in the source, ${archives.length} archives and the binary${opts.published ? ' and the catalog' : ''}`)
+  return errors
+}
+
 // --- preflight and doctor ----------------------------------------------------
 
 // Reads the first Homebrew repository block from .goreleaser.yml.
@@ -358,16 +419,17 @@ function tap() {
   return { owner: field('owner'), name: field('name'), token }
 }
 
-// The tap token is not a secret: cd.yml mints it per run from the OctoLab
-// Releaser GitHub App installed on the tap, so GitHub signs the commits
-// goreleaser makes there.
+// The tap and catalog tokens are not secrets: cd.yml mints them per run from
+// the OctoLab Releaser GitHub App installed on the tap and on octolab/skills,
+// so GitHub signs the commits made there.
 const RELEASER_APP = { id: 'OCTOLAB_RELEASER_CLIENT_ID', key: 'OCTOLAB_RELEASER_KEY' }
+const CATALOG = 'octolab/skills'
 
 function secretGuide(name, t) {
   const save = `(gh secret set ${name} -o <org> or -R <owner>/<repo>)`
   if (t && (name === RELEASER_APP.id || name === RELEASER_APP.key)) {
     const app = `a GitHub App owned by ${t.owner} with no webhook and Repository permissions → Contents: Read and write, ` +
-      `installed on ${t.owner}/${t.name} only`
+      `installed on ${t.owner}/${t.name} and ${CATALOG} only`
     return name === RELEASER_APP.id
       ? `create ${app}; save its Client ID as secret ${name} ${save}`
       : `generate a private key for ${app}; save the .pem file as secret ${name} ${save}`
@@ -376,8 +438,9 @@ function secretGuide(name, t) {
 }
 
 // Checks the App credentials before anything is built and hands the tap to
-// the step that mints the token; that step fails if the App is not installed
-// on the tap or lacks Contents: write.
+// the step that mints the token; that step, and the one that mints the
+// catalog token, fail if the App is not installed on the repository or lacks
+// Contents: write.
 function preflight() {
   const t = tap()
   if (!t?.token) return []
@@ -515,8 +578,13 @@ try {
       }
       process.exit(results.some(([, e]) => e) ? 1 : 0)
     }
+    case 'skill': {
+      const errors = skill(opts)
+      errors.forEach((e) => console.error(`skill: ${e}`))
+      process.exit(errors.length ? 1 : 0)
+    }
     default:
-      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke|vanity ...')
+      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke|vanity|skill ...')
       process.exit(2)
   }
 } catch (e) {

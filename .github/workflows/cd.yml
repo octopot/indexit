@@ -118,6 +118,33 @@ jobs:
             ~/go/pkg/mod
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
+      - name: Check the skill in the archives
+        run: node .github/scripts/release.mjs skill
+      # the catalog keeps stable releases only; the tap token is scoped to the
+      # tap, so the catalog gets its own
+      - name: Mint the catalog token
+        if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+        id: catalog
+        uses: actions/create-github-app-token@v3.2.0
+        with:
+          client-id: ${{ secrets.OCTOLAB_RELEASER_CLIENT_ID }}
+          private-key: ${{ secrets.OCTOLAB_RELEASER_KEY }}
+          owner: octolab
+          repositories: skills
+          permission-contents: write
+      - name: Publish the agent skill
+        if: steps.catalog.outcome == 'success'
+        id: skill
+        uses: octolab/skills/.github/actions/publish@ca9113a9489baf116638053997ec9d2179bfc9a5
+        with:
+          tool: indexit
+          token: ${{ steps.catalog.outputs.token }}
+      - name: Compare the published skill
+        if: steps.skill.outcome == 'success'
+        env:
+          PUBLISHED: ${{ steps.skill.outputs.payload-digest }}
+        run: node .github/scripts/release.mjs skill --published "${PUBLISHED}"
+
   notify:
     name: Notifying
     needs: [ release ]

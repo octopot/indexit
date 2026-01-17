@@ -7,6 +7,7 @@ export default {
   setup: { type: 'separator', title: 'Make it yours' },
   authentication: 'Accounts & sessions',
   proxy: 'Connect through a proxy',
+  agents: 'Use with coding agents',
   reference: 'CLI & configuration',
   troubleshooting: 'Troubleshooting',
 }

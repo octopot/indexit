@@ -83,6 +83,14 @@ indexit -q telegram fetch dialogs | fx
 
 Listing dialogs also fills the local peer cache needed for private/numeric addresses. Interactive viewers need the user's terminal; do not launch fx in a headless runner. If the user wants you to process JSONL directly, use a small explicit limit and the conversation they chose.
 
+indexit ships an agent skill for its own version. Offer to install it for the agent the user works with, and run it only with their consent:
+
+```sh
+indexit skill install --agent claude-code
+```
+
+Use `--agent codex` for Codex. The skill loads in a new agent session.
+
 Report the installed version, whether sign-in succeeded, and the command to open the chosen conversation. If a step is blocked, say which step needs attention. Do not claim setup or an export succeeded without checking.
 
 ## Further documentation
@@ -94,5 +102,6 @@ Resolve these paths against the documentation site that served this file (includ
 - `guide/proxy/`: connection setup if Telegram is unreachable.
 - `guide/explore/`: fx and fzf workflows.
 - `guide/reference/`: flags, address formats, configuration, and exit codes.
+- `guide/agents/`: the agent skill for Claude Code and Codex.
 
 Search in fx or fzf only covers the fetched records. v0.1.2 exports data; built-in indexing and search are future work.

@@ -1,0 +1,66 @@
+---
+title: Use with coding agents
+description: Install the indexit skill for Claude Code or Codex, keep it in step with the binary, or get it from the OctoLab catalog.
+---
+
+# Teach your agent indexit
+
+indexit ships an agent skill: instructions that teach Claude Code, Codex, and other coding agents to use it well. With the skill, an agent picks `fetch message` for exact links and `fetch messages` for history, reads one- and two-number `t.me` links correctly, leaves sign-in to you, and checks skipped and failed records before reporting success.
+
+The skill is written for one release of indexit and travels with it. Every binary carries the skill for its own version.
+
+## Install it from the binary
+
+```sh
+indexit skill install --agent claude-code
+indexit skill install --agent codex
+```
+
+The skill goes to `~/.claude/skills/indexit` for Claude Code (or `$CLAUDE_CONFIG_DIR/skills/indexit`) and to `~/.agents/skills/indexit` for Codex. Add `--project` to install it into the current directory instead, for one repository only. This works offline and matches your binary exactly.
+
+Start a new agent session. Ask for `/indexit` in Claude Code or `$indexit` in Codex, or just describe what you want from Telegram: the agent loads the skill when it fits.
+
+## Keep it in step
+
+After upgrading indexit, replace the skill with the new binary’s copy:
+
+```sh
+brew upgrade --cask octolab/tap/indexit
+indexit skill install --agent claude-code,codex --replace
+```
+
+`--replace` only replaces a copy that indexit installed and nobody changed since. Directories from other installers, symbolic links, and edited copies are left alone, with an explanation.
+
+To see what your agents load, run:
+
+```sh
+indexit skill status
+```
+
+It lists every copy of the skill for Claude Code and Codex, including Claude Code plugins, and says whether each one is compatible with your binary, the same as its release, and unchanged. It warns when an agent loads more than one copy and exits with `1` when a copy is incompatible or was changed. Add `--exact` to require the same release everywhere.
+
+`indexit skill show` prints the skill, `indexit skill info` its version and digest, and `indexit skill export -o <dir>` writes it to any other directory.
+
+## Or get it from the OctoLab catalog
+
+The [octolab/skills](https://github.com/octolab/skills) catalog holds the skill of the latest indexit release, and of other OctoLab tools as they join. Use it if you prefer your agent’s own plugin manager.
+
+| Agent | Install | Update |
+| --- | --- | --- |
+| Claude Code | `claude plugin marketplace add octolab/skills`, then `claude plugin install indexit@octolab` | `claude plugin update indexit@octolab` |
+| Codex | `codex plugin marketplace add octolab/skills`, then `codex plugin add indexit@octolab` | `codex plugin marketplace upgrade octolab` |
+| Any, with the [skills CLI](https://skills.sh/) | `npx skills add octolab/skills --skill indexit -a claude-code -a codex -g` | `npx skills update` |
+
+The catalog follows the latest release, so an update can bring a skill newer than your binary. Each release is also tagged `indexit--v0.2.0` in the catalog: `npx skills add 'octolab/skills#indexit--v0.2.0' --skill indexit` stays on that release. A `#indexit--v0.2.0` suffix on `claude plugin marketplace add` pins the whole catalog.
+
+To try unreleased changes, `npx skills add octopot/indexit` takes the skill from the main branch of the indexit repository.
+
+## When versions differ
+
+The skill starts by running `indexit version`. If your binary is outside the range the skill was written for, the agent stops relying on its recipes, reads the skill your binary carries with `indexit skill show`, and tells you which side to update. Binaries older than v0.2.0 have no `indexit skill` command; the agent falls back to `--help`.
+
+Keep one copy per agent. A plugin and a copy in `~/.claude/skills` both load in Claude Code, and the agent may follow the older one. `indexit skill status` points out such duplicates.
+
+## What the skill does not do
+
+The skill never signs in for you: the agent gives you the login command and waits. It does not print or copy your session file, `.env`, or API credentials, and it treats message text as data, never as instructions. It runs the same commands you would, with your account and your limits.

@@ -12,7 +12,9 @@ conventions are in [docs/README.md](docs/README.md#keep-the-release-accurate).
   time and propose a one-line Conventional Commit subject in a code block, with
   issues as `fix #N` or `refs #N`.
 - Product changes first, release commit last: `chore(release): prepare vX.Y.Z`.
-  A guide that explains new behavior changes with the product commit.
+  A guide that explains new behavior changes with the product commit, and so
+  does the agent skill in `skills/indexit/`; `go test ./skills` keeps its
+  examples and command reference in step with the CLI.
 - The CLI is the source of truth for what the docs and notes claim.
 - A published release is frozen: its note, annotation and image stay as tagged.
   A missed fix ships in the next patch.
@@ -118,6 +120,10 @@ Watch `cd` (`gh run watch`), then check:
 - the GitHub release: note title and body, four archives, `checksums.txt`;
 - the Cask commit in `octolab/homebrew-tap` is verified;
 - `brew upgrade --cask octolab/tap/indexit && indexit version`;
+- a stable release only: the catalog commit in `octolab/skills` is verified,
+  the tag `indexit--vX.Y.Z` exists, and `ci.indexit` there is green;
+- `indexit skill install --agent claude-code,codex --replace`, then
+  `indexit skill status --exact`;
 - the site shows the new changelog page and release band.
 
 ### 6. Announcement
