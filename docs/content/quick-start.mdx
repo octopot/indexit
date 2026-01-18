@@ -17,7 +17,7 @@ Copy this instruction into an agent that can read the web and run commands on yo
 
 <AgentSetup url={`${siteUrl}quick-start.md`} />
 
-Your agent handles installation and checks the setup. You create your Telegram API credentials, enter them locally, and confirm the login on your phone.
+Your agent handles installation, checks the setup, and offers to add the indexit skill, so you can [keep working through it](#work-through-your-agent). You create your Telegram API credentials, enter them locally, and confirm the login on your phone.
 
 Prefer to run the commands yourself? Follow the steps below.
 
@@ -107,6 +107,28 @@ indexit -q telegram fetch dialogs | fx
 ```
 
 Listing dialogs fills the local peer cache. The `-q` flag keeps progress logs out of the interactive view; errors are still shown.
+
+## Work through your agent
+
+indexit is built to be driven by a coding agent as well as by hand. Every binary carries a skill: instructions that teach Claude Code, Codex, and other agents its commands and pitfalls, written for that release. The setup instruction above offers to install it; to do it yourself:
+
+```sh
+indexit skill install --agent claude-code
+```
+
+Use `--agent codex` for Codex. Start a new agent session, then ask for `/indexit` in Claude Code or `$indexit` in Codex, or just say what you want. Here is the quick start again, side by side:
+
+| Step | By hand | Ask your agent |
+| --- | --- | --- |
+| Install | `brew install --cask octolab/tap/indexit` | “Set up indexit.” With the setup instruction above, it installs indexit for your system and checks `indexit version`. |
+| Credentials | Write `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` into `.env` | “Help me add my Telegram API credentials.” It tells you where to get them; you type them into `.env` yourself. |
+| Sign in | `indexit telegram auth login --qr` | “Connect my Telegram account.” It gives you the login command to run in your terminal, then confirms with `auth status`. |
+| Read messages | `indexit -q telegram fetch messages --dialog @example_channel --limit 200 \| fx` | “What has @example_channel posted lately?” It fetches a small batch and answers from the records. |
+| Find a private chat | `indexit -q telegram fetch dialogs \| fx`, then the chat’s `uid` | “Find my chat with the climbing club.” It lists your dialogs, matches the titles, and asks which one you meant. |
+
+The agent reads the same JSONL that you open in fx, but it doesn’t launch fx or fzf: they need your terminal. It filters records with jq, keeps first runs small, and checks skipped messages and failed downloads before it reports success. Your credentials, session, and sign-in stay with you.
+
+The same goes for everything after the first steps: “Export these three message links”, “Save the photos from this forum topic”, “What is this invite link, and does it have a discussion group?” [See what the skill covers →](/guide/agents/)
 
 ## Try the two workflows
 

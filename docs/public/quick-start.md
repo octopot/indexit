@@ -89,7 +89,7 @@ indexit ships an agent skill for its own version. Offer to install it for the ag
 indexit skill install --agent claude-code
 ```
 
-Use `--agent codex` for Codex. The skill loads in a new agent session.
+Use `--agent codex` for Codex. The skill loads in a new agent session. Tell the user that from then on they can ask in their own words, for example "What has @example_channel posted lately?" or "Find my chat with the climbing club", and the skill guides the agent through the matching commands.
 
 Report the installed version, whether sign-in succeeded, and the command to open the chosen conversation. If a step is blocked, say which step needs attention. Do not claim setup or an export succeeded without checking.
 
