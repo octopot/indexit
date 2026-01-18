@@ -14,8 +14,8 @@ milestone:
 state: OPEN
 stateReason:
 createdAt: 2026-10-02T09:37:34Z
-updatedAt: 2026-10-04T13:03:15Z
-lastEditedAt: 2026-10-04T13:03:15Z
+updatedAt: 2026-10-04T18:49:15Z
+lastEditedAt: 2026-10-04T18:49:13Z
 closedAt:
 ---
 
@@ -51,10 +51,10 @@ The same tap receives octomation/maintainer releases, so the decision applies to
 
 ## Acceptance criteria
 
-- [ ] The Cask commit of the next release is `verified: true` on GitHub.
-- [ ] The tap token is scoped to `octolab/homebrew-tap` with contents write and no longer outlives the release job.
-- [ ] `release.mjs preflight` and `doctor` check the new credentials and say how to create them.
-- [ ] `.github/workflows/README.md` documents the secrets.
+- [x] The Cask commit of the next release is `verified: true` on GitHub.
+- [x] The tap token is scoped to `octolab/homebrew-tap` with contents write and no longer outlives the release job.
+- [x] `release.mjs preflight` and `doctor` check the new credentials and say how to create them.
+- [x] `.github/workflows/README.md` documents the secrets.
 
 <!-- 2026-10-02T09:28Z https://github.com/octopot/indexit/issues/108#issuecomment-5949368603
 Experiment 1: `use_github_app_token: true` with the personal access token. Did not work.
@@ -105,4 +105,20 @@ The PAT `HOMEBREW_TAP_TOKEN` stays: octomation/maintainer still pushes its Cask 
 The App is installed on octolab/homebrew-tap only (`repository_selection: selected`, Contents: write, Metadata: read), and the workflows landed in ff367f5. [Doctor run 36994117563](https://github.com/octopot/indexit/actions/runs/36994117563) on that commit passed "Check release secrets" and "Mint the tap token": the secrets are set and the App can get a write token for the tap.
 
 Left for the acceptance: the Cask commit of the next release is `verified: true`, authored by `octolab-releaser[bot]`.
+-->
+
+<!-- 2026-10-04T18:48Z https://github.com/octopot/indexit/issues/108#issuecomment-5983235237
+v0.2.0 shipped with the App token, and its Cask commit is signed: every acceptance criterion holds.
+
+```text
+30187567 valid    octolab-releaser[bot]  Brew cask update for indexit version v0.2.0
+30a1801d unsigned kamilsk                Brew cask update for indexit version v0.1.2
+```
+
+- **Verified Cask.** [30187567](https://github.com/octolab/homebrew-tap/commit/30187567) is `verified: true`, authored by `octolab-releaser[bot]`.
+- **Scoped, short-lived token.** [cd run 37222619943](https://github.com/octopot/indexit/actions/runs/37222619943) mints it for the tap repository only with `permission-contents: write`; it expires within an hour, and the "Post Mint the tap token" step revoked it when the job ended.
+- **Checks.** `release.mjs preflight` and `doctor` check `OCTOLAB_RELEASER_CLIENT_ID` and `OCTOLAB_RELEASER_KEY` and print how to create the App; [doctor run 37221842526](https://github.com/octopot/indexit/actions/runs/37221842526) minted both the tap and the catalog token.
+- **Docs.** `.github/workflows/README.md` lists both secrets.
+
+The same App now also publishes the agent skill to octolab/skills. octomation/maintainer still pushes to the tap with the PAT `HOMEBREW_TAP_TOKEN`; moving it to the App and revoking the PAT is tracked there.
 -->
