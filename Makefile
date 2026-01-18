@@ -313,9 +313,19 @@ doctor:
 	$(AT) node .github/scripts/release.mjs doctor
 .PHONY: doctor
 
+# runs the doctor workflow on main and waits for its result: unlike doctor, it
+# mints the tap and catalog tokens, which proves the App can publish
+workflow-doctor:
+	$(AT) last() { gh run list -w doctor.yml -e workflow_dispatch -L 1 --json databaseId -q '.[0].databaseId'; }; \
+	prev="$$(last)"; \
+	gh workflow run doctor.yml --ref main -f reason="$(or $(REASON),make workflow-doctor)"; \
+	until run="$$(last)" && [ -n "$$run" ] && [ "$$run" != "$$prev" ]; do sleep 3; done; \
+	gh run watch --exit-status "$$run"
+.PHONY: workflow-doctor
+
 release-check: config-vet
 	$(AT) test -n "$(TAG)" || { echo 'usage: git tag vX.Y.Z && make release-check TAG=vX.Y.Z'; exit 2; }
-	$(AT) node .github/scripts/release.mjs check $(TAG)
+	$(AT) node .github/scripts/release.mjs check $(TAG) --pushed "$$(git rev-parse --abbrev-ref HEAD)=$$(git rev-parse HEAD)"
 	$(AT) $(MAKE) go-deps-tidy go-tools-tidy git-check
 	$(AT) goreleaser check
 .PHONY: release-check

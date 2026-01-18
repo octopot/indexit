@@ -160,7 +160,7 @@ flowchart LR
 
 ## doctor
 
-[doctor.yml](doctor.yml) runs `release.mjs doctor` and `preflight` in CI; `make doctor` runs the first one locally.
+[doctor.yml](doctor.yml) runs `release.mjs doctor` and `preflight` in CI; `make doctor` runs the first one locally, and `make workflow-doctor` dispatches the workflow on main and waits for its result.
 
 ```mermaid
 flowchart LR
