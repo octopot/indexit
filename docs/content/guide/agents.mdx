@@ -37,13 +37,15 @@ To see what your agents load, run:
 indexit skill status
 ```
 
-It lists every copy of the skill for Claude Code and Codex, including Claude Code plugins, and says whether each one is compatible with your binary, the same as its release, and unchanged. It warns when an agent loads more than one copy and exits with `1` when a copy is incompatible or was changed. Add `--exact` to require the same release everywhere.
+It checks user and project copies for Claude Code and Codex, Claude Code plugins, and the legacy Codex skill directory. Codex plugin copies are not listed. It reports compatibility and whether the content matches this binary’s skill; for copies installed by indexit, it also detects edits.
+
+It warns about multiple copies found for one agent. It exits with `1` when a copy is incompatible or was edited after indexit installed it; `--exact` also fails on content that differs from the bundled skill. Use `indexit skill status --agent claude-code,codex --exact` to require a matching copy for both agents: without `--agent`, finding no copies is not an error.
 
 `indexit skill show` prints the skill, `indexit skill info` its version and digest, and `indexit skill export -o <dir>` writes it to any other directory.
 
 ## Or get it from the OctoLab catalog
 
-The [octolab/skills](https://github.com/octolab/skills) catalog holds the skill of the latest indexit release, and of other OctoLab tools as they join. Use it if you prefer your agent’s own plugin manager.
+The [octolab/skills](https://github.com/octolab/skills) catalog holds the skill of the latest stable indexit release, and of other OctoLab tools as they join. Use it if you prefer your agent’s own plugin manager.
 
 | Agent | Install | Update |
 | --- | --- | --- |

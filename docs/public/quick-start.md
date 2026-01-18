@@ -101,6 +101,7 @@ Resolve these paths against the documentation site that served this file (includ
 - `guide/authentication/`: phone-code login, account files, and logout.
 - `guide/proxy/`: connection setup if Telegram is unreachable.
 - `guide/explore/`: fx and fzf workflows.
+- `guide/peers/`: channel descriptions, linked discussion groups, and invite previews.
 - `guide/reference/`: flags, address formats, configuration, and exit codes.
 - `guide/agents/`: the agent skill for Claude Code and Codex.
 

@@ -1,0 +1,69 @@
+---
+title: Describe channels & groups
+description: Learn what a Telegram channel is about, pair it with its discussion group, and preview invite links without joining.
+---
+
+# Give each channel some context
+
+Before exporting a conversation, find out what it is about and where its comments live. `fetch peer` returns a card for each channel, group, user, or invite link you pass: one JSON object per line, in the order you supplied them.
+
+[Install indexit and sign in](/quick-start/) first. These commands use your Telegram account; replace the example names and invite hash with your own. They never join a chat.
+
+## Look before you export
+
+```sh
+indexit -q telegram fetch peer @example_channel | fx
+```
+
+The card includes the channel’s identity, title, usernames, description (`about`), and member count (`participants_count`), when Telegram supplies them. `peer_type` distinguishes a channel from a group, user, or bot. Telegram’s verification, scam, fake, and restriction flags are included when present.
+
+A channel preview link works too:
+
+```sh
+indexit -q telegram fetch peer https://t.me/s/example_channel | fx
+```
+
+Use the returned `uid` with `--dialog` when you are ready to [export messages](/guide/messages/). Describing a peer also stores it in the peer cache, so its numeric `uid` resolves on later runs with the same account. For a private conversation you cannot name by username, [list your dialogs first](/guide/explore/#2-find-a-conversation-with-fzf).
+
+## Pair a channel with its discussion group
+
+Telegram can link a channel to the group that hosts its comments. Inspect that relationship directly:
+
+```sh
+indexit -q telegram fetch peer @example_channel @example_discussion \
+  | jq '{uid, title, peer_type, linked_chat_uid, linked_chat, error}'
+```
+
+On the channel card, `linked_chat_uid` identifies its discussion group. On the group card, it identifies the channel. `linked_chat` adds the linked conversation’s title and username when available. Match cards by these UIDs, even when the titles differ; do not guess the pairing from names.
+
+If Telegram supplies no linked conversation, the link fields are absent. A card can contain `linked_chat_uid` without the additional `linked_chat` details.
+
+## Preview an invitation without joining
+
+```sh
+indexit -q telegram fetch peer 'https://t.me/+<hash>' | fx
+```
+
+Replace `<hash>` with the invitation’s hash; `https://t.me/joinchat/<hash>` works too. An invite to a chat you already belong to, or that Telegram lets you temporarily peek into, can return a full card. Otherwise, you get only Telegram’s preview: the title, description, member count, and type, with no `uid` and with `error.code` set to `invite_not_member`.
+
+`invite.member` says whether you belong to the chat. A temporary peek also has `invite.peek` and may have `invite.expires`. An expired or revoked invitation produces `invite_expired`. None of these operations accepts the invitation or joins the chat.
+
+## Prepare channel notes for your vault
+
+For a vault with one note per channel, collect the description and discussion-group link together:
+
+```sh
+indexit -q telegram fetch peer @example_channel @another_channel \
+  | jq '{uid, title, username, about, participants_count,
+         linked_chat_uid, linked_chat, error}'
+```
+
+Use `uid` as the identity of each note and retain `linked_chat_uid` to associate the discussion group. Optional fields may be absent; jq shows them as `null` in this projection. Check `error` before importing a card, and keep previews without a UID for review instead of treating them as identified channels. indexit supplies the data; your importer creates or updates the notes.
+
+## Check partial results
+
+An inaccessible or malformed ref produces an `error` record and does not prevent later refs from being processed. Users and bots return identity fields with `error.code: "not_channel"`; they are not full channel or group cards.
+
+`fetch peer` exits with `0` if at least one record has no error, `1` if every ref fails, or `2` if every ref is malformed. A successful exit can therefore include failed records. Inspect `error` even when using `-q`, which hides warnings. `--limit` and `--page-size` do not apply: choose the refs you want to inspect.
+
+[All card fields and error codes →](/guide/reference/#peer-cards) · [Use indexit with your coding agent →](/guide/agents/)

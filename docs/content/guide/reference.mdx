@@ -98,17 +98,19 @@ Required credentials are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`. Proxy settin
 | `https://t.me/s/example_channel` | Public channel preview, same as the username |
 | `https://t.me/+<hash>`, `https://t.me/joinchat/<hash>` | Invite link; only `fetch peer` accepts it |
 
-Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks.
+Four-letter usernames are accepted. Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks.
 
 ## Peer cards
+
+For practical workflows, see [describe channels and groups](/guide/peers/).
 
 `fetch peer` turns each ref into one `peer` record, in the order of the refs:
 
 ```sh
-indexit -q telegram fetch peer @example_channel https://t.me/+<hash> | fx
+indexit -q telegram fetch peer @example_channel 'https://t.me/+<hash>' | fx
 ```
 
-A ref is any address above, a bare `https://t.me/c/<id>`, or an invite link; links work without `https://`. Channels and supergroups are read with `channels.getFullChannel`, basic groups with `messages.getFullChat`. Users and bots get no full request: their record carries the identity and the error `not_channel`.
+A ref is any address above, a bare `https://t.me/c/<id>`, or an invite link; links work without `https://`. Channels and supergroups are read with `channels.getFullChannel`, basic groups with `messages.getFullChat`. Users and bots get no full request: their record carries the identity and the error `not_channel`; cached `user:<id>` refs lack a bot flag and report `peer_type: "user"` even for bots, while `@username` refs distinguish bots.
 
 Refs are processed in order, so a username or an invite placed before the numeric ID of the same channel warms the peer cache for it.
 

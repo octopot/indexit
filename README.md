@@ -4,7 +4,7 @@
 
 **Your Telegram. Your data.**
 
-Export conversations as JSONL, fetch individual messages by link, and save photos and files from chats or forum topics. One Go CLI, using your Telegram account.
+Export conversations as JSONL, fetch individual messages by link, and save photos and files from chats or forum topics. Describe channels and their discussion groups, too. One Go CLI, using your Telegram account, with an offline skill for coding agents.
 
 ## Install
 
@@ -29,6 +29,8 @@ Set up your API credentials first and replace the example channel with your own.
 
 - [Quick start](docs/content/quick-start.mdx) — install, sign in, and explore your first messages.
 - [Explore & find](docs/content/guide/explore.mdx) — interactive fx and fzf workflows, with browser demos.
+- [Channels & groups](docs/content/guide/peers.mdx) — descriptions, linked discussion groups, and invite previews.
+- [Coding agents](docs/content/guide/agents.mdx) — install the bundled skill and check it after upgrades.
 - [Messages](docs/content/guide/messages.mdx) — history, date windows, and exact links.
 - [Topics & media](docs/content/guide/media.mdx) — bring a trip archive home.
 - [v0.1.2 release notes](docs/content/changelog/v0.1.2.md) — unique message and media exports, accurate limits, and protection against stalled pagination.
