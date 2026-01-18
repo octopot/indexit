@@ -47,3 +47,29 @@ func TestFiles(t *testing.T) {
 	_, err = Files(os.DirFS(dir))
 	assert.ErrorContains(t, err, "symbolic links")
 }
+
+func TestCopyDigest(t *testing.T) {
+	skill := fstest.MapFS{"SKILL.md": {Data: []byte("hello\n")}}
+	want, err := Digest(skill)
+	require.NoError(t, err)
+
+	// The marker and Finder's litter are not part of the copy.
+	digest, err := CopyDigest(fstest.MapFS{
+		"SKILL.md":             {Data: []byte("hello\n")},
+		MarkerFile:             {Data: []byte("{}")},
+		".DS_Store":            {},
+		"references/.DS_Store": {},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, want, digest)
+
+	// Any other dotfile is, and so is a marker away from the top.
+	for _, extra := range []string{".git/config", ".hidden", "references/" + MarkerFile} {
+		digest, err := CopyDigest(fstest.MapFS{
+			"SKILL.md": {Data: []byte("hello\n")},
+			extra:      {},
+		})
+		require.NoError(t, err)
+		assert.NotEqual(t, want, digest, extra)
+	}
+}

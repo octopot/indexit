@@ -22,7 +22,10 @@ func Files(fsys fs.FS) ([]string, error) {
 	return walk(fsys, false)
 }
 
-func walk(fsys fs.FS, skipDotfiles bool) ([]string, error) {
+// walk lists the files of a skill or, when installed is set, of an installed
+// copy: there the ownership marker and Finder's .DS_Store are left out, and
+// any other dotfile counts as content, so a copy holding one is changed.
+func walk(fsys fs.FS, installed bool) ([]string, error) {
 	var files []string
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		switch {
@@ -30,11 +33,9 @@ func walk(fsys fs.FS, skipDotfiles bool) ([]string, error) {
 			return err
 		case path == ".":
 			return nil
-		case strings.HasPrefix(d.Name(), ".") && skipDotfiles && d.IsDir():
-			return fs.SkipDir
-		case strings.HasPrefix(d.Name(), ".") && skipDotfiles:
+		case installed && !d.IsDir() && (path == MarkerFile || d.Name() == ".DS_Store"):
 			return nil
-		case strings.HasPrefix(d.Name(), "."):
+		case strings.HasPrefix(d.Name(), ".") && !installed:
 			return fmt.Errorf("%s: dotfiles are not allowed in a skill", path)
 		case d.Type()&fs.ModeSymlink != 0:
 			return fmt.Errorf("%s: symbolic links are not allowed in a skill", path)
@@ -59,8 +60,8 @@ func Digest(fsys fs.FS) (string, error) {
 	return digest(fsys, files)
 }
 
-// CopyDigest returns the digest of an installed copy, leaving out dotfiles
-// such as the ownership marker or .DS_Store.
+// CopyDigest returns the digest of an installed copy, leaving out the
+// ownership marker and .DS_Store.
 func CopyDigest(fsys fs.FS) (string, error) {
 	files, err := walk(fsys, true)
 	if err != nil {

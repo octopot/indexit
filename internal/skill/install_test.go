@@ -70,6 +70,15 @@ func TestExport(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, Unchanged, outcome)
 
+	// Any other dotfile is the user's, and replacing the copy would delete it.
+	git := filepath.Join(dir, ".git", "config")
+	require.NoError(t, os.MkdirAll(filepath.Dir(git), 0o755))
+	require.NoError(t, os.WriteFile(git, []byte("x"), 0o644))
+	_, err = Export(v1, dir, m1, true)
+	refused(t, err, "was changed after indexit installed it")
+	assert.FileExists(t, git)
+	require.NoError(t, os.RemoveAll(filepath.Dir(git)))
+
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("edited\n"), 0o644))
 	_, err = Export(v1, dir, m1, true)
 	refused(t, err, "was changed after indexit installed it")

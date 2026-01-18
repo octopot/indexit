@@ -10,7 +10,7 @@ import (
 )
 
 // MarkerFile is the ownership marker that indexit writes next to SKILL.md.
-// Dotfiles are left out of the digest, so the marker doesn't change it.
+// CopyDigest leaves it out, so the marker doesn't change the digest.
 const MarkerFile = ".indexit-skill.json"
 
 // Marker records what indexit installed into a directory.
