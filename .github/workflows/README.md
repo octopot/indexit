@@ -68,11 +68,12 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  tag([push v* tag]) --> check[check the tag and its note] --> secrets[check release secrets] --> token[mint the tap token] --> pages[resolve the Pages URL] --> render[render the note]
+  tag([push v* tag]) --> check[check the tag and its note] --> signature[GitHub verifies the tag] --> secrets[check release secrets] --> token[mint the tap token] --> pages[resolve the Pages URL] --> render[render the note]
   render --> go[set up Go, make tools] --> test[fast check and tests] --> publish[goreleaser release]
   publish --> release[(GitHub release: body and title from the note)]
   publish --> tap[(Cask in the tap)]
-  publish --> archives[check the skill in the archives] --> skill[publish the skill, stable tags only] --> catalog[(octolab/skills)]
+  publish --> archives[check the skill in the archives]
+  archives --> skill[skill job: publish the skill, stable tags only] --> catalog[(octolab/skills)]
   skill --> notify[notify]
 ```
 
@@ -85,8 +86,10 @@ flowchart TB
   before the push leaves your machine; `make release-check TAG=<tag>` runs it on
   demand, together with the `go mod tidy` + `git-check` that `fast-check` would
   otherwise fail on only after the tag is out (ci.yml and tools.yml check it on
-  main too). The first steps here repeat it for pushes that bypassed the hook, then
-  mint the tap token, all before Go is even installed.
+  main too). The first steps here repeat it for pushes that bypassed the hook,
+  check that GitHub verifies the tag's signature (`release.mjs signature`; the
+  catalog refuses an unverified tag, by then too late to replace it), then mint
+  the tap token, all before Go is even installed.
 - **The note becomes the release.** `release.mjs render` strips the frontmatter
   and the H1, makes site links absolute from the Pages URL and hands the title
   to goreleaser (`release.name_template`).
@@ -105,13 +108,16 @@ flowchart TB
 - **The agent skill ships with the release.** `skills/indexit/` is embedded in
   the binary and packed into every archive; `release.mjs skill` checks that the
   source, the archives and `indexit skill info` agree on its digest. For a
-  stable tag, the pinned `octolab/skills` publish action then copies the skill
-  from the tag into the catalog, with a commit signed as the App and a tag
-  `indexit--vX.Y.Z`, and the digest it published is compared once more. The
-  catalog token is minted separately, from the same App installed on
-  `octolab/skills`: the tap token is scoped to the tap. Prerelease tags are
-  not published to the catalog. Update the action's pin only after reviewing
-  the catalog's changes.
+  stable tag, the `skill` job then runs the pinned `octolab/skills` publish
+  action: it copies the skill from the tag into the catalog, with a commit
+  signed as the App and a tag `indexit--vX.Y.Z`, and the digest it published
+  is compared with the source. The catalog token is minted separately, from
+  the same App installed on `octolab/skills`: the tap token is scoped to the
+  tap. Prerelease tags are not published to the catalog. The job is separate
+  so that a failed publication can be rerun alone
+  (`gh run rerun <run-id> --failed`) while the release stays as it is; the
+  action is idempotent. Update the action's pin only after reviewing the
+  catalog's changes.
 - A manual run on a branch builds a snapshot and publishes nothing; it still
   checks the skill in the archives.
 

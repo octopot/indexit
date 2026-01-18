@@ -9,7 +9,8 @@
 //   release.mjs pages  <base-url>                            (CI: the Pages URL matches settings.json pages)
 //   release.mjs smoke  <site-url> [--retries <n>]            (CI: the deployed site serves pages and assets)
 //   release.mjs vanity                                       (vanity imports in go.mod resolve over verified HTTPS)
-//   release.mjs skill [--published <digest>]                 (CI: one agent skill in the source, archives, binary and catalog)
+//   release.mjs signature <tag>                              (CI: GitHub verifies the tag's signature)
+//   release.mjs skill [--published <digest>]                 (CI: one agent skill in the source, archives and binary, or in the catalog)
 
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -164,6 +165,27 @@ function check(tag, opts) {
     }
   }
   return errors
+}
+
+// The catalog publishes a skill only from a tag GitHub verifies, after the
+// release is out. Checked first, a bad tag can still be replaced.
+function signature(tag) {
+  const slug = repoSlug()
+  if (!slug) return ['cannot resolve the repository; set GITHUB_REPOSITORY']
+  const fix = `git push --delete origin ${tag}, git tag -s, then push it with the branch`
+  let ref
+  try {
+    ref = JSON.parse(gh('api', `repos/${slug}/git/ref/tags/${encodeURIComponent(tag)}`))
+  } catch (e) {
+    return [`${tag}: not found on ${slug}: ${e.message}`]
+  }
+  if (ref.object.type !== 'tag') return [`${tag}: lightweight tag; replace it with a signed one: ${fix}`]
+  const { object, verification } = JSON.parse(gh('api', `repos/${slug}/git/tags/${ref.object.sha}`))
+  if (object.type !== 'commit') return [`${tag}: points at a ${object.type}, not a commit; replace it: ${fix}`]
+  if (!verification?.verified) {
+    return [`${tag}: GitHub does not verify its signature (${verification?.reason || 'unsigned'}); replace it with one signed by a key your GitHub account has: ${fix}`]
+  }
+  return []
 }
 
 function lint(file, text) {
@@ -376,12 +398,17 @@ function skillDigest(dir) {
   return `sha256:${hash.digest('hex')}`
 }
 
-// Compares the skill in the source with every release archive, with the copy
-// embedded in the binary for this machine and, after publication, with the
-// catalog's payload digest.
+// Compares the skill in the source with every release archive and with the
+// copy embedded in the binary for this machine or, given --published, with
+// the catalog's payload digest.
 function skill(opts) {
   const dir = SKILL.slice(0, SKILL.lastIndexOf('/'))
   const want = skillDigest(dir)
+  if (opts.published !== undefined) {
+    if (opts.published !== want) return [`octolab/skills: published ${opts.published || 'nothing'}, the source is ${want}`]
+    console.log(`skill ${want} in the source and the catalog`)
+    return []
+  }
   const errors = []
   const archives = existsSync('dist') ? readdirSync('dist').filter((f) => f.endsWith('.tar.gz')) : []
   if (!archives.length) return [`dist: no release archives; run goreleaser first`]
@@ -400,10 +427,7 @@ function skill(opts) {
   } else {
     errors.push(`dist: no archive for ${process.platform}-${arch} to check the embedded skill`)
   }
-  if (opts.published !== undefined && opts.published !== want) {
-    errors.push(`octolab/skills: published ${opts.published || 'nothing'}, the source is ${want}`)
-  }
-  if (!errors.length) console.log(`skill ${want} in the source, ${archives.length} archives and the binary${opts.published ? ' and the catalog' : ''}`)
+  if (!errors.length) console.log(`skill ${want} in the source, ${archives.length} archives and the binary`)
   return errors
 }
 
@@ -578,13 +602,18 @@ try {
       }
       process.exit(results.some(([, e]) => e) ? 1 : 0)
     }
+    case 'signature': {
+      const errors = signature(opts._[0])
+      errors.forEach((e) => console.error(`signature: ${e}`))
+      process.exit(errors.length ? 1 : 0)
+    }
     case 'skill': {
       const errors = skill(opts)
       errors.forEach((e) => console.error(`skill: ${e}`))
       process.exit(errors.length ? 1 : 0)
     }
     default:
-      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke|vanity|skill ...')
+      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke|vanity|signature|skill ...')
       process.exit(2)
   }
 } catch (e) {
