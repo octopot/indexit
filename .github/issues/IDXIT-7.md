@@ -11,12 +11,12 @@ labels:
   - "impact: low"
   - "effort: medium"
 milestone:
-state: OPEN
-stateReason:
+state: CLOSED
+stateReason: COMPLETED
 createdAt: 2026-10-02T09:37:34Z
-updatedAt: 2026-10-04T18:49:15Z
+updatedAt: 2026-10-04T18:51:12Z
 lastEditedAt: 2026-10-04T18:49:13Z
-closedAt:
+closedAt: 2026-10-04T18:51:12Z
 ---
 
 # ci/cd: sign the Cask commits in the Homebrew tap
