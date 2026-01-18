@@ -81,7 +81,7 @@ work at any position; the examples put them first, e.g.
 | History for a period | `fetch messages` with `--from` / `--to` (RFC3339) |
 | Exact messages from links or IDs | `fetch message <link>...` or `--dialog <address> --id 11,46` |
 | Photos, videos, files | `fetch media --dialog <address> --dir <dir>` |
-| Check an address offline | `debug uid <value>` |
+| Check a dialog address offline | `debug uid <value>` |
 | Sign in, check or end the session | `auth login [--qr]`, `auth status`, `auth logout` |
 
 Key distinctions:

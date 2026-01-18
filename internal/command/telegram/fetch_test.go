@@ -122,6 +122,32 @@ func TestFetchMessageInvalidInputIsUsageError(t *testing.T) {
 	}
 }
 
+func TestFetchInviteDialogIsUsageError(t *testing.T) {
+	// Fails before any connection: without credentials a client would fail
+	// with a plain error instead.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("TELEGRAM_API_ID", "")
+	for _, args := range [][]string{
+		{"messages", "--dialog", "https://t.me/+AbCdEf"},
+		{"topics", "--dialog", "https://t.me/+AbCdEf"},
+		{"media", "--dialog", "https://t.me/joinchat/AbCdEf", "--dir", t.TempDir()},
+		{"message", "--dialog", "https://t.me/+AbCdEf", "--id", "1"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			command := New()
+			command.SetOut(&bytes.Buffer{})
+			command.SetErr(&bytes.Buffer{})
+			command.SetArgs(append([]string{"fetch"}, args...))
+			err := command.Execute()
+			var usage *exitcode.Error
+			require.ErrorAs(t, err, &usage)
+			assert.Equal(t, exitcode.Usage, usage.Code)
+			assert.ErrorContains(t, err, "fetch peer")
+		})
+	}
+}
+
 func TestFetchPeerAllBadRefsIsUsageErrorWithRecords(t *testing.T) {
 	var out bytes.Buffer
 	command := New()

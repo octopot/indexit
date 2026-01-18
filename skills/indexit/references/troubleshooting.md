@@ -55,10 +55,12 @@ If Telegram revoked the session, the user signs in again.
 
 ## Exit code 2
 
-A usage or configuration error: check the address format with
+A usage or configuration error: check a dialog address with
 `indexit telegram debug uid <value>`, the flags with `--help`, and the proxy
 settings. Bare positive numbers are ambiguous and rejected; use `user:<id>`,
-`chat:<id>` or `channel:<id>`.
+`chat:<id>` or `channel:<id>`. An invite link names no dialog: describe it with
+`fetch peer`, which also takes links without `https://` and a bare
+`t.me/c/<id>` that `debug uid` rejects.
 
 ## Still stuck
 

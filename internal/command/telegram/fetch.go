@@ -144,6 +144,16 @@ type messageGroup struct {
 	ids []int
 }
 
+// parseDialog parses a --dialog value. An invite link names no dialog to read
+// history from, so it fails as usage before indexit connects to Telegram.
+func parseDialog(value string) (uid.PeerRef, error) {
+	ref, err := uid.Parse(value)
+	if err == nil && ref.Kind == uid.KindInvite {
+		err = fmt.Errorf("invite link %s names no dialog: run 'indexit telegram fetch peer' to inspect it", ref.String())
+	}
+	return ref, err
+}
+
 // collectMessageRefs turns positional refs (each carrying a message id) and
 // the --dialog/--id pair into per-peer groups, preserving first-seen order of
 // peers and ids. Deduplication of ids is left to the fetcher.
@@ -181,7 +191,7 @@ func collectMessageRefs(args []string, dialog string, ids []int) ([]messageGroup
 		return nil, fmt.Errorf("--id requires --dialog")
 	}
 	if dialog != "" {
-		ref, err := uid.Parse(dialog)
+		ref, err := parseDialog(dialog)
 		if err != nil {
 			return nil, err
 		}
@@ -311,7 +321,7 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			if err := validateFormat(fetchOpt.format); err != nil {
 				return usageErr(err)
 			}
-			ref, err := uid.Parse(msgOpt.dialog)
+			ref, err := parseDialog(msgOpt.dialog)
 			if err != nil {
 				return usageErr(err)
 			}
@@ -391,7 +401,7 @@ func fetchTopicsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			if err := validateFormat(fetchOpt.format); err != nil {
 				return usageErr(err)
 			}
-			ref, err := uid.Parse(topicOpt.dialog)
+			ref, err := parseDialog(topicOpt.dialog)
 			if err != nil {
 				return usageErr(err)
 			}
@@ -562,7 +572,7 @@ func fetchMediaCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			if err := validateFormat(fetchOpt.format); err != nil {
 				return usageErr(err)
 			}
-			ref, err := uid.Parse(mediaOpt.dialog)
+			ref, err := parseDialog(mediaOpt.dialog)
 			if err != nil {
 				return usageErr(err)
 			}
