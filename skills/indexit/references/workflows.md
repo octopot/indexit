@@ -1,6 +1,6 @@
 # Workflows
 
-Recipes for indexit `>=0.2.0 <0.3.0`. Substitute the user's real addresses;
+Recipes for indexit `>=0.2.1 <0.3.0`. Substitute the user's real addresses;
 `@example_channel`, `@example_forum` and the numbers below are placeholders.
 
 ## Set up and sign in

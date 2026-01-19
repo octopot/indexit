@@ -64,6 +64,6 @@ INDEXIT_PROXY_PASS=password
 
 For MTProto, set the type to `mtproto` and use `INDEXIT_PROXY_SECRET`. `INDEXIT_PROXY_URL` takes precedence over these separate variables.
 
-Standard `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` do not configure this Telegram connection. Without an `INDEXIT_PROXY_*` configuration, indexit connects directly. A configured proxy does not silently fall back to direct access, and v0.2.0 has no proxy pool or failover.
+Standard `HTTP_PROXY`, `HTTPS_PROXY`, and `NO_PROXY` do not configure this Telegram connection. Without an `INDEXIT_PROXY_*` configuration, indexit connects directly. A configured proxy does not silently fall back to direct access, and v0.2.1 has no proxy pool or failover.
 
 Remember that a loaded `.env` overrides matching shell variables. For a one-off environment-only invocation, use `--env-file=""`; see [configuration](/guide/reference/).
