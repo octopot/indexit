@@ -14,7 +14,7 @@ Use `indexit <command> --help` for help at any level. All examples describe the 
 | `auth login [--qr]` | Sign in interactively |
 | `auth status` | Report the session and authorization state |
 | `auth logout` | Revoke the session and remove its local file |
-| `fetch dialogs` | List dialogs and populate the peer cache |
+| `fetch dialogs` | List dialogs with account status and populate the peer cache |
 | `fetch topics --dialog UID` | List a forum’s topics |
 | `fetch peer REF…` | Describe channels, groups, users, and invite links, one record per ref |
 | `fetch messages --dialog UID` | Walk conversation or topic history |
@@ -100,6 +100,26 @@ Required credentials are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`. Proxy settin
 
 Four-letter usernames are accepted. Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks.
 
+## Account status
+
+`fetch dialogs` and `fetch peer` include these fields for the signed-in account in channels, supergroups (gigagroups included), and basic groups:
+
+| Field | Meaning |
+| --- | --- |
+| `is_member` | Whether the account currently belongs to the chat; false for chats it left and for migrated or deactivated basic groups |
+| `is_admin` | Whether the account is the owner or has admin rights |
+| `is_creator` | Whether the account is the owner |
+
+Known values are emitted as `true` or `false`. Unknown or inapplicable values are omitted: reduced (`min`) channels, channel direct-message inboxes (monoforums), inaccessible or missing entities, invite-only previews, and users/bots have no account status fields. `invite.member` separately reports membership learned from an invite link. Older binaries may omit the new fields as well.
+
+Telegram can retain owner/admin flags on migrated basic groups or channels the owner left. To find owned chats the account currently belongs to, require both `is_member == true` and `is_creator == true`.
+
+A peer record with `error` can retain account status from an entity already returned by an invite check when the subsequent full fetch fails. Check `error` before relying on the rest of the card.
+
+`fetch dialogs` reads this information from its existing responses, without a request per peer. Use explicit comparisons such as `is_member == true` and `is_admin == false`, and report unknown status separately. Titles and member counts do not establish ownership. These fields describe only the signed-in account, so they cannot identify another person's chats where that account is an ordinary member.
+
+[Filter your dialogs by account status →](/guide/explore/#find-chats-where-you-are-an-ordinary-member)
+
 ## Peer cards
 
 For practical workflows, see [describe channels and groups](/guide/peers/).
@@ -121,6 +141,7 @@ Refs are processed in order, so a username or an invite placed before the numeri
 | `peer_type` | `channel`, `supergroup` (gigagroups included), `chat`, `user`, or `bot` |
 | `title`, `username`, `usernames` | Name, main username, other active usernames |
 | `about`, `participants_count` | Description and member count |
+| `is_member`, `is_admin`, `is_creator` | Current account's membership, administration (owners included), and ownership; see [account status](#account-status) |
 | `linked_chat_uid`, `linked_chat` | The discussion group of a channel, or the channel of a discussion group, with `uid`, `title`, `username` |
 | `verified`, `scam`, `fake`, `restricted` | Telegram flags; `restricted` carries the restriction text |
 | `date` | Telegram’s date of the channel or group: when the account joined it, or when it was created |

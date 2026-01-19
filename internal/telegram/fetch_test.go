@@ -540,3 +540,40 @@ func TestFetchDialogs_PopulatesPeerCache(t *testing.T) {
 	assert.EqualValues(t, 12345, entry.AccessHash)
 	assert.Equal(t, "demo", entry.Username)
 }
+
+func TestFetchDialogs_AccountStatusNeedsNoPeerRequests(t *testing.T) {
+	admin := &tg.Channel{ID: 2, Megagroup: true}
+	admin.SetAdminRights(tg.ChatAdminRights{DeleteMessages: true})
+	api := &scriptedAPI{
+		dialogsPages: []tg.MessagesDialogsClass{&tg.MessagesDialogs{
+			Dialogs: []tg.DialogClass{
+				&tg.Dialog{Peer: &tg.PeerChannel{ChannelID: 1}},
+				&tg.Dialog{Peer: &tg.PeerChannel{ChannelID: 2}},
+				&tg.Dialog{Peer: &tg.PeerChat{ChatID: 3}},
+				&tg.Dialog{Peer: &tg.PeerChannel{ChannelID: 4}},
+			},
+			Chats: []tg.ChatClass{
+				&tg.Channel{ID: 1}, admin, &tg.Chat{ID: 3, Creator: true},
+				&tg.Channel{ID: 4, Min: true},
+			},
+		}},
+	}
+	out := &recWriter{}
+	err := FetchDialogs(t.Context(), api, peers.New(), out, DialogsOptions{}, RateGuard{})
+	require.NoError(t, err) // scriptedAPI rejects full-channel/chat requests.
+	require.Len(t, out.records, 4)
+	assert.Len(t, api.dialogsReqs, 2, "one data page and the terminal empty page")
+	for i, wantAdmin := range []bool{false, true, true} {
+		rec := out.records[i].(model.DialogRecord)
+		require.NotNil(t, rec.IsMember)
+		require.NotNil(t, rec.IsAdmin)
+		require.NotNil(t, rec.IsCreator)
+		assert.True(t, *rec.IsMember)
+		assert.Equal(t, wantAdmin, *rec.IsAdmin)
+		assert.Equal(t, i == 2, *rec.IsCreator)
+	}
+	unknown := out.records[3].(model.DialogRecord)
+	assert.Nil(t, unknown.IsMember)
+	assert.Nil(t, unknown.IsAdmin)
+	assert.Nil(t, unknown.IsCreator)
+}

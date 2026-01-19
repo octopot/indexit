@@ -17,6 +17,8 @@ indexit -q telegram fetch peer @example_channel | fx
 
 The card includes the channel’s identity, title, usernames, description (`about`), and member count (`participants_count`), when Telegram supplies them. `peer_type` distinguishes a channel from a group, user, or bot. Telegram’s verification, scam, fake, and restriction flags are included when present.
 
+Cards also include `is_member`, `is_admin` (owners included), and `is_creator` for your signed-in account when known. Known false values are explicit; an absent field is unknown or not applicable. To filter all your chats by these fields, use [the dialog workflow](/guide/explore/#find-chats-where-you-are-an-ordinary-member): `fetch dialogs` includes the same status without fetching each card. See [account status](/guide/reference/#account-status) for unavailable data and invite previews.
+
 A channel preview link works too:
 
 ```sh

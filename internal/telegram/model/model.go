@@ -14,6 +14,15 @@ type DialogRecord struct {
 	Verified      bool   `json:"verified,omitempty"`
 	Scam          bool   `json:"scam,omitempty"`
 	Fake          bool   `json:"fake,omitempty"`
+	AccountStatus
+}
+
+// AccountStatus describes the authenticated account in a channel or group.
+// Nil means unknown or not applicable; known false values must survive JSON.
+type AccountStatus struct {
+	IsMember  *bool `json:"is_member,omitempty"`
+	IsAdmin   *bool `json:"is_admin,omitempty"`
+	IsCreator *bool `json:"is_creator,omitempty"`
 }
 
 type PeerDescriptor struct {
@@ -99,25 +108,26 @@ type MediaRecord struct {
 // per ref, in the order of the refs. A ref that could not be fetched still
 // yields a record, with Error set and as much identity as was learned.
 type PeerRecord struct {
-	Kind              string            `json:"_kind"`
-	Ref               string            `json:"ref"`
-	UID               string            `json:"uid,omitempty"`
-	PeerType          string            `json:"peer_type,omitempty"`
-	PeerID            int64             `json:"peer_id,omitempty"`
-	Title             string            `json:"title,omitempty"`
-	Username          string            `json:"username,omitempty"`
-	Usernames         []string          `json:"usernames,omitempty"`
-	About             string            `json:"about,omitempty"`
-	ParticipantsCount int               `json:"participants_count,omitempty"`
-	LinkedChatUID     string            `json:"linked_chat_uid,omitempty"`
-	LinkedChat        *LinkedChat       `json:"linked_chat,omitempty"`
-	Verified          bool              `json:"verified,omitempty"`
-	Scam              bool              `json:"scam,omitempty"`
-	Fake              bool              `json:"fake,omitempty"`
-	Restricted        string            `json:"restricted,omitempty"`
-	Date              string            `json:"date,omitempty"`
-	Invite            *InviteDescriptor `json:"invite,omitempty"`
-	Error             *PeerError        `json:"error,omitempty"`
+	Kind              string      `json:"_kind"`
+	Ref               string      `json:"ref"`
+	UID               string      `json:"uid,omitempty"`
+	PeerType          string      `json:"peer_type,omitempty"`
+	PeerID            int64       `json:"peer_id,omitempty"`
+	Title             string      `json:"title,omitempty"`
+	Username          string      `json:"username,omitempty"`
+	Usernames         []string    `json:"usernames,omitempty"`
+	About             string      `json:"about,omitempty"`
+	ParticipantsCount int         `json:"participants_count,omitempty"`
+	LinkedChatUID     string      `json:"linked_chat_uid,omitempty"`
+	LinkedChat        *LinkedChat `json:"linked_chat,omitempty"`
+	Verified          bool        `json:"verified,omitempty"`
+	Scam              bool        `json:"scam,omitempty"`
+	Fake              bool        `json:"fake,omitempty"`
+	Restricted        string      `json:"restricted,omitempty"`
+	Date              string      `json:"date,omitempty"`
+	AccountStatus
+	Invite *InviteDescriptor `json:"invite,omitempty"`
+	Error  *PeerError        `json:"error,omitempty"`
 }
 
 // LinkedChat is the discussion group of a channel, or the channel of a

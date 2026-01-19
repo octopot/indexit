@@ -261,6 +261,31 @@ func TestFetchPeersBasicChat(t *testing.T) {
 	assert.Equal(t, []string{"full:chat:40", "full:chat:40"}, api.calls)
 }
 
+func TestFetchPeersAccountStatus(t *testing.T) {
+	api := peerWorld()
+	admin := *newsChat
+	admin.SetAdminRights(tg.ChatAdminRights{InviteUsers: true})
+	api.channels[20].Chats = []tg.ChatClass{&admin}
+	owner := *basicChat
+	owner.Creator = true
+	api.chats[40].Chats = []tg.ChatClass{&owner}
+
+	recs, _ := fetchPeerRecords(t, api, peers.New(), "@news_channel", "@news_chat", "chat:40")
+	for i, rec := range recs {
+		require.Nil(t, rec.Error)
+		require.NotNil(t, rec.IsMember)
+		require.NotNil(t, rec.IsAdmin)
+		require.NotNil(t, rec.IsCreator)
+		assert.True(t, *rec.IsMember)
+		assert.Equal(t, i != 0, *rec.IsAdmin)
+		assert.Equal(t, i == 2, *rec.IsCreator)
+	}
+	assert.Equal(t, []string{
+		"resolve:news_channel", "full:channel:10:110",
+		"resolve:news_chat", "full:channel:20:120", "full:chat:40",
+	}, api.calls, "account status comes from the existing full response")
+}
+
 func TestFetchPeersUserAndBot(t *testing.T) {
 	api := peerWorld()
 	recs, stats := fetchPeerRecords(t, api, peers.New(), "@some_user", "user:@helper_bot")
@@ -303,6 +328,9 @@ func TestFetchPeersInviteAlreadyMember(t *testing.T) {
 
 func TestFetchPeersInvitePeek(t *testing.T) {
 	api := peerWorld()
+	nonmember := *newsChannel
+	nonmember.Left = true
+	api.channels[10].Chats = []tg.ChatClass{&nonmember, newsChat}
 	recs, stats := fetchPeerRecords(t, api, peers.New(), "https://t.me/joinchat/PeekIn")
 	rec := recs[0]
 
@@ -311,11 +339,33 @@ func TestFetchPeersInvitePeek(t *testing.T) {
 	assert.Equal(t, "channel", rec.PeerType)
 	assert.Equal(t, "Daily news", rec.About)
 	assert.Equal(t, "channel:20", rec.LinkedChatUID)
+	require.NotNil(t, rec.IsMember)
+	assert.False(t, *rec.IsMember)
 	assert.Equal(t, &model.InviteDescriptor{
 		Hash: "PeekIn", Member: false, Peek: true, Expires: "2023-11-14T22:13:20Z",
 	}, rec.Invite)
 	assert.Equal(t, PeerStats{Fetched: 1}, stats)
 	assert.Equal(t, []string{"invite:PeekIn", "full:channel:10:110"}, api.calls)
+}
+
+func TestFetchPeersInviteKeepsAccountStatusOnFullFailure(t *testing.T) {
+	api := peerWorld()
+	owner := *newsChat
+	owner.Creator = true
+	api.invites["AlreadyIn"] = &tg.ChatInviteAlready{Chat: &owner}
+	api.errs["channel:20"] = tgerr.New(500, "INTERNAL")
+
+	recs, _ := fetchPeerRecords(t, api, peers.New(), "https://t.me/+AlreadyIn")
+	rec := recs[0]
+	require.NotNil(t, rec.Error)
+	assert.Equal(t, PeerErrRPC, rec.Error.Code)
+	require.NotNil(t, rec.IsMember)
+	require.NotNil(t, rec.IsAdmin)
+	require.NotNil(t, rec.IsCreator)
+	assert.True(t, *rec.IsMember)
+	assert.True(t, *rec.IsAdmin)
+	assert.True(t, *rec.IsCreator)
+	assert.Equal(t, []string{"invite:AlreadyIn", "full:channel:20:120"}, api.calls)
 }
 
 func TestFetchPeersInviteNotMember(t *testing.T) {

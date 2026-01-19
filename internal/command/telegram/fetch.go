@@ -87,7 +87,12 @@ func fetchDialogsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 	return &cobra.Command{
 		Use:   "dialogs",
 		Short: "Fetch Telegram dialogs",
-		Args:  cobra.NoArgs,
+		Long: "Fetch Telegram dialogs as JSONL and populate the peer cache.\n\n" +
+			"Channels and groups include the current account's is_member, is_admin,\n" +
+			"and is_creator status from the same response, without per-peer requests.\n" +
+			"Owners count as admins. Known false values are explicit; unknown status\n" +
+			"is omitted. User dialogs have no account status fields.",
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validateFormat(fetchOpt.format); err != nil {
 				return usageErr(err)
@@ -465,6 +470,9 @@ func fetchPeerCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			"invite link. Channels and groups are read in full: description, members,\n" +
 			"and the linked discussion group or channel. Invite links are only\n" +
 			"previewed: indexit never joins a chat.\n\n" +
+			"Channel and group cards include is_member, is_admin (owners included),\n" +
+			"and is_creator for the current account when known. Unknown status is\n" +
+			"omitted; known false values are explicit.\n\n" +
 			"A ref that cannot be parsed or fetched yields a record with an error\n" +
 			"instead of stopping the run. The command fails only when no record was\n" +
 			"fetched. --limit and --page-size do not apply to this command.",

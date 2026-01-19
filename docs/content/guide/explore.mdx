@@ -57,6 +57,23 @@ jq turns each dialog into a row containing its UID and title. fzf displays the t
 
 `--unbuffered` lets rows reach fzf as they arrive. This example illustrates fuzzy matching; fzf also supports [exact matches and exclusions](https://github.com/junegunn/fzf#search-syntax).
 
+## Find chats where you are an ordinary member
+
+`fetch dialogs` includes your account's membership and admin status for channels, supergroups, and basic groups. To select chats you belong to and do not administer:
+
+```sh
+indexit -q telegram fetch dialogs \
+  | jq -c 'select(.peer_type | IN("channel", "supergroup", "chat")) | select(.is_member == true and .is_admin == false)'
+```
+
+Owners count as admins; `is_creator` identifies ownership separately. To select owned chats you currently belong to, require both `is_creator == true` and `is_member == true`: Telegram can retain ownership flags on migrated basic groups or channels you left. The status comes from the same dialog pages, so this needs no extra request per chat. Basic groups use `peer_type: "chat"`; remove `"chat"` from `IN(...)` when your destination supports only channels and supergroups.
+
+Known values are explicit booleans, including `false`. An absent field means unknown or not applicable. Keep channel/group records with missing membership or admin status for separate review; do not treat missing fields as `false`. Older exports can lack these fields too. See [account status](/guide/reference/#account-status) for details.
+
+An empty selection does not prove there are no matching memberships. If every channel/group record lacks the status fields, check `indexit version` and `indexit telegram fetch dialogs --help` for support, and upgrade if needed.
+
+These fields describe the signed-in account. A title or a small member count cannot establish ownership, and the fields do not identify a partner's chats where you are an ordinary member. Use an explicit list for those exclusions.
+
 ## Search messages as a list
 
 The same pattern works when you remember a phrase but not the message:

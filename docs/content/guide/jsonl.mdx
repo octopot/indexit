@@ -41,13 +41,15 @@ indexit -q telegram fetch messages \
 
 | `_kind` | Identifying fields | Useful information |
 | --- | --- | --- |
-| `dialog` | `uid`, `peer_type`, `peer_id` | Title, username, forum status, unread count, available flags |
+| `dialog` | `uid`, `peer_type`, `peer_id` | Title, username, forum status, unread count, account status, available flags |
 | `topic` | `dialog_uid`, `topic_id` | Title, creation date, top message, counters and flags |
-| `peer` | `ref`, `uid` | Peer type, title, usernames, description, member count, linked chat, invite status, or error |
+| `peer` | `ref`, `uid` | Peer type, title, usernames, description, member count, linked chat, account status, invite status, or error |
 | `message` | `dialog_uid`, `id` | Date, text, optional sender, topic, media description, replies and forwards |
 | `media` | `dialog_uid`, `message_id`, `path` | File type, date, size, optional album, skip status, or download error |
 
-Optional fields can be absent, including false flags and zero counters. Dates are RFC3339 in UTC. Text is plain text; formatting entities are not exported. Reactions are a total, not a breakdown by emoji.
+Optional fields can be absent, including most false flags and zero counters. The account status fields `is_member`, `is_admin`, and `is_creator` preserve known `false` values; an absent field means unknown or not applicable. Use explicit boolean comparisons when [filtering memberships](/guide/explore/#find-chats-where-you-are-an-ordinary-member), and see [account status](/guide/reference/#account-status) for the full contract.
+
+Dates are RFC3339 in UTC. Text is plain text; formatting entities are not exported. Reactions are a total, not a breakdown by emoji.
 
 `fetch messages` describes attachments. [Use `fetch media`](/guide/media/) for bytes, paths, and album IDs. A photo descriptor can contain only `type`; the download result carries its size.
 

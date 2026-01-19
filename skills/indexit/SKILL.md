@@ -75,6 +75,7 @@ work at any position; the examples put them first, e.g.
 | The user wants | Command |
 | --- | --- |
 | Their chats, or to find a private one | `fetch dialogs` (also fills the peer cache) |
+| Channels and groups they belong to but do not administer | `fetch dialogs`, filter `is_member == true` and `is_admin == false` |
 | A forum's topics | `fetch topics --dialog <address>` |
 | Who or what a channel, group, user or invite link is | `fetch peer <ref>...` |
 | History of a chat or topic | `fetch messages --dialog <address>` |
@@ -95,6 +96,13 @@ Key distinctions:
   `fetch dialogs` with the same account first. Public `@username` links don't.
 - `fetch peer` never joins a chat; for an invite to a chat the account isn't
   in, it returns only Telegram's preview.
+- **Use account status to filter membership and administration.** Both
+  `fetch dialogs` and `fetch peer` expose `is_member`, `is_admin` (owners
+  included), and `is_creator` when known. `fetch dialogs` gets them without
+  per-peer requests. Match explicit booleans; an absent field is unknown or
+  not applicable, never evidence of `false`. Report unknown status separately.
+  Do not infer ownership from titles or member counts. These fields describe
+  the signed-in account, not a partner's or another person's ownership.
 
 Step-by-step recipes: [references/workflows.md](references/workflows.md).
 Every command and flag of this release:

@@ -94,6 +94,7 @@ func Dialog(dialog tg.DialogClass, entities gotdpeer.Entities, last tg.NotEmptyM
 		rec.UID = fmt.Sprintf("chat:%d", p.ChatID)
 		if ok {
 			rec.Title = chat.Title
+			rec.AccountStatus = accountStatus(chat)
 		}
 	case *tg.PeerChannel:
 		channel, ok := entities.Channel(p.ChannelID)
@@ -110,6 +111,7 @@ func Dialog(dialog tg.DialogClass, entities gotdpeer.Entities, last tg.NotEmptyM
 			rec.Verified = channel.Verified
 			rec.Scam = channel.Scam
 			rec.Fake = channel.Fake
+			rec.AccountStatus = accountStatus(channel)
 		}
 	default:
 		return model.DialogRecord{}, false

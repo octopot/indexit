@@ -37,6 +37,7 @@ func PeerChat(chat tg.ChatClass) (model.PeerRecord, bool) {
 		rec.PeerType = PeerTypeChat
 		rec.Title = c.Title
 		rec.ParticipantsCount = c.ParticipantsCount
+		rec.AccountStatus = accountStatus(c)
 		if c.Date > 0 {
 			rec.Date = unix(c.Date)
 		}
@@ -55,6 +56,7 @@ func PeerChat(chat tg.ChatClass) (model.PeerRecord, bool) {
 // when the account joined it, or when it was created for a non-member.
 func PeerChannel(channel *tg.Channel) model.PeerRecord {
 	rec := peerRecord(uid.KindChannel, channel.ID)
+	rec.AccountStatus = accountStatus(channel)
 	rec.PeerType = channelType(channel.Megagroup, channel.Gigagroup)
 	rec.Title = channel.Title
 	rec.Username, rec.Usernames = usernames(channel.Username, channel.Usernames)
