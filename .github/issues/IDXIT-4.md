@@ -5,22 +5,24 @@ databaseId: 5253848379
 number: 81
 url: https://github.com/octopot/indexit/issues/81
 title: "fetch: download message media from a dialog or topic"
+issueType: Feature
 labels:
   - "type: feature"
   - "scope: code"
   - "impact: high"
   - "effort: medium"
+assignees:
+  - kamilsk
 milestone: "[[IDXIT-M1]]"
+parent: null
+issueFields: {}
 state: CLOSED
 stateReason: COMPLETED
+duplicateOf: null
 createdAt: 2026-08-26T06:01:20Z
 updatedAt: 2026-10-04T13:03:08Z
 lastEditedAt: 2026-10-04T13:03:08Z
 closedAt: 2026-09-18T11:54:44Z
-issueType: Feature
-assignees: []
-parent: null
-issueFields: []
 ---
 
 # fetch: download message media from a dialog or topic

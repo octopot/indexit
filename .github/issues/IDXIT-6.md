@@ -5,18 +5,24 @@ databaseId: 5542790965
 number: 105
 url: https://github.com/octopot/indexit/issues/105
 title: "ci/cd: split release builds across runners instead of capping parallelism"
+issueType: null
 labels:
   - "type: improvement"
   - "scope: inventory"
   - "impact: medium"
   - "effort: hard"
-milestone:
+assignees:
+  - kamilsk
+milestone: null
+parent: null
+issueFields: {}
 state: OPEN
-stateReason:
+stateReason: null
+duplicateOf: null
 createdAt: 2026-09-22T17:12:29Z
 updatedAt: 2026-10-04T13:03:12Z
 lastEditedAt: 2026-10-04T13:03:12Z
-closedAt:
+closedAt: null
 ---
 
 # ci/cd: split release builds across runners instead of capping parallelism

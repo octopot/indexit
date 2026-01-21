@@ -5,14 +5,20 @@ databaseId: 5675619020
 number: 108
 url: https://github.com/octopot/indexit/issues/108
 title: "ci/cd: sign the Cask commits in the Homebrew tap"
+issueType: null
 labels:
   - "type: improvement"
   - "scope: inventory"
   - "impact: low"
   - "effort: medium"
-milestone:
+assignees:
+  - kamilsk
+milestone: null
+parent: null
+issueFields: {}
 state: CLOSED
 stateReason: COMPLETED
+duplicateOf: null
 createdAt: 2026-10-02T09:37:34Z
 updatedAt: 2026-10-04T18:51:12Z
 lastEditedAt: 2026-10-04T18:49:13Z

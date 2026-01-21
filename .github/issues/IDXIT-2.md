@@ -5,22 +5,24 @@ databaseId: 5253438185
 number: 79
 url: https://github.com/octopot/indexit/issues/79
 title: "auth: QR login as a working path when phone codes are not delivered"
+issueType: Feature
 labels:
   - "type: feature"
   - "scope: code"
   - "impact: high"
   - "effort: medium"
+assignees:
+  - kamilsk
 milestone: "[[IDXIT-M1]]"
+parent: null
+issueFields: {}
 state: CLOSED
 stateReason: COMPLETED
+duplicateOf: null
 createdAt: 2026-08-26T04:46:42Z
 updatedAt: 2026-10-04T13:03:03Z
 lastEditedAt: 2026-10-04T13:03:03Z
 closedAt: 2026-08-26T04:46:52Z
-issueType: Feature
-assignees: []
-parent: null
-issueFields: []
 ---
 
 # auth: QR login as a working path when phone codes are not delivered

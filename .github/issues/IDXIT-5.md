@@ -5,14 +5,20 @@ databaseId: 5502755083
 number: 102
 url: https://github.com/octopot/indexit/issues/102
 title: "ci/cd: restore HTTPS and Go module discovery for go.octolab.org"
+issueType: null
 labels:
   - "type: bug"
   - "severity: major"
   - "scope: deps"
   - "impact: high"
-milestone:
+assignees:
+  - kamilsk
+milestone: null
+parent: null
+issueFields: {}
 state: CLOSED
 stateReason: COMPLETED
+duplicateOf: null
 createdAt: 2026-09-18T17:43:51Z
 updatedAt: 2026-10-04T13:03:10Z
 lastEditedAt: 2026-10-04T13:03:10Z

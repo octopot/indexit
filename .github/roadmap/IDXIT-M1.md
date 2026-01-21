@@ -6,19 +6,19 @@ number: 1
 url: https://github.com/octopot/indexit/milestone/1
 title: "Telegram fetcher PoC implementation"
 state: OPEN
-openIssueCount: 0
+openIssueCount: 1
 closedIssueCount: 5
-dueOn:
+dueOn: null
 createdAt: 2026-09-23T17:27:44Z
-updatedAt: 2026-10-04T13:31:01Z
-closedAt:
+updatedAt: 2026-10-16T12:05:08Z
+closedAt: null
 creator: kamilsk
 tags:
   - type/milestone
   - topic/telegram
 ---
 
-# milestone: Telegram fetcher PoC implementation
+# Telegram fetcher PoC implementation
 
 Read-only Telegram fetcher in the indexit CLI — dialogs, messages, topics, contacts, multi-account — delivered in four phases.
 
@@ -76,8 +76,9 @@ Functional behaviour is in place; these are tracked, not blocking:
 
 ## Issues
 
-- [x] #78 — proxy: support MTProto proxies as a SOCKS5 replacement ([[IDXIT-1]])
-- [x] #79 — auth: QR login as a working path when phone codes are not delivered ([[IDXIT-2]])
-- [x] #80 — fetch: list forum topics of a dialog ([[IDXIT-3]])
-- [x] #81 — fetch: download message media from a dialog or topic ([[IDXIT-4]])
-- [x] #109 — fetch: describe channels, groups and invite links as peer cards ([[IDXIT-8]])
+- [x] [[IDXIT-1]] — proxy: support MTProto proxies as a SOCKS5 replacement
+- [x] [[IDXIT-2]] — auth: QR login as a working path when phone codes are not delivered
+- [x] [[IDXIT-3]] — fetch: list forum topics of a dialog
+- [x] [[IDXIT-4]] — fetch: download message media from a dialog or topic
+- [x] [[IDXIT-8]] — fetch: describe channels, groups and invite links as peer cards
+- [ ] [[IDXIT-9]] — fetch: describe users and bots as peer cards

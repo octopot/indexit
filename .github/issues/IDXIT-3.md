@@ -5,22 +5,24 @@ databaseId: 5253847855
 number: 80
 url: https://github.com/octopot/indexit/issues/80
 title: "fetch: list forum topics of a dialog"
+issueType: Feature
 labels:
   - "type: feature"
   - "scope: code"
   - "impact: medium"
   - "effort: medium"
+assignees:
+  - kamilsk
 milestone: "[[IDXIT-M1]]"
+parent: null
+issueFields: {}
 state: CLOSED
 stateReason: COMPLETED
+duplicateOf: null
 createdAt: 2026-08-26T06:01:14Z
 updatedAt: 2026-10-04T13:03:05Z
 lastEditedAt: 2026-10-04T13:03:05Z
 closedAt: 2026-09-18T11:53:43Z
-issueType: Feature
-assignees: []
-parent: null
-issueFields: []
 ---
 
 # fetch: list forum topics of a dialog

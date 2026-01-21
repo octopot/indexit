@@ -5,22 +5,24 @@ databaseId: 5699420714
 number: 109
 url: https://github.com/octopot/indexit/issues/109
 title: "fetch: describe channels, groups and invite links as peer cards"
+issueType: Feature
 labels:
   - "type: feature"
   - "scope: code"
   - "impact: medium"
   - "effort: medium"
+assignees:
+  - kamilsk
 milestone: "[[IDXIT-M1]]"
+parent: null
+issueFields: {}
 state: CLOSED
 stateReason: COMPLETED
+duplicateOf: null
 createdAt: 2026-10-04T12:47:22Z
 updatedAt: 2026-10-04T13:29:53Z
 lastEditedAt: 2026-10-04T12:55:14Z
 closedAt: 2026-10-04T13:29:53Z
-issueType: Feature
-assignees: []
-parent: null
-issueFields: []
 ---
 
 # fetch: describe channels, groups and invite links as peer cards
