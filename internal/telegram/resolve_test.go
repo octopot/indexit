@@ -43,6 +43,19 @@ func TestResolvePeerRejectsColdNumericChannel(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrColdPeer))
 }
 
+func TestResolvePeerCachedUserWithoutHash(t *testing.T) {
+	cache := peers.New()
+	cache.Put(peers.Entry{Kind: uid.KindUser, ID: 5, Username: "min_only"})
+	cache.Put(peers.Entry{Kind: uid.KindUser, ID: 9, AccessHash: 90})
+
+	_, err := ResolvePeer(context.Background(), fakeAPI{}, cache, uid.PeerRef{Kind: uid.KindUser, ID: 5}, RateGuard{})
+	assert.ErrorIs(t, err, ErrColdPeer, "a user without an access hash is cold, even one that was the account")
+
+	resolved, err := ResolvePeer(context.Background(), fakeAPI{}, cache, uid.PeerRef{Kind: uid.KindUser, ID: 9}, RateGuard{})
+	require.NoError(t, err)
+	assert.Equal(t, &tg.InputPeerUser{UserID: 9, AccessHash: 90}, resolved.Input)
+}
+
 func TestResolvePeerResolvesUsernameAndCachesPeer(t *testing.T) {
 	cache := peers.New()
 
@@ -114,6 +127,10 @@ func (f fakeAPI) MessagesGetFullChat(context.Context, int64) (*tg.MessagesChatFu
 
 func (f fakeAPI) MessagesCheckChatInvite(context.Context, string) (tg.ChatInviteClass, error) {
 	return nil, errors.New("unexpected MessagesCheckChatInvite call")
+}
+
+func (f fakeAPI) UsersGetFullUser(context.Context, tg.InputUserClass) (*tg.UsersUserFull, error) {
+	return nil, errors.New("unexpected UsersGetFullUser call")
 }
 
 func TestResolvePeerFourLetterUsername(t *testing.T) {

@@ -50,6 +50,19 @@ Replace `<hash>` with the invitation’s hash; `https://t.me/joinchat/<hash>` wo
 
 `invite.member` says whether you belong to the chat. A temporary peek also has `invite.peek` and may have `invite.expires`. An expired or revoked invitation produces `invite_expired`. None of these operations accepts the invitation or joins the chat.
 
+## Describe people and bots
+
+A user or a bot gets a full card too:
+
+```sh
+indexit -q telegram fetch peer @example_person @example_bot \
+  | jq '{uid, peer_type, title, about, personal_channel_uid, personal_channel, bot, error}'
+```
+
+`peer_type` is `user` or `bot`. `about` is the bio. `personal_channel_uid` names the channel the person shows on the profile; `personal_channel` adds its title and username when Telegram supplies them, shaped like `linked_chat`. A bot card has `bot` with the description, commands, and what the bot may do in groups. Names, the birthday, a business account’s address and hours, the Stars rating, and the phone number appear when Telegram returns them; what privacy settings hide is absent, with no error.
+
+A cached `user:<id>` works as well, and reports `bot` for a bot. A user Telegram has shown only in passing, such as a message author in a large group, has no usable address: pass the username instead.
+
 ## Prepare channel notes for your vault
 
 For a vault with one note per channel, collect the description and discussion-group link together:
@@ -64,7 +77,7 @@ Use `uid` as the identity of each note and retain `linked_chat_uid` to associate
 
 ## Check partial results
 
-An inaccessible or malformed ref produces an `error` record and does not prevent later refs from being processed. Users and bots return identity fields with `error.code: "not_channel"`; they are not full channel or group cards.
+An inaccessible or malformed ref produces an `error` record and does not prevent later refs from being processed. A failed card keeps the identity indexit already knows. Users and bots are full cards, not errors: to keep only channels and groups, filter by `peer_type`.
 
 `fetch peer` exits with `0` if at least one record has no error, `1` if every ref fails, or `2` if every ref is malformed. A successful exit can therefore include failed records. Inspect `error` even when using `-q`, which hides warnings. `--limit` and `--page-size` do not apply: choose the refs you want to inspect.
 

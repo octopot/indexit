@@ -41,11 +41,13 @@ func ResolvePeer(ctx context.Context, api API, cache *peers.Cache, ref uid.PeerR
 
 	if ref.Kind == uid.KindUser || ref.Kind == uid.KindChannel {
 		if entry, ok := cache.Get(ref.Kind, ref.ID); ok {
-			return ResolvedPeer{
-				Input:   inputFromCache(entry),
-				UID:     fmt.Sprintf("%s:%d", ref.Kind, ref.ID),
-				TopicID: ref.TopicID,
-			}, nil
+			if input, warm := inputFromCache(entry); warm {
+				return ResolvedPeer{
+					Input:   input,
+					UID:     fmt.Sprintf("%s:%d", ref.Kind, ref.ID),
+					TopicID: ref.TopicID,
+				}, nil
+			}
 		}
 		return ResolvedPeer{}, fmt.Errorf("%w: %s", ErrColdPeer, ref.String())
 	}
@@ -95,15 +97,21 @@ func canonicalUID(peer tg.PeerClass) (string, error) {
 	}
 }
 
-func inputFromCache(entry peers.Entry) tg.InputPeerClass {
+// inputFromCache addresses a cached peer. A user without an access hash, as a
+// min user leaves it, is cold: a cache entry is never addressed as self, since
+// the cache outlives a change of account.
+func inputFromCache(entry peers.Entry) (tg.InputPeerClass, bool) {
 	switch entry.Kind {
 	case uid.KindUser:
-		return &tg.InputPeerUser{UserID: entry.ID, AccessHash: entry.AccessHash}
+		if entry.AccessHash == 0 {
+			return nil, false
+		}
+		return &tg.InputPeerUser{UserID: entry.ID, AccessHash: entry.AccessHash}, true
 	case uid.KindChannel:
-		return &tg.InputPeerChannel{ChannelID: entry.ID, AccessHash: entry.AccessHash}
+		return &tg.InputPeerChannel{ChannelID: entry.ID, AccessHash: entry.AccessHash}, true
 	case uid.KindChat:
-		return &tg.InputPeerChat{ChatID: entry.ID}
+		return &tg.InputPeerChat{ChatID: entry.ID}, true
 	default:
-		return &tg.InputPeerEmpty{}
+		return &tg.InputPeerEmpty{}, true
 	}
 }

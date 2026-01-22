@@ -127,7 +127,9 @@ indexit -q telegram fetch peer @example_channel https://t.me/+<hash> channel:<id
 
 One `peer` record per ref, in order. A username or invite placed before the
 numeric ID of the same channel warms the peer cache for it. Users and bots get
-identity fields plus `error.code` `not_channel`.
+full cards too: bio, personal channel, birthday, business details, and for a
+bot its description and commands. Filter by `peer_type` to keep only channels
+and groups.
 
 ## Filter and save
 

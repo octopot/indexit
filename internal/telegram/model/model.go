@@ -116,26 +116,99 @@ type PeerRecord struct {
 	Title             string      `json:"title,omitempty"`
 	Username          string      `json:"username,omitempty"`
 	Usernames         []string    `json:"usernames,omitempty"`
+	FirstName         string      `json:"first_name,omitempty"`
+	LastName          string      `json:"last_name,omitempty"`
+	Phone             string      `json:"phone,omitempty"`
+	LangCode          string      `json:"lang_code,omitempty"`
 	About             string      `json:"about,omitempty"`
 	ParticipantsCount int         `json:"participants_count,omitempty"`
 	LinkedChatUID     string      `json:"linked_chat_uid,omitempty"`
 	LinkedChat        *LinkedChat `json:"linked_chat,omitempty"`
-	Verified          bool        `json:"verified,omitempty"`
-	Scam              bool        `json:"scam,omitempty"`
-	Fake              bool        `json:"fake,omitempty"`
-	Restricted        string      `json:"restricted,omitempty"`
-	Date              string      `json:"date,omitempty"`
+	// PersonalChannelUID is the channel a user shows on the profile; the
+	// UID stays when the channel itself is missing from the response.
+	PersonalChannelUID    string        `json:"personal_channel_uid,omitempty"`
+	PersonalChannel       *LinkedChat   `json:"personal_channel,omitempty"`
+	Birthday              string        `json:"birthday,omitempty"`
+	Business              *BusinessCard `json:"business,omitempty"`
+	Bot                   *BotCard      `json:"bot,omitempty"`
+	StarsRating           *StarsRating  `json:"stars_rating,omitempty"`
+	SendPaidMessagesStars *int64        `json:"send_paid_messages_stars,omitempty"`
+	Verified              bool          `json:"verified,omitempty"`
+	Premium               bool          `json:"premium,omitempty"`
+	Scam                  bool          `json:"scam,omitempty"`
+	Fake                  bool          `json:"fake,omitempty"`
+	Support               bool          `json:"support,omitempty"`
+	Deleted               bool          `json:"deleted,omitempty"`
+	Restricted            string        `json:"restricted,omitempty"`
+	Date                  string        `json:"date,omitempty"`
 	AccountStatus
 	Invite *InviteDescriptor `json:"invite,omitempty"`
 	Error  *PeerError        `json:"error,omitempty"`
 }
 
-// LinkedChat is the discussion group of a channel, or the channel of a
-// discussion group.
+// LinkedChat is the discussion group of a channel, the channel of a
+// discussion group, or the personal channel of a user.
 type LinkedChat struct {
 	UID      string `json:"uid"`
 	Title    string `json:"title,omitempty"`
 	Username string `json:"username,omitempty"`
+}
+
+// BusinessCard is what a business account shows on its profile.
+type BusinessCard struct {
+	Location  *BusinessLocation  `json:"location,omitempty"`
+	WorkHours *BusinessWorkHours `json:"work_hours,omitempty"`
+	Intro     *BusinessIntro     `json:"intro,omitempty"`
+}
+
+// BusinessLocation is an address, a point on the map, or both. A zero
+// coordinate is a real one, so known coordinates survive JSON.
+type BusinessLocation struct {
+	Address   string   `json:"address,omitempty"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
+}
+
+// BusinessWorkHours lists the open intervals of a week in minutes counted
+// from Monday 00:00 in the time zone of the business.
+type BusinessWorkHours struct {
+	TimezoneID string             `json:"timezone_id,omitempty"`
+	WeeklyOpen []BusinessOpenSpan `json:"weekly_open,omitempty"`
+}
+
+type BusinessOpenSpan struct {
+	StartMinute int `json:"start_minute"`
+	EndMinute   int `json:"end_minute"`
+}
+
+type BusinessIntro struct {
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+// BotCard describes a bot. Its capabilities are known whenever the card is
+// there, so false values must survive JSON. ActiveUsers is omitted when
+// Telegram does not report it.
+type BotCard struct {
+	Description             string       `json:"description,omitempty"`
+	Commands                []BotCommand `json:"commands,omitempty"`
+	PrivacyPolicyURL        string       `json:"privacy_policy_url,omitempty"`
+	ActiveUsers             int          `json:"active_users,omitempty"`
+	InlinePlaceholder       string       `json:"inline_placeholder,omitempty"`
+	CanJoinGroups           *bool        `json:"can_join_groups,omitempty"`
+	CanReadAllGroupMessages *bool        `json:"can_read_all_group_messages,omitempty"`
+	HasMainApp              *bool        `json:"has_main_app,omitempty"`
+}
+
+type BotCommand struct {
+	Command     string `json:"command"`
+	Description string `json:"description,omitempty"`
+}
+
+// StarsRating is the profile rating earned with Telegram Stars, as returned.
+type StarsRating struct {
+	Level int   `json:"level"`
+	Stars int64 `json:"stars"`
 }
 
 // InviteDescriptor describes the invite link a peer was reached through.

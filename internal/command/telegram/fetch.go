@@ -468,8 +468,10 @@ func fetchPeerCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			"Emits one peer record per ref, in the order of the refs. A ref is any\n" +
 			"dialog address, a t.me/c/<id> link, or a t.me/+<hash> or t.me/joinchat/<hash>\n" +
 			"invite link. Channels and groups are read in full: description, members,\n" +
-			"and the linked discussion group or channel. Invite links are only\n" +
-			"previewed: indexit never joins a chat.\n\n" +
+			"and the linked discussion group or channel. Users and bots are read in\n" +
+			"full too: bio, personal channel, birthday, business card, and a bot's\n" +
+			"description and commands. Invite links are only previewed: indexit\n" +
+			"never joins a chat.\n\n" +
 			"Channel and group cards include is_member, is_admin (owners included),\n" +
 			"and is_creator for the current account when known. Unknown status is\n" +
 			"omitted; known false values are explicit.\n\n" +
@@ -477,6 +479,7 @@ func fetchPeerCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			"instead of stopping the run. The command fails only when no record was\n" +
 			"fetched. --limit and --page-size do not apply to this command.",
 		Example: `  indexit telegram fetch peer @example_channel https://t.me/example_chat
+  indexit telegram fetch peer @example_person @example_bot
   indexit telegram fetch peer channel:<id> https://t.me/+<hash>`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

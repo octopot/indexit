@@ -25,10 +25,6 @@ const (
 	PeerErrInviteNotMember = "invite_not_member"
 	PeerErrInviteExpired   = "invite_expired"
 	PeerErrRPC             = "rpc"
-	// PeerErrNotChannel marks a user or a bot: the record carries its
-	// identity, yet a consumer that checks only error must not take a person
-	// for a channel or a group.
-	PeerErrNotChannel = "not_channel"
 )
 
 type PeerOptions struct {
@@ -56,9 +52,8 @@ type peerFailure struct {
 // failing the run; only a write error or the end of the context does that.
 //
 // Channels and supergroups are read with channels.getFullChannel, basic chats
-// with messages.getFullChat; users and bots are described from the resolved
-// entity alone. Invite links are previewed with messages.checkChatInvite and
-// are never joined.
+// with messages.getFullChat, users and bots with users.getFullUser. Invite
+// links are previewed with messages.checkChatInvite and are never joined.
 func FetchPeers(ctx context.Context, api API, cache *peers.Cache, out Writer, opt PeerOptions, guard RateGuard) (PeerStats, error) {
 	var stats PeerStats
 	for _, raw := range opt.Refs {
@@ -66,12 +61,6 @@ func FetchPeers(ctx context.Context, api API, cache *peers.Cache, out Writer, op
 			return stats, err
 		}
 		rec, failure := fetchPeer(ctx, api, cache, raw, guard)
-		if failure == nil && (rec.PeerType == mapper.PeerTypeUser || rec.PeerType == mapper.PeerTypeBot) {
-			failure = &peerFailure{
-				code:    PeerErrNotChannel,
-				message: fmt.Sprintf("%s is a %s, not a channel or a group", rec.UID, rec.PeerType),
-			}
-		}
 		if failure != nil && failure.cause != nil && ctx.Err() != nil {
 			return stats, ctx.Err()
 		}
@@ -161,15 +150,24 @@ func fetchPeer(ctx context.Context, api API, cache *peers.Cache, raw string, gua
 		if !ok {
 			return model.PeerRecord{}, coldPeer(ref)
 		}
-		// The cache knows no bot flag and users get no full request: a
-		// numeric user is described from the cache alone.
-		return model.PeerRecord{
+		// The cache knows no bot flag: until the full response tells, the
+		// identity is a user's.
+		base := model.PeerRecord{
 			UID:      fmt.Sprintf("%s:%d", uid.KindUser, entry.ID),
 			PeerType: mapper.PeerTypeUser,
 			PeerID:   entry.ID,
 			Title:    entry.Title,
 			Username: entry.Username,
-		}, nil
+		}
+		input, warm := inputUserFromCache(entry)
+		if !warm {
+			return base, coldPeer(ref)
+		}
+		rec, failure := fetchFullUser(ctx, api, cache, entry.ID, input, base, guard)
+		if failure != nil && tgerr.Is(failure.cause, "PEER_ID_INVALID", "USER_ID_INVALID") {
+			failure.message = fmt.Sprintf("%s; the cached address of %s may be stale: run 'indexit telegram fetch dialogs' first, or pass a @username / t.me/<nick> link", failure.message, ref.String())
+		}
+		return rec, failure
 	default:
 		return model.PeerRecord{}, &peerFailure{code: PeerErrBadRef, message: fmt.Sprintf("unsupported telegram peer %s", ref.String())}
 	}
@@ -208,7 +206,13 @@ func fetchUsername(ctx context.Context, api API, cache *peers.Cache, ref uid.Pee
 		if !ok {
 			return model.PeerRecord{}, &peerFailure{code: PeerErrRPC, message: fmt.Sprintf("user %d is missing from the response", p.UserID)}
 		}
-		return mapper.PeerUser(user), nil
+		// The user was just resolved by the current account, so its self flag
+		// is the account's own; a cached entry is never addressed as self.
+		var input tg.InputUserClass = &tg.InputUser{UserID: user.ID, AccessHash: user.AccessHash}
+		if user.Self && user.AccessHash == 0 {
+			input = &tg.InputUserSelf{}
+		}
+		return fetchFullUser(ctx, api, cache, user.ID, input, mapper.PeerUser(user), guard)
 	case *tg.PeerChannel:
 		channel, ok := entities.Channel(p.ChannelID)
 		if !ok {
@@ -220,6 +224,40 @@ func fetchUsername(ctx context.Context, api API, cache *peers.Cache, ref uid.Pee
 	default:
 		return model.PeerRecord{}, &peerFailure{code: PeerErrRPC, message: fmt.Sprintf("unsupported resolved peer type %T", result.Peer)}
 	}
+}
+
+// fetchFullUser reads a user or a bot in full. The user itself and its
+// personal channel come in the users and chats of the same response; a failed
+// request keeps the identity in base.
+func fetchFullUser(ctx context.Context, api API, cache *peers.Cache, userID int64, input tg.InputUserClass, base model.PeerRecord, guard RateGuard) (model.PeerRecord, *peerFailure) {
+	var result *tg.UsersUserFull
+	err := guard.Do(ctx, func(ctx context.Context) error {
+		var err error
+		result, err = api.UsersGetFullUser(ctx, input)
+		return err
+	})
+	if err != nil {
+		return base, rpcFailure(err)
+	}
+
+	entities := entitiesFromLists(result.Users, result.Chats)
+	mapper.CacheEntities(cache, entities)
+	rec := base
+	if user, ok := entities.User(userID); ok {
+		rec = mapper.PeerUser(user)
+	}
+	mapper.ApplyUserFull(&rec, &result.FullUser, entities)
+	return rec, nil
+}
+
+// inputUserFromCache addresses a cached user by its access hash. A user
+// without one, as a min user leaves it, is cold. A cache entry is never
+// addressed as self: the cache outlives a change of account.
+func inputUserFromCache(entry peers.Entry) (tg.InputUserClass, bool) {
+	if entry.AccessHash == 0 {
+		return nil, false
+	}
+	return &tg.InputUser{UserID: entry.ID, AccessHash: entry.AccessHash}, true
 }
 
 // fetchFullChannel reads a channel or a supergroup in full. The channel itself

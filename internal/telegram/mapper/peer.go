@@ -70,7 +70,8 @@ func PeerChannel(channel *tg.Channel) model.PeerRecord {
 	return rec
 }
 
-// PeerUser maps a user or a bot.
+// PeerUser maps a user or a bot. The phone number is emitted as Telegram
+// returns it, which it does only when the profile shares it.
 func PeerUser(user *tg.User) model.PeerRecord {
 	rec := peerRecord(uid.KindUser, user.ID)
 	rec.PeerType = PeerTypeUser
@@ -79,11 +80,113 @@ func PeerUser(user *tg.User) model.PeerRecord {
 	}
 	rec.Title = userDisplay(user)
 	rec.Username, rec.Usernames = usernames(user.Username, user.Usernames)
+	rec.FirstName = user.FirstName
+	rec.LastName = user.LastName
+	rec.Phone = user.Phone
+	rec.LangCode = user.LangCode
 	rec.Verified = user.Verified
+	rec.Premium = user.Premium
 	rec.Scam = user.Scam
 	rec.Fake = user.Fake
+	rec.Support = user.Support
+	rec.Deleted = user.Deleted
 	rec.Restricted = restriction(user.RestrictionReason)
+	if user.Bot {
+		joinGroups, readAll, mainApp := !user.BotNochats, user.BotChatHistory, user.BotHasMainApp
+		rec.Bot = &model.BotCard{
+			ActiveUsers:             user.BotActiveUsers,
+			InlinePlaceholder:       user.BotInlinePlaceholder,
+			CanJoinGroups:           &joinGroups,
+			CanReadAllGroupMessages: &readAll,
+			HasMainApp:              &mainApp,
+		}
+	}
 	return rec
+}
+
+// ApplyUserFull adds the full-user details. The personal channel is looked
+// up among the entities of the same response, like the linked chat of a
+// channel. What privacy settings hide is simply absent from full.
+func ApplyUserFull(rec *model.PeerRecord, full *tg.UserFull, entities gotdpeer.Entities) {
+	if full == nil {
+		return
+	}
+	rec.About = full.About
+	if id, ok := full.GetPersonalChannelID(); ok && id != 0 {
+		rec.PersonalChannelUID = fmt.Sprintf("%s:%d", uid.KindChannel, id)
+		if channel, ok := entities.Channel(id); ok {
+			username, _ := usernames(channel.Username, channel.Usernames)
+			rec.PersonalChannel = &model.LinkedChat{
+				UID:      rec.PersonalChannelUID,
+				Title:    channel.Title,
+				Username: username,
+			}
+		}
+	}
+	if birthday, ok := full.GetBirthday(); ok {
+		rec.Birthday = birthdayDate(birthday)
+	}
+	rec.Business = businessCard(full)
+	if info, ok := full.GetBotInfo(); ok {
+		if rec.Bot == nil {
+			rec.Bot = &model.BotCard{}
+		}
+		rec.Bot.Description = info.Description
+		rec.Bot.PrivacyPolicyURL = info.PrivacyPolicyURL
+		rec.Bot.Commands = nil
+		for _, cmd := range info.Commands {
+			rec.Bot.Commands = append(rec.Bot.Commands, model.BotCommand{Command: cmd.Command, Description: cmd.Description})
+		}
+	}
+	if rating, ok := full.GetStarsRating(); ok {
+		rec.StarsRating = &model.StarsRating{Level: rating.Level, Stars: rating.Stars}
+	}
+	// Zero is not absence: paid messages are on, but this account is exempt.
+	if stars, ok := full.GetSendPaidMessagesStars(); ok {
+		rec.SendPaidMessagesStars = &stars
+	}
+}
+
+// birthdayDate renders a birthday as YYYY-MM-DD, or as --MM-DD (ISO 8601
+// without a year) when the profile hides the year.
+func birthdayDate(b tg.Birthday) string {
+	if b.Day <= 0 || b.Month <= 0 {
+		return ""
+	}
+	if year, ok := b.GetYear(); ok && year > 0 {
+		return fmt.Sprintf("%04d-%02d-%02d", year, b.Month, b.Day)
+	}
+	return fmt.Sprintf("--%02d-%02d", b.Month, b.Day)
+}
+
+// businessCard maps the location, the opening hours and the intro of a
+// business account. The greeting and away messages are automation settings,
+// not part of the card.
+func businessCard(full *tg.UserFull) *model.BusinessCard {
+	var card model.BusinessCard
+	if loc, ok := full.GetBusinessLocation(); ok {
+		location := model.BusinessLocation{Address: loc.Address}
+		if point, ok := loc.GetGeoPointAsNotEmpty(); ok {
+			location.Latitude, location.Longitude = &point.Lat, &point.Long
+		}
+		if location.Address != "" || location.Latitude != nil {
+			card.Location = &location
+		}
+	}
+	if hours, ok := full.GetBusinessWorkHours(); ok {
+		work := &model.BusinessWorkHours{TimezoneID: hours.TimezoneID}
+		for _, span := range hours.WeeklyOpen {
+			work.WeeklyOpen = append(work.WeeklyOpen, model.BusinessOpenSpan{StartMinute: span.StartMinute, EndMinute: span.EndMinute})
+		}
+		card.WorkHours = work
+	}
+	if intro, ok := full.GetBusinessIntro(); ok && (intro.Title != "" || intro.Description != "") {
+		card.Intro = &model.BusinessIntro{Title: intro.Title, Description: intro.Description}
+	}
+	if card == (model.BusinessCard{}) {
+		return nil
+	}
+	return &card
 }
 
 // ApplyChannelFull adds the full-channel details. The linked chat is looked up

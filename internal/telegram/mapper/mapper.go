@@ -29,8 +29,24 @@ func CacheEntities(cache *peers.Cache, entities gotdpeer.Entities) {
 	}
 }
 
+// CacheUser stores the address of a user. A min user, sent with partial data
+// as the author of a message in a large group, carries an access hash that
+// is valid only in that context: it never touches a cached entry and, with
+// nothing cached yet, is stored as an identity without a hash.
 func CacheUser(cache *peers.Cache, user *tg.User) {
 	if cache == nil || user == nil {
+		return
+	}
+	if user.Min {
+		if _, ok := cache.Get(uid.KindUser, user.ID); ok {
+			return
+		}
+		cache.Put(peers.Entry{
+			Kind:     uid.KindUser,
+			ID:       user.ID,
+			Username: user.Username,
+			Title:    userDisplay(user),
+		})
 		return
 	}
 	cache.Put(peers.Entry{

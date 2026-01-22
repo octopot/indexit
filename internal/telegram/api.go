@@ -31,6 +31,7 @@ type API interface {
 	// MessagesCheckChatInvite only previews an invite link. The join call is
 	// deliberately absent from this surface: indexit never joins a chat.
 	MessagesCheckChatInvite(context.Context, string) (tg.ChatInviteClass, error)
+	UsersGetFullUser(context.Context, tg.InputUserClass) (*tg.UsersUserFull, error)
 	AuthLogOut(context.Context) (*tg.AuthLoggedOut, error)
 }
 

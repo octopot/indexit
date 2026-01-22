@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.octolab.org/toolset/indexit/internal/telegram/mapper"
 	"go.octolab.org/toolset/indexit/internal/telegram/model"
 	"go.octolab.org/toolset/indexit/internal/telegram/peers"
 	"go.octolab.org/toolset/indexit/internal/telegram/uid"
@@ -24,7 +25,9 @@ type peerAPI struct {
 	channels map[int64]*tg.MessagesChatFull
 	chats    map[int64]*tg.MessagesChatFull
 	invites  map[string]tg.ChatInviteClass
-	errs     map[string]error // keyed by username, invite hash, or "channel:<id>"
+	users    map[int64]*tg.UsersUserFull
+	self     int64
+	errs     map[string]error // keyed by username, invite hash, "channel:<id>", or "user:<id>"
 
 	calls []string
 }
@@ -64,6 +67,27 @@ func (f *peerAPI) MessagesGetFullChat(_ context.Context, id int64) (*tg.Messages
 	return nil, tgerr.New(400, "CHAT_ID_INVALID")
 }
 
+func (f *peerAPI) UsersGetFullUser(_ context.Context, input tg.InputUserClass) (*tg.UsersUserFull, error) {
+	var id int64
+	switch u := input.(type) {
+	case *tg.InputUser:
+		id = u.UserID
+		f.calls = append(f.calls, fmt.Sprintf("full:user:%d:%d", u.UserID, u.AccessHash))
+	case *tg.InputUserSelf:
+		id = f.self
+		f.calls = append(f.calls, "full:user:self")
+	default:
+		return nil, fmt.Errorf("unexpected input %T", input)
+	}
+	if err, ok := f.errs[fmt.Sprintf("user:%d", id)]; ok {
+		return nil, err
+	}
+	if out, ok := f.users[id]; ok {
+		return out, nil
+	}
+	return nil, tgerr.New(400, "USER_ID_INVALID")
+}
+
 func (f *peerAPI) MessagesCheckChatInvite(_ context.Context, hash string) (tg.ChatInviteClass, error) {
 	f.calls = append(f.calls, "invite:"+hash)
 	if err, ok := f.errs[hash]; ok {
@@ -76,7 +100,8 @@ func (f *peerAPI) MessagesCheckChatInvite(_ context.Context, hash string) (tg.Ch
 }
 
 // The fixture world: a broadcast channel 10 and its discussion supergroup 20,
-// a gigagroup 30, a basic chat 40, a user 50 and a bot 60.
+// a gigagroup 30, a basic chat 40, a user 50 with the personal channel 70, a
+// bot 60, and the account itself 80.
 var (
 	newsChannel = &tg.Channel{
 		ID: 10, AccessHash: 110, Title: "News", Username: "news_channel",
@@ -98,7 +123,24 @@ var (
 	basicChat = &tg.Chat{ID: 40, Title: "Family", ParticipantsCount: 3, Date: 1500000000}
 	someUser  = &tg.User{ID: 50, AccessHash: 150, FirstName: "Some", LastName: "User", Username: "some_user", Scam: true}
 	someBot   = &tg.User{ID: 60, AccessHash: 160, FirstName: "Helper", Username: "helper_bot", Bot: true}
+	selfUser  = &tg.User{ID: 80, FirstName: "Me", Username: "its_me", Self: true}
 )
+
+func someUserFull() *tg.UsersUserFull {
+	full := tg.UserFull{ID: 50, About: "Writes things"}
+	full.SetPersonalChannelID(70)
+	return &tg.UsersUserFull{
+		FullUser: full,
+		Users:    []tg.UserClass{&tg.User{ID: 50, AccessHash: 150, FirstName: "Some", LastName: "User", Username: "some_user", Scam: true, Phone: "15550100"}},
+		Chats:    []tg.ChatClass{betaChan},
+	}
+}
+
+func someBotFull() *tg.UsersUserFull {
+	full := tg.UserFull{ID: 60, About: "I help"}
+	full.SetBotInfo(tg.BotInfo{Description: "A helpful bot", Commands: []tg.BotCommand{{Command: "start", Description: "Start over"}}})
+	return &tg.UsersUserFull{FullUser: full, Users: []tg.UserClass{someBot}}
+}
 
 func peerWorld() *peerAPI {
 	return &peerAPI{
@@ -109,7 +151,14 @@ func peerWorld() *peerAPI {
 			"beta":         {Peer: &tg.PeerChannel{ChannelID: 70}, Chats: []tg.ChatClass{betaChan}},
 			"some_user":    {Peer: &tg.PeerUser{UserID: 50}, Users: []tg.UserClass{someUser}},
 			"helper_bot":   {Peer: &tg.PeerUser{UserID: 60}, Users: []tg.UserClass{someBot}},
+			"its_me":       {Peer: &tg.PeerUser{UserID: 80}, Users: []tg.UserClass{selfUser}},
 		},
+		users: map[int64]*tg.UsersUserFull{
+			50: someUserFull(),
+			60: someBotFull(),
+			80: {FullUser: tg.UserFull{ID: 80, About: "That is me"}, Users: []tg.UserClass{selfUser}},
+		},
+		self: 80,
 		channels: map[int64]*tg.MessagesChatFull{
 			10: {
 				FullChat: &tg.ChannelFull{ID: 10, About: "Daily news", ParticipantsCount: 1000, LinkedChatID: 20},
@@ -288,23 +337,156 @@ func TestFetchPeersAccountStatus(t *testing.T) {
 
 func TestFetchPeersUserAndBot(t *testing.T) {
 	api := peerWorld()
-	recs, stats := fetchPeerRecords(t, api, peers.New(), "@some_user", "user:@helper_bot")
+	cache := peers.New()
+	recs, stats := fetchPeerRecords(t, api, cache, "@some_user", "user:@helper_bot")
 
-	assert.Equal(t, "user", recs[0].PeerType)
+	user := recs[0]
+	assert.Nil(t, user.Error, "a person is a full card, not an error")
+	assert.Equal(t, "user", user.PeerType)
+	assert.Equal(t, "user:50", user.UID)
+	assert.EqualValues(t, 50, user.PeerID)
+	assert.Equal(t, "Some User", user.Title)
+	assert.Equal(t, "Some", user.FirstName)
+	assert.Equal(t, "User", user.LastName)
+	assert.Equal(t, "some_user", user.Username)
+	assert.Equal(t, "15550100", user.Phone, "the phone in the full response is emitted")
+	assert.True(t, user.Scam)
+	assert.Equal(t, "Writes things", user.About)
+	assert.Equal(t, "channel:70", user.PersonalChannelUID)
+	assert.Equal(t, &model.LinkedChat{UID: "channel:70", Title: "Beta", Username: "beta"}, user.PersonalChannel)
+
+	bot := recs[1]
+	assert.Nil(t, bot.Error)
+	assert.Equal(t, "bot", bot.PeerType)
+	assert.Equal(t, "user:60", bot.UID)
+	assert.Equal(t, "helper_bot", bot.Username)
+	assert.Equal(t, "I help", bot.About)
+	require.NotNil(t, bot.Bot)
+	assert.Equal(t, "A helpful bot", bot.Bot.Description)
+	assert.Equal(t, []model.BotCommand{{Command: "start", Description: "Start over"}}, bot.Bot.Commands)
+
+	assert.Equal(t, PeerStats{Fetched: 2}, stats)
+	assert.Equal(t, []string{
+		"resolve:some_user", "full:user:50:150",
+		"resolve:helper_bot", "full:user:60:160",
+	}, api.calls)
+	personal, ok := cache.Get(uid.KindChannel, 70)
+	require.True(t, ok, "the personal channel is cached")
+	assert.EqualValues(t, 170, personal.AccessHash)
+}
+
+func TestFetchPeersCachedBotReportsBot(t *testing.T) {
+	api := peerWorld()
+	cache := peers.New()
+	cache.Put(peers.Entry{Kind: uid.KindUser, ID: 60, AccessHash: 160, Title: "Helper", Username: "helper_bot"})
+
+	recs, stats := fetchPeerRecords(t, api, cache, "user:60")
+	rec := recs[0]
+	assert.Nil(t, rec.Error)
+	assert.Equal(t, "bot", rec.PeerType, "the full response tells a bot the cache cannot")
+	require.NotNil(t, rec.Bot)
+	assert.Equal(t, "A helpful bot", rec.Bot.Description)
+	assert.Equal(t, PeerStats{Fetched: 1}, stats)
+	assert.Equal(t, []string{"full:user:60:160"}, api.calls)
+}
+
+func TestFetchPeersSelf(t *testing.T) {
+	api := peerWorld()
+	cache := peers.New()
+	recs, _ := fetchPeerRecords(t, api, cache, "@its_me")
+
+	assert.Nil(t, recs[0].Error)
+	assert.Equal(t, "user:80", recs[0].UID)
+	assert.Equal(t, "That is me", recs[0].About)
+	assert.Equal(t, []string{"resolve:its_me", "full:user:self"}, api.calls,
+		"the account just resolved without an access hash is addressed as itself")
+}
+
+func TestFetchPeersCachedSelfAfterAccountSwitch(t *testing.T) {
+	api := peerWorld()
+	cache := peers.New()
+	// The hashless entry the previous account left for itself. Addressed as
+	// self, it would return the current account under the old UID.
+	mapper.CacheUser(cache, selfUser)
+
+	recs, _ := fetchPeerRecords(t, api, cache, "user:80")
+	rec := recs[0]
+	require.NotNil(t, rec.Error)
+	assert.Equal(t, PeerErrColdPeer, rec.Error.Code)
+	assert.Equal(t, "user:80", rec.UID, "the cached identity is kept")
+	assert.Equal(t, "its_me", rec.Username)
+	assert.Empty(t, api.calls, "a cache entry is never addressed as self")
+}
+
+func TestFetchPeersCachedUserUsesAccessHash(t *testing.T) {
+	api := peerWorld()
+	cache := peers.New()
+	cache.Put(peers.Entry{Kind: uid.KindUser, ID: 50, AccessHash: 150})
+
+	recs, _ := fetchPeerRecords(t, api, cache, "user:50")
+	assert.Nil(t, recs[0].Error)
 	assert.Equal(t, "user:50", recs[0].UID)
-	assert.EqualValues(t, 50, recs[0].PeerID)
-	assert.Equal(t, "Some User", recs[0].Title)
-	assert.Equal(t, "some_user", recs[0].Username)
-	assert.True(t, recs[0].Scam)
-	assert.Equal(t, "bot", recs[1].PeerType)
-	assert.Equal(t, "user:60", recs[1].UID)
-	assert.Equal(t, "helper_bot", recs[1].Username)
-	for _, rec := range recs {
-		require.NotNil(t, rec.Error, "a person is never a success for a channel consumer")
-		assert.Equal(t, PeerErrNotChannel, rec.Error.Code)
-	}
+	assert.Equal(t, []string{"full:user:50:150"}, api.calls)
+}
+
+func TestFetchPeersUserFullFailureKeepsIdentity(t *testing.T) {
+	api := peerWorld()
+	api.errs["user:50"] = tgerr.New(400, "PEER_ID_INVALID")
+	cache := peers.New()
+	cache.Put(peers.Entry{Kind: uid.KindUser, ID: 60, AccessHash: 1, Title: "Helper", Username: "helper_bot"})
+	api.errs["user:60"] = tgerr.New(400, "PEER_ID_INVALID")
+
+	recs, stats := fetchPeerRecords(t, api, cache, "@some_user", "user:60")
+
+	user := recs[0]
+	require.NotNil(t, user.Error)
+	assert.Equal(t, PeerErrRPC, user.Error.Code)
+	assert.Contains(t, user.Error.Message, "PEER_ID_INVALID")
+	assert.Equal(t, "user:50", user.UID)
+	assert.Equal(t, "user", user.PeerType)
+	assert.Equal(t, "Some User", user.Title)
+	assert.Equal(t, "some_user", user.Username)
+	assert.Empty(t, user.About)
+
+	cached := recs[1]
+	require.NotNil(t, cached.Error)
+	assert.Equal(t, PeerErrRPC, cached.Error.Code)
+	assert.Contains(t, cached.Error.Message, "fetch dialogs", "a stale cached address gets the cold-peer hint")
+	assert.Equal(t, "user:60", cached.UID)
+	assert.Equal(t, "Helper", cached.Title)
 	assert.Equal(t, PeerStats{Failed: 2}, stats)
-	assert.Equal(t, []string{"resolve:some_user", "resolve:helper_bot"}, api.calls, "users get no full request")
+}
+
+func TestFetchPeersBotFullFailureKeepsBot(t *testing.T) {
+	api := peerWorld()
+	api.errs["user:60"] = tgerr.New(500, "INTERNAL")
+
+	recs, _ := fetchPeerRecords(t, api, peers.New(), "@helper_bot")
+	rec := recs[0]
+	require.NotNil(t, rec.Error)
+	assert.Equal(t, PeerErrRPC, rec.Error.Code)
+	assert.Equal(t, "bot", rec.PeerType, "the resolved identity already tells a bot")
+	assert.Equal(t, "user:60", rec.UID)
+	assert.Equal(t, "helper_bot", rec.Username)
+}
+
+func TestFetchPeersMinUserIsCold(t *testing.T) {
+	api := peerWorld()
+	cache := peers.New()
+	mapper.CacheEntities(cache, entitiesFromLists([]tg.UserClass{
+		&tg.User{ID: 50, AccessHash: 999, Min: true, FirstName: "Some", Username: "some_user"},
+	}, nil))
+
+	recs, _ := fetchPeerRecords(t, api, cache, "user:50")
+	rec := recs[0]
+	require.NotNil(t, rec.Error)
+	assert.Equal(t, PeerErrColdPeer, rec.Error.Code, "a min user leaves no usable address")
+	assert.Equal(t, "user:50", rec.UID, "the cached identity is kept")
+	assert.Equal(t, "user", rec.PeerType)
+	assert.EqualValues(t, 50, rec.PeerID)
+	assert.Equal(t, "Some", rec.Title)
+	assert.Equal(t, "some_user", rec.Username)
+	assert.Empty(t, api.calls, "no request is made")
 }
 
 func TestFetchPeersUserRefRejectsChannel(t *testing.T) {
@@ -425,12 +607,12 @@ func TestFetchPeersWarmNumericPeers(t *testing.T) {
 	recs, stats := fetchPeerRecords(t, api, cache, "channel:10", "https://t.me/c/10", "user:50")
 	assert.Equal(t, "News", recs[0].Title)
 	assert.Equal(t, "channel:10", recs[1].UID)
+	assert.Nil(t, recs[2].Error)
 	assert.Equal(t, "user", recs[2].PeerType)
 	assert.Equal(t, "some_user", recs[2].Username)
-	require.NotNil(t, recs[2].Error)
-	assert.Equal(t, PeerErrNotChannel, recs[2].Error.Code)
-	assert.Equal(t, PeerStats{Fetched: 2, Failed: 1}, stats)
-	assert.Equal(t, []string{"full:channel:10:110", "full:channel:10:110"}, api.calls)
+	assert.Equal(t, "Writes things", recs[2].About)
+	assert.Equal(t, PeerStats{Fetched: 3}, stats)
+	assert.Equal(t, []string{"full:channel:10:110", "full:channel:10:110", "full:user:50:150"}, api.calls)
 }
 
 func TestFetchPeersNotFound(t *testing.T) {
@@ -459,12 +641,13 @@ func TestFetchPeersPartialFailureKeepsOrder(t *testing.T) {
 		codes = append(codes, rec.Error.Code)
 	}
 	assert.Equal(t, []string{
-		PeerErrBadRef, PeerErrNotFound, "", PeerErrRPC, PeerErrColdPeer, PeerErrInviteNotMember, PeerErrNotChannel,
+		PeerErrBadRef, PeerErrNotFound, "", PeerErrRPC, PeerErrColdPeer, PeerErrInviteNotMember, "",
 	}, codes)
 	assert.Equal(t, "channel:99", recs[3].UID, "a failed full request keeps the known identity")
 	assert.Equal(t, "Private", recs[3].Title)
 	assert.Contains(t, recs[3].Error.Message, "CHANNEL_PRIVATE")
-	assert.Equal(t, PeerStats{Fetched: 1, Failed: 6, BadRefs: 1}, stats)
+	assert.Equal(t, "bot", recs[6].PeerType)
+	assert.Equal(t, PeerStats{Fetched: 2, Failed: 5, BadRefs: 1}, stats)
 }
 
 func TestFetchPeersStopsOnCancelledContext(t *testing.T) {

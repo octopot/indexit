@@ -130,7 +130,7 @@ For practical workflows, see [describe channels and groups](/guide/peers/).
 indexit -q telegram fetch peer @example_channel 'https://t.me/+<hash>' | fx
 ```
 
-A ref is any address above, a bare `https://t.me/c/<id>`, or an invite link; links work without `https://`. Channels and supergroups are read with `channels.getFullChannel`, basic groups with `messages.getFullChat`. Users and bots get no full request: their record carries the identity and the error `not_channel`; cached `user:<id>` refs lack a bot flag and report `peer_type: "user"` even for bots, while `@username` refs distinguish bots.
+A ref is any address above, a bare `https://t.me/c/<id>`, or an invite link; links work without `https://`. Channels and supergroups are read with `channels.getFullChannel`, basic groups with `messages.getFullChat`, users and bots with `users.getFullUser`. A user or a bot is a card like any other, not an error: tell people from chats by `peer_type`. A cached `user:<id>` ref reports `bot` once the full response arrives; if that request fails, its record falls back to `peer_type: "user"`.
 
 Refs are processed in order, so a username or an invite placed before the numeric ID of the same channel warms the peer cache for it.
 
@@ -140,13 +140,22 @@ Refs are processed in order, so a username or an invite placed before the numeri
 | `uid`, `peer_id` | `channel:<id>`, `chat:<id>`, or `user:<id>`, and the numeric ID |
 | `peer_type` | `channel`, `supergroup` (gigagroups included), `chat`, `user`, or `bot` |
 | `title`, `username`, `usernames` | Name, main username, other active usernames |
-| `about`, `participants_count` | Description and member count |
+| `about`, `participants_count` | Description or bio, and member count |
 | `is_member`, `is_admin`, `is_creator` | Current account's membership, administration (owners included), and ownership; see [account status](#account-status) |
 | `linked_chat_uid`, `linked_chat` | The discussion group of a channel, or the channel of a discussion group, with `uid`, `title`, `username` |
 | `verified`, `scam`, `fake`, `restricted` | Telegram flags; `restricted` carries the restriction text |
+| `first_name`, `last_name`, `phone`, `lang_code` | A user’s names, the phone number, and the user’s language code, each as Telegram returns it; `lang_code` comes mostly for your own account |
+| `premium`, `support`, `deleted` | User flags: Telegram Premium, a Telegram support account, a deleted account |
+| `personal_channel_uid`, `personal_channel` | The channel a user shows on the profile, with `uid`, `title`, `username`, shaped like `linked_chat` |
+| `birthday` | `YYYY-MM-DD`, or `--MM-DD` when the profile hides the year |
+| `business` | A business account’s `location` (`address`, `latitude`, `longitude`), `work_hours` (`timezone_id`, `weekly_open` spans of `start_minute`, `end_minute` counted from Monday 00:00), and `intro` (`title`, `description`) |
+| `bot` | A bot’s `description`, `commands` (`command`, `description`), `privacy_policy_url`, `active_users` (absent when Telegram doesn’t report it), `inline_placeholder`, and the explicit `can_join_groups`, `can_read_all_group_messages`, `has_main_app` |
+| `stars_rating`, `send_paid_messages_stars` | A user’s Stars rating (`level`, `stars`) and the Stars price of a message to them; `0` means paid messages are on but your account is exempt, an absent field means messages are free |
 | `date` | Telegram’s date of the channel or group: when the account joined it, or when it was created |
 | `invite` | For invite links: `hash`, `member`, and optional `peek`, `expires`, `request_needed` |
 | `error` | `code` and `message` when the ref could not be described in full |
+
+What privacy settings hide is simply absent from a user card, with no error. Profile photos, stories, gifts, decoration such as emoji status or colours, and what a profile means only to your account, such as blocking or notification settings, are not part of the card.
 
 indexit never joins a chat. An invite to a chat the account is in, or may peek into, yields the full card. An invite to any other chat yields only Telegram’s preview — title, description, member count, type — without an ID, and the error `invite_not_member`.
 
@@ -156,14 +165,13 @@ A failed ref does not stop the run; its record carries `error.code`:
 | --- | --- |
 | `bad_ref` | The ref is not a Telegram address |
 | `not_found` | The username is free or invalid |
-| `cold_peer` | A numeric ID is not in the peer cache; run `fetch dialogs` or pass a username |
+| `cold_peer` | A numeric ID is not in the peer cache, or names a user known only from a passing mention such as a message in a large group; such a user keeps the identity it left (`uid`, `title`, `username`), a never-seen ID has none. Run `fetch dialogs` or pass a username |
 | `invite_not_member` | The invite leads to a chat the account is not in |
 | `invite_expired` | The invite link is expired or revoked |
-| `not_channel` | The ref is a user or a bot; `uid`, `peer_type`, `title`, and `username` are still filled |
-| `rpc` | Any other Telegram error, such as a private channel |
+| `rpc` | Any other Telegram error, such as a private channel or a stale cached user; the record keeps the identity already known |
 
 ## Exit status
 
 `0` means the command completed, including empty or partial results. `1` is a runtime failure. `2` covers flagged usage/configuration errors, such as invalid fetch UIDs, missing required flags, or malformed proxy settings.
 
-`fetch peer` exits with `0` when at least one record has no `error` (a user or a bot counts as an error); when every ref fails, it exits with `1`, or `2` if every ref was malformed. For specific-message exports, inspect stderr for skipped IDs. For media, inspect records with `error`: individual download failures can coexist with exit code `0`.
+`fetch peer` exits with `0` when at least one record has no `error`; when every ref fails, it exits with `1`, or `2` if every ref was malformed. For specific-message exports, inspect stderr for skipped IDs. For media, inspect records with `error`: individual download failures can coexist with exit code `0`.
