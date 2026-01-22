@@ -4,13 +4,13 @@ id: I_kwDOSVi84s8AAAABSmBHNQ
 databaseId: 5542790965
 number: 105
 url: https://github.com/octopot/indexit/issues/105
-title: "ci/cd: split release builds across runners instead of capping parallelism"
+title: "ci/cd: start release builds from a warm cache on the default branch"
 issueType: null
 labels:
   - "type: improvement"
   - "scope: inventory"
   - "impact: medium"
-  - "effort: hard"
+  - "effort: medium"
 assignees:
   - kamilsk
 milestone: null
@@ -20,68 +20,43 @@ state: OPEN
 stateReason: null
 duplicateOf: null
 createdAt: 2026-09-22T17:12:29Z
-updatedAt: 2026-10-04T13:03:12Z
-lastEditedAt: 2026-10-04T13:03:12Z
+updatedAt: 2026-10-18T07:42:08Z
+lastEditedAt: 2026-10-18T07:42:08Z
 closedAt: null
 ---
 
-# ci/cd: split release builds across runners instead of capping parallelism
+# ci/cd: start release builds from a warm cache on the default branch
 
 ## Motivation
 
-The release job builds four targets (`darwin`/`linux` × `amd64`/`arm64`) on a single runner, and GoReleaser starts all of them at once. A cold cross-compile of this module peaks at about 5 GB of resident memory — `gotd` is a single generated package holding the whole Telegram API — so four at once overruns the 16 GB hosted runner and the kernel kills the job without printing an error.
+The release job builds four targets (`darwin`/`linux` × `amd64`/`arm64`) on a single runner. A cold cross-compile of this module peaks at about 5 GB of resident memory — `gotd` is a single generated package holding the whole Telegram API — so four at once overran the 16 GB hosted runner and the kernel killed the job without an error ([Continuous delivery, September 22, 2026](https://github.com/octopot/indexit/actions/runs/35754753213)). A warm build cache needs about 0.6 GB per target and builds in seconds, so the job was meant to start warm and fall back to `--parallelism 2` only when cold.
 
-Failure reference: [Continuous delivery, September 22, 2026](https://github.com/octopot/indexit/actions/runs/35754753213).
+It never starts warm. Every release since — v0.1.1, v0.1.2, v0.2.0, v0.2.1 — logged `Cache not found` even for the bare `release-Linux-` prefix, ran with `--parallelism 2`, and spent 3m29s (v0.2.1) building binaries in a job of about ten minutes. A tag restores only caches of its own ref and of the default branch, so what one release saves is out of reach of the next; nothing keeps a release cache on `main` between the monthly cleanup and a tag, and GitHub evicts a cache that nobody reads for seven days. The repository sits at 9.9 GB of its 10 GB cache quota, most of it caches of closed Dependabot pull requests.
 
-```text
-• building binaries
-  • building  paths=. binaries=indexit target=darwin_arm64_v8.0
-  • building  paths=. binaries=indexit target=linux_amd64_v1
-  • building  paths=. binaries=indexit target=linux_arm64_v8.0
-  • building  paths=. binaries=indexit target=darwin_amd64_v1
-<3m34s of silence, job fails, post steps skipped>
-```
-
-`--parallelism 2` is in place as a stopgap. It halves the peak and keeps the job inside the runner, but it is a ceiling, not a design: memory per target only grows, and every new target makes the single runner a tighter fit while adding a full build to one machine's wall clock.
-
-One target per runner is the shape that scales — adding a platform becomes a matrix entry rather than a memory calculation.
-
-## Out of scope
-
-- Reverting `--parallelism 2` before a replacement is green.
-- The same ceiling in `make go-dist-check`, which is generated from `octomation/makefiles`.
+Splitting the build across runners was the original plan here. Four green releases at `--parallelism 2` show the single runner is not the limit: the ceiling costs about three minutes, a warm cache takes them back without three extra jobs and a prebuilt shim, and GoReleaser's own split is a Pro feature.
 
 ## Verification PoC
 
-The cost of a single cold target, on which the 16 GB estimate rests:
-
 ```sh
-/usr/bin/time -l env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-  go build -a -trimpath -ldflags '-s -w' -o /dev/null .
-#      19.81 real
-#      4994465792  maximum resident set size
+gh run view <cd run id> --log | grep -E 'Cache (restored|not found)|BUILD_FLAGS|took:'
+gh cache list -R octopot/indexit --ref refs/heads/main --key release-
+gh api repos/octopot/indexit/actions/cache/usage
 ```
-
-GoReleaser's own split and merge is Pro-only, verified against the version the workflow pins, v2.18.2:
-
-```sh
-goreleaser release --snapshot --clean --skip=publish --split
-# ⨯ command failed   error=unknown flag: --split
-
-# with `builder: prebuilt` in the config
-goreleaser release --snapshot --clean --skip=publish
-# ⨯ release failed   error=yaml: unmarshal errors:
-#   line 9: field prebuilt not found in type config.Build
-```
-
-Both features carry the `g_featpro` marker in the v2.18.2 documentation sources, so the decision below is a licensing one, not a configuration one.
 
 ## Acceptance criteria
 
-- [ ] Decide between a GoReleaser Pro licence (`partial: {by: target}`, a matrix, `goreleaser continue --merge`) and a hand-rolled matrix of `goreleaser build --single-target` jobs feeding a release job.
-- [ ] If hand-rolled: archives, `checksums.txt` and the Homebrew cask keep their current shape, including completions generated by running the built binary.
-- [ ] Adding a target is a matrix entry only — no change to memory ceilings.
-- [ ] A tagged release and a snapshot run both pass, with no job exceeding the runner's memory.
+- [ ] `main` holds a release build cache after any push that changes `go.sum`, `tools/go.sum` or `.goreleaser.yml`, and it survives a quiet week;
+- [ ] no cache is saved from a tag;
+- [ ] on the next tag the restore hits the exact key, the parallelism limit is skipped, building binaries takes under 45 s, and there is no OOM;
+- [ ] a miss, or a fallback to another Go version or dependency set, still builds with `--parallelism 2`;
+- [ ] a closed pull request leaves no caches behind, and usage stays under 8 GB after a release;
+- [ ] the runs of the caches cleanup and warmup on day 1 stay readable until the runs cleanup a day later.
+
+## Out of scope
+
+- Splitting the build across runners (GoReleaser Pro `partial`, or a matrix of `--single-target` builds with a prebuilt shim): revisit only for a target a hosted Linux runner cannot build.
+- Reverting `--parallelism 2` as the cold fallback.
+- The same ceiling in `make go-dist-check`, which is generated from `octomation/makefiles`.
 
 <!-- 2026-09-24T15:56Z https://github.com/octopot/indexit/issues/105#issuecomment-5817549098
 Status 2026-09-24: the split is parked; a warm build cache comes first.

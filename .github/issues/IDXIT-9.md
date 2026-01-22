@@ -20,8 +20,8 @@ state: OPEN
 stateReason: null
 duplicateOf: null
 createdAt: 2026-10-16T12:05:08Z
-updatedAt: 2026-10-16T12:05:08Z
-lastEditedAt: null
+updatedAt: 2026-10-18T07:38:40Z
+lastEditedAt: 2026-10-18T07:38:40Z
 closedAt: null
 ---
 
@@ -31,7 +31,7 @@ closedAt: null
 
 `fetch peer` describes channels and groups in full since [[IDXIT-8]], but a user or a bot gets only its identity and the error `not_channel`: no bio, no personal channel, nothing a consumer can file. The case behind it is the same notes vault: a person's Telegram account is a note of its own, next to their contact card and their channel, and that note wants the account's bio and the channel the account itself points to. Today the bio is copied by hand from the `t.me/<username>` web preview, which is blocked on some networks and never names the personal channel; the channel is guessed from the bio text.
 
-Telegram answers this with one call, `users.getFullUser`: the bio, the personal channel (`personal_channel_id`), and for a bot its description and commands.
+Telegram answers this with one call, `users.getFullUser`: the bio, the personal channel (`personal_channel_id`), the birthday and business card, and for a bot its description and commands. The card carries everything the profile shows, the phone number included when Telegram returns it.
 
 ## PoC
 
@@ -43,16 +43,18 @@ $ indexit telegram fetch peer @example_person @example_bot
 
 ## Acceptance criteria
 
-- [ ] a user by username yields its bio, other active usernames and the flags Telegram reports (verified, premium, scam, fake);
+- [ ] a user by username yields its bio, first and last name, other active usernames and the flags Telegram reports (verified, premium, scam, fake, deleted, support);
 - [ ] a user with a personal channel yields that channel's uid, title and username, shaped like `linked_chat` of a channel card;
 - [ ] a bot yields `peer_type: "bot"` and its description and commands, whether it is given as `@username` or as a cached `user:<id>`;
 - [ ] a user hidden by privacy settings yields what Telegram gives and no error for the missing parts;
-- [ ] the phone number is never emitted, even when Telegram returns it for a contact;
-- [ ] `not_channel` is retired or kept only for a documented reason, and the guide's card fields and reasons are updated;
+- [ ] whatever else the profile shows is on the card when Telegram returns it: the phone number, the birthday (with or without the year), the business location, hours and intro, the Stars rating and the price of a paid message;
+- [ ] a failed full request still yields the identity, with the error;
+- [ ] `not_channel` is retired: a user or a bot is a full card, not an error, and the guide's card fields and reasons are updated;
 - [ ] still one card per ref, in order, and the account is not changed.
 
 ## Out of scope
 
-- Profile photos, stories, gifts and other files.
+- Profile photos, stories, gifts and other files; profile decoration (emoji status, colours, wallpaper).
 - Common chats with the user, their contacts or presence.
+- What the profile means only to this account: blocked, notification settings, the private note, read dates.
 - Messages of the personal channel: that is `fetch messages`.
