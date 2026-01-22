@@ -51,7 +51,7 @@ jobs:
       - name: Mint the tap token
         if: startsWith(github.ref, 'refs/tags/v')
         id: tap
-        uses: actions/create-github-app-token@v3.2.0
+        uses: actions/create-github-app-token@v3.3.0
         with:
           client-id: ${{ secrets.OCTOLAB_RELEASER_CLIENT_ID }}
           private-key: ${{ secrets.OCTOLAB_RELEASER_KEY }}
@@ -106,7 +106,7 @@ jobs:
       - name: Run fast check and tests
         run: make fast-check test TIMEOUT=2m
       - name: Publish the release
-        uses: goreleaser/goreleaser-action@v7.2.3
+        uses: goreleaser/goreleaser-action@v7.3.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
           HOMEBREW_TAP_TOKEN: ${{ steps.tap.outputs.token }}
@@ -144,7 +144,7 @@ jobs:
       # the tap token is scoped to the tap, so the catalog gets its own
       - name: Mint the catalog token
         id: catalog
-        uses: actions/create-github-app-token@v3.2.0
+        uses: actions/create-github-app-token@v3.3.0
         with:
           client-id: ${{ secrets.OCTOLAB_RELEASER_CLIENT_ID }}
           private-key: ${{ secrets.OCTOLAB_RELEASER_KEY }}
@@ -153,7 +153,7 @@ jobs:
           permission-contents: write
       - name: Publish the agent skill
         id: skill
-        uses: octolab/skills/.github/actions/publish@ca9113a9489baf116638053997ec9d2179bfc9a5
+        uses: octolab/skills/.github/actions/publish@60605c44e841ffd83eb6c92fa44c8398b1a39429
         with:
           tool: indexit
           token: ${{ steps.catalog.outputs.token }}
