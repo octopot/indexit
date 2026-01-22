@@ -84,8 +84,8 @@ jobs:
           go-version: 1.27.x
           cache: false
           check-latest: true
-      # setup-go restores only on an exact key, so any go.sum change meant a
-      # cold cross-compile of gotd (~5GB per target); fall back to a stale cache
+      # warmup.caches.yml saves it on main: a cache saved from a tag is out of
+      # reach of the next tag; a stale fallback still brings the modules
       - name: Restore the release build cache
         id: cache
         uses: actions/cache/restore@v6.1.0
@@ -93,12 +93,14 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum') }}
+          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum', '.goreleaser.yml') }}
           restore-keys: |
             release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-
             release-${{ runner.os }}-
+      # only the exact key proves the build cache warm: another go.sum or Go
+      # version means a cold cross-compile of gotd (~5GB per target)
       - name: Limit build parallelism on a cold cache
-        if: steps.cache.outputs.cache-matched-key == ''
+        if: steps.cache.outputs.cache-hit != 'true'
         run: echo "BUILD_FLAGS=--parallelism 2" >> "${GITHUB_ENV}"
 
       - name: Install tools for release checks
@@ -116,15 +118,6 @@ jobs:
           # a cold build of gotd needs ~5GB per target, so four in parallel
           # overrun the 16GB runner; a warm cache needs ~0.6GB — see BUILD_FLAGS
           args: ${{ startsWith(github.ref, 'refs/tags/v') && format('release --clean {0} {1}', env.BUILD_FLAGS, env.RELEASE_NOTES) || format('release --snapshot --clean --skip=publish {0}', env.BUILD_FLAGS) }}
-      - name: Save the release build cache
-        if: success() && steps.cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6.1.0
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ steps.cache.outputs.cache-primary-key }}
-
       - name: Check the skill in the archives
         run: node .github/scripts/release.mjs skill
 

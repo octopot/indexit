@@ -13,6 +13,20 @@ on:
     workflows: [ Workflow caches cleanup ]
     types: [ completed ]
 
+  # a tag restores only caches of its own ref and of main, so the release
+  # build cache has to be made on main, and GitHub evicts it after 7 idle days
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/warmup.caches.yml'
+      - '.goreleaser.yml'
+      - 'go.sum'
+      - 'tools/go.sum'
+
+  schedule:
+    # twice a week: a run lags behind its cron, and 7 idle days evict a cache
+    - cron: 0 7 * * 1,4 # at 07:00 on Monday and Thursday, UTC
+
 permissions:
   contents: read
 
@@ -20,6 +34,7 @@ jobs:
   deps:
     name: Caching deps
     runs-on: ubuntu-24.04
+    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
 
     strategy:
       fail-fast: false
@@ -44,6 +59,7 @@ jobs:
   docs:
     name: Caching docs deps
     runs-on: ubuntu-24.04
+    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout the repository
@@ -62,6 +78,7 @@ jobs:
   tools:
     name: Caching tools
     runs-on: ubuntu-24.04
+    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout the repository
@@ -100,7 +117,10 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum') }}
+          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum', '.goreleaser.yml') }}
+          restore-keys: |
+            release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-
+            release-${{ runner.os }}-
       - name: Build all release targets
         if: steps.cache.outputs.cache-hit != 'true'
         run: |
@@ -119,7 +139,9 @@ jobs:
     name: Notifying
     needs: [ deps, docs, release, tools ]
     runs-on: ubuntu-24.04
-    if: failure() || success()
+    # success() is false when the other jobs are skipped, on a push or a
+    # schedule
+    if: ${{ !cancelled() }}
 
     steps:
       - name: Checkout the repository

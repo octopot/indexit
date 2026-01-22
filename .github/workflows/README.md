@@ -8,19 +8,22 @@
 | [tools](#tools) | Tools validation | PR and push to main (`tools/`), monthly, manual | Install the tools module and check generated code |
 | [doctor](#doctor) | Repository doctor | manual | Compare the repository with GitHub and explain fixes |
 | [caches](#caches) | Workflow caches cleanup | monthly, manual, reusable | Delete all Actions caches |
-| [warmup](#warmup) | Workflow caches warmup | after caches cleanup, manual | Refill Go, docs and tools caches |
-| [runs](#runs) | Workflow runs cleanup | monthly, manual, reusable | Delete completed runs, with a dry run |
+| [warmup](#warmup) | Workflow caches warmup | after caches cleanup, push to main (`go.sum`, `tools/go.sum`, `.goreleaser.yml`), twice a week, manual | Refill Go, docs and tools caches; keep the release build cache warm |
+| [pulls](#pulls) | Pull request caches cleanup | PR closed, daily, manual | Delete the caches of closed PRs |
+| [runs](#runs) | Workflow runs cleanup | monthly on day 2, manual, reusable | Delete completed runs, with a dry run |
 | [stale](#stale) | Stale issues cleanup | daily, manual, reusable | Mark and close stale issues and PRs |
 
-Schedules are in UTC: cleanups at 06:00, checks at 07:00, monthly on day 1.
+Schedules are in UTC: cleanups at 06:00, checks at 07:00, monthly on day 1;
+runs cleanup on day 2, so the runs of day 1 stay readable until then; the release warmup on Mondays and Thursdays.
 
 ```mermaid
 flowchart LR
   dev([developer]) -- PR / push main --> ci & docs & tools
   dev -- "git push --atomic origin main vX.Y.Z" --> hook{{pre-push hook}}
   hook -- tag --> cd & ci
-  cron([schedule]) --> ci & docs & tools & caches & runs & stale
+  cron([schedule]) --> ci & docs & tools & caches & runs & stale & warmup & pulls
   caches -- completed --> warmup
+  dev -- PR closed --> pulls
   you([maintainer]) -- manual --> doctor
   cd --> release[(GitHub release)] & tap[(Homebrew tap)] & catalog[(octolab/skills)]
   docs --> pages[(GitHub Pages)]
@@ -35,7 +38,7 @@ flowchart LR
 - GitHub-hosted Ubuntu runners (`ubuntu-24.04`) supply the runtime the actions need.
 - Workflow permissions default to `contents: read`; publishing and maintenance
   jobs request more explicitly.
-- Every workflow except doctor ends with a `notify` job that posts to Slack.
+- Every workflow except doctor and pulls ends with a `notify` job that posts to Slack.
   `SLACK_WEBHOOK` is optional: an empty value skips the notification.
 - Secrets are checked by `make doctor`, which prints how to create a missing one.
 
@@ -197,8 +200,29 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  deps[Go modules] & docs[docs npm] & tools[tools module] --> notify[notify]
+  deps[Go modules] & docs[docs npm] & tools[tools module] & release[release builds] --> notify[notify]
 ```
+
+- **The release build cache lives on main.** A tag can restore only caches of
+  its own ref and of the default branch, so the cache `cd` restores is made
+  here: `goreleaser build` of every target, keyed by the Go version and
+  `go.sum`, `tools/go.sum` and `.goreleaser.yml`. A push to main that changes
+  one of them rebuilds it, incrementally from the previous one, a run twice a
+  week keeps it inside GitHub's 7-day eviction window, and the other jobs run
+  only after the cleanup or on demand.
+- `cd` builds with full parallelism only on the exact key; any other match
+  brings the modules but not a warm build cache, so it keeps `--parallelism 2`
+  (a cold cross-compile of gotd takes ~5GB per target on a 16GB runner).
+
+## pulls
+
+[cleanup.pulls.yml](cleanup.pulls.yml) deletes the caches of a pull request once
+it is closed: they are scoped to `refs/pull/<n>/merge` and of no use after it,
+but count against the 10GB quota. It runs on `pull_request_target`, which keeps
+a writable token when Dependabot closes its own PR, and checks out no code.
+A run still in progress when its PR closes saves its caches afterwards, so a
+daily run sweeps the caches of every PR that is no longer open.
+It has no `notify` job, as it runs on every closed PR.
 
 ## runs
 
