@@ -70,6 +70,64 @@ func TestLocations(t *testing.T) {
 	}, got)
 }
 
+func TestLocations_codexPlugins(t *testing.T) {
+	root := t.TempDir()
+	env := Env{
+		Home:      filepath.Join(root, "home"),
+		ClaudeDir: filepath.Join(root, "claude"),
+		CodexHome: filepath.Join(root, "codex"),
+		Cwd:       filepath.Join(root, "home"),
+	}
+	cache := filepath.Join(env.CodexHome, "plugins", "cache")
+	for _, dir := range []string{
+		filepath.Join(cache, "octolab", "indexit", "0.2.1", "skills", "indexit"),
+		filepath.Join(cache, "octolab", "indexit", "0.2.10", "skills", "indexit"),
+		filepath.Join(cache, "octolab", "indexit", "0.2.2", "skills", "indexit"),
+		filepath.Join(cache, "off", "indexit", "0.2.2", "skills", "indexit"),
+		filepath.Join(cache, "octolab", "other", "0.1.0", "skills", "indexit"),
+	} {
+		writeSkill(t, dir, "x")
+	}
+	config := `model = "gpt"
+
+[marketplaces.octolab]
+source_type = "git"
+source = "https://github.com/octolab/skills.git"
+
+[plugins]
+auto_update = true
+
+[plugins."indexit@octolab"]
+
+[plugins."indexit@off"]
+enabled = false
+
+[plugins."indexit@missing"]
+enabled = true
+
+[plugins."indexit@.."]
+enabled = true
+
+[plugins."other@octolab"]
+enabled = true
+`
+	require.NoError(t, os.MkdirAll(env.CodexHome, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(env.CodexHome, "config.toml"), []byte(config), 0o644))
+	writeSkill(t, filepath.Join(env.CodexHome, "plugins", "indexit", "0.9.0", "skills", "indexit"), "x")
+
+	locations := Locations(env, "indexit")
+	require.Len(t, locations, 1, "only the enabled plugin named like the skill, in the version Codex loads")
+	assert.Equal(t, Location{
+		Agent:  Codex,
+		Scope:  "plugin",
+		Path:   filepath.Join(cache, "octolab", "indexit", "0.2.10", "skills", "indexit"),
+		Plugin: "indexit@octolab",
+	}, locations[0], "a table without enabled is enabled; a non-table value and a dot marketplace are skipped")
+
+	require.NoError(t, os.WriteFile(filepath.Join(env.CodexHome, "config.toml"), []byte("not = [toml"), 0o644))
+	assert.Empty(t, Locations(env, "indexit"), "an unreadable config lists no plugin")
+}
+
 func TestLocations_home(t *testing.T) {
 	home := t.TempDir()
 	env := Env{Home: home, ClaudeDir: filepath.Join(home, ".claude"), CodexHome: filepath.Join(home, ".codex"), Cwd: home}

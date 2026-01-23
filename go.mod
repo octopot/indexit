@@ -12,6 +12,7 @@ require (
 	github.com/fatih/color v1.19.0
 	github.com/gotd/log/logzap v0.1.1
 	github.com/gotd/td v0.162.0
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.1
@@ -50,7 +51,6 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/ogen-go/ogen v1.23.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.0-beta.8 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/refraction-networking/utls v1.8.2 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect

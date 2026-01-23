@@ -248,8 +248,8 @@ func skillStatusCommand(load func() (bundle, error)) *cobra.Command {
 		Short: "Check the installed copies of the skill against this binary",
 		Long: "Check the installed copies of the skill against this binary.\n\n" +
 			"Looks in the user's and the project's skills of Claude Code and Codex, and\n" +
-			"in Claude Code plugins. Fails when a copy is incompatible with this binary,\n" +
-			"was changed after indexit installed it, or no copy exists for a requested\n" +
+			"in their plugins. Fails when a copy is incompatible with this binary, was\n" +
+			"changed after indexit installed it, or no copy exists for a requested\n" +
 			"--agent; with --exact, also when a copy differs from this release.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -313,6 +313,10 @@ func printStatus(out io.Writer, b bundle, env skill.Env, copies []skill.Copy) {
 			where += " (symbolic link)"
 		}
 		_, _ = fmt.Fprintf(out, "\n%s %s: %s\n  %s\n", agentNames[c.Agent], c.Scope, where, describe(c))
+		if len(c.AmbiguousVersions) > 0 {
+			_, _ = fmt.Fprintf(out, "  Codex's pick among %s depends on the order on disk; remove the stale ones\n",
+				strings.Join(c.AmbiguousVersions, ", "))
+		}
 		switch {
 		case c.Integrity == "modified":
 			_, _ = fmt.Fprintln(out, "  changed after indexit installed it; move it away and run indexit skill install")
@@ -340,9 +344,12 @@ func describe(c skill.Copy) string {
 		"incompatible": "incompatible with this binary",
 		"unknown":      "compatibility unknown",
 	}[c.Compatibility])
-	if c.ReleaseMatch == "exact" {
+	switch c.ReleaseMatch {
+	case "exact":
 		facts = append(facts, "same as this release")
-	} else {
+	case "unknown":
+		facts = append(facts, "match with this release unknown")
+	default:
 		facts = append(facts, "differs from this release")
 	}
 	facts = append(facts, map[string]string{
@@ -366,6 +373,8 @@ func statusError(copies []skill.Copy, agents []string, exact, requested bool) er
 			problems = append(problems, c.Path+" is incompatible with this binary")
 		case c.Integrity == "modified":
 			problems = append(problems, c.Path+" was changed after indexit installed it")
+		case exact && len(c.AmbiguousVersions) > 0:
+			problems = append(problems, c.Path+" may not be the copy Codex loads")
 		case exact && c.ReleaseMatch != "exact":
 			problems = append(problems, c.Path+" differs from this release")
 		}
