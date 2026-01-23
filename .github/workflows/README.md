@@ -55,7 +55,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   lint[lint: golangci-lint]
-  test[test: fast check, tests, coverage, install check] --> report[report: Codecov via OIDC]
+  test[test: fast check, tests, coverage, install and skill install checks] --> report[report: Codecov via OIDC]
   lint & report --> notify[notify]
 ```
 
@@ -64,6 +64,10 @@ flowchart LR
 - Codecov uses GitHub OIDC (`id-token: write`). The repository must be activated
   in Codecov; no `CODECOV_TOKEN` is needed.
 - PRs get no notification.
+- On both Go versions, `test` installs the binary, then installs the agent
+  skill with it into an empty temporary home for Claude Code and Codex and
+  requires `skill status --exact` to report both copies intact: the maintainer
+  installs the skill through the catalog, so this keeps the CLI path checked.
 
 ## cd
 
