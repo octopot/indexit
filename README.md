@@ -15,7 +15,7 @@ brew install --cask octolab/tap/indexit
 indexit version
 ```
 
-For Linux or a manual installation, download a [v0.2.1 release archive](https://github.com/octopot/indexit/releases/tag/v0.2.1) for your platform. Ready-to-run binaries are available for macOS and Linux on `amd64` and `arm64`; Go is not required. See the [installation steps](docs/content/quick-start.mdx#1-install-indexit).
+For Linux or a manual installation, download a [v0.2.2 release archive](https://github.com/octopot/indexit/releases/tag/v0.2.2) for your platform. Ready-to-run binaries are available for macOS and Linux on `amd64` and `arm64`; Go is not required. See the [installation steps](docs/content/quick-start.mdx#1-install-indexit).
 
 ## Quick start
 
@@ -33,9 +33,9 @@ Set up your API credentials first and replace the example channel with your own.
 - [Coding agents](docs/content/guide/agents.mdx) — install the bundled skill and check it after upgrades.
 - [Messages](docs/content/guide/messages.mdx) — history, date windows, and exact links.
 - [Topics & media](docs/content/guide/media.mdx) — bring a trip archive home.
-- [v0.2.1 release notes](docs/content/changelog/v0.2.1.md) — membership, admin, and owner status in dialogs and peer cards.
+- [v0.2.2 release notes](docs/content/changelog/v0.2.2.md) — full cards for users and bots, and a peer cache bound to its account.
 
-v0.2.1 describes and exports Telegram data, including your account’s membership and admin status, with a bundled skill to help coding agents use the CLI. Built-in search, contacts, Stories, and automatic synchronization are future work.
+v0.2.2 describes and exports Telegram data, including users, bots, and your account’s membership and admin status, with a bundled skill to help coding agents use the CLI. Built-in search, contacts, Stories, and automatic synchronization are future work.
 
 ## Development
 
