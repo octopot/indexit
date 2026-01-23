@@ -121,11 +121,15 @@ jobs:
           restore-keys: |
             release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-
             release-${{ runner.os }}-
+      # the same goreleaser as cd.yml: make tools installs into setup-go's
+      # GOBIN, not bin/, and a different version could build differently
       - name: Build all release targets
         if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          make tools
-          "bin/$(go env GOOS)/$(go env GOARCH)/goreleaser" build --snapshot --clean --parallelism 2
+        uses: goreleaser/goreleaser-action@v7.3.0
+        with:
+          distribution: goreleaser
+          version: v2.18.2
+          args: build --snapshot --clean --parallelism 2
       - name: Save the release build cache
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6.1.0
