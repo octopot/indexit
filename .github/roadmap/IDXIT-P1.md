@@ -29,7 +29,7 @@ Design and scope live in the spec: [[Telegram fetcher, PoC implementation plan]]
 
 Milestones:
 
-- [[IDXIT-M1]] — Telegram fetcher PoC implementation: open; Phase 1 functionally complete, Phase 2 has one task left; 11 / 19 tasks closed.
+- [[IDXIT-M1]] — Telegram fetcher PoC implementation: open; Phase 1 functionally complete, Phase 2 done; 12 / 19 tasks closed.
 
 Later milestones (not yet opened) will graduate the PoC into the wider pipeline — e.g. durable peer/message store, and wiring the JSONL stream into the Sparkle indexer itself.
 

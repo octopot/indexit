@@ -16,13 +16,13 @@ assignees:
 milestone: "[[IDXIT-M1]]"
 parent: null
 issueFields: {}
-state: OPEN
-stateReason: null
+state: CLOSED
+stateReason: COMPLETED
 duplicateOf: null
 createdAt: 2026-10-16T12:05:08Z
-updatedAt: 2026-10-18T12:18:19Z
-lastEditedAt: 2026-10-18T12:18:19Z
-closedAt: null
+updatedAt: 2026-10-18T13:38:26Z
+lastEditedAt: 2026-10-18T13:37:56Z
+closedAt: 2026-10-18T13:38:26Z
 ---
 
 # fetch: describe users and bots as peer cards
@@ -45,19 +45,19 @@ $ indexit telegram fetch peer @example_person @example_bot
 
 ## Acceptance criteria
 
-- [ ] a user by username yields its bio, first and last name, other active usernames and the flags Telegram reports (verified, premium, scam, fake, deleted, support);
-- [ ] a user with a personal channel yields that channel's uid, title and username, shaped like `linked_chat` of a channel card;
-- [ ] a bot yields `peer_type: "bot"` and its description and commands, whether it is given as `@username` or as a cached `user:<id>`;
-- [ ] a user hidden by privacy settings yields what Telegram gives and no error for the missing parts;
-- [ ] whatever else the profile shows is on the card when Telegram returns it: the phone number, the birthday (with or without the year), the business location, hours and intro, the Stars rating and the price of a paid message;
-- [ ] a failed full request still yields the identity, with the error;
-- [ ] `not_channel` is retired: a user or a bot is a full card, not an error, and the guide's card fields and reasons are updated;
-- [ ] still one card per ref, in order, and the account is not changed;
-- [ ] a peer cache written for one account is never used for another, whether the switch came through logout and login, `--session` or `--peer-cache`: the other account starts with an empty cache and a warning that says how to refill it;
-- [ ] a cache that cannot be shown to belong to the current account, including one written before this change, is not trusted;
-- [ ] the same account keeps its cache across a re-login, and the check costs no request while the session is unchanged;
-- [ ] when the account cannot be determined, the command still runs without the cache and does not overwrite it;
-- [ ] `auth status` shows which account the peer cache belongs to.
+- [x] a user by username yields its bio, first and last name, other active usernames and the flags Telegram reports (verified, premium, scam, fake, deleted, support);
+- [x] a user with a personal channel yields that channel's uid, title and username, shaped like `linked_chat` of a channel card;
+- [x] a bot yields `peer_type: "bot"` and its description and commands, whether it is given as `@username` or as a cached `user:<id>`;
+- [x] a user hidden by privacy settings yields what Telegram gives and no error for the missing parts;
+- [x] whatever else the profile shows is on the card when Telegram returns it: the phone number, the birthday (with or without the year), the business location, hours and intro, the Stars rating and the price of a paid message;
+- [x] a failed full request still yields the identity, with the error;
+- [x] `not_channel` is retired: a user or a bot is a full card, not an error, and the guide's card fields and reasons are updated;
+- [x] still one card per ref, in order, and the account is not changed;
+- [x] a peer cache written for one account is never used for another, whether the switch came through logout and login, `--session` or `--peer-cache`: the other account starts with an empty cache and a warning that says how to refill it;
+- [x] a cache that cannot be shown to belong to the current account, including one written before this change, is not trusted;
+- [x] the same account keeps its cache across a re-login, and the check costs no request while the session is unchanged;
+- [x] when the account cannot be determined, the command still runs without the cache and does not overwrite it;
+- [x] `auth status` shows which account the peer cache belongs to.
 
 ## Out of scope
 
@@ -65,3 +65,7 @@ $ indexit telegram fetch peer @example_person @example_bot
 - Common chats with the user, their contacts or presence.
 - What the profile means only to this account: blocked, notification settings, the private note, read dates.
 - Messages of the personal channel: that is `fetch messages`.
+
+<!-- 2026-10-18T13:38Z https://github.com/octopot/indexit/issues/122#issuecomment-6250577943
+Shipped in [v0.2.2](https://github.com/octopot/indexit/releases/tag/v0.2.2) and verified on a live account: a user card with bio, names and personal channel; @BotFather and the cached user:93372553 both as peer_type bot with description and commands; the ownerless cache reset with a warning on the first fetch; verified=session afterwards; auth status shows the cache owner.
+-->

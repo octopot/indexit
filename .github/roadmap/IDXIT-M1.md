@@ -6,11 +6,11 @@ number: 1
 url: https://github.com/octopot/indexit/milestone/1
 title: "Telegram fetcher PoC implementation"
 state: OPEN
-openIssueCount: 1
-closedIssueCount: 5
+openIssueCount: 0
+closedIssueCount: 6
 dueOn: null
 createdAt: 2026-09-23T17:27:44Z
-updatedAt: 2026-10-18T07:39:32Z
+updatedAt: 2026-10-18T13:38:26Z
 closedAt: null
 creator: kamilsk
 tags:
@@ -26,12 +26,12 @@ Milestone of [[IDXIT-P1]]. Tracks the four-phase PoC defined in [[Telegram fetch
 
 ## Progress
 
-**11 / 19 tasks closed.** Phase 1 is functionally complete and shipped in v0.1.0; the remaining Phase-1 work is robustness/polish tracked in `.github/reports/` and `.github/reviews/`. Phase 2 shipped through v0.2.1 (peer cards for channels, groups and invite links in v0.2.0, account status in v0.2.1); user and bot cards remain. Phases 3–4 are not started.
+**12 / 19 tasks closed.** Phase 1 is functionally complete and shipped in v0.1.0; the remaining Phase-1 work is robustness/polish tracked in `.github/reports/` and `.github/reviews/`. Phase 2 is done: peer cards for channels, groups and invite links in v0.2.0, account status in v0.2.1, user and bot cards with an account-bound peer cache in v0.2.2. Phases 3–4 are not started.
 
 | Phase | Scope                       | State       | Done  |
 | ----- | --------------------------- | ----------- | ----- |
 | 1     | Dialogs & messages          | in progress | 6 / 9 |
-| 2     | Topics & single message     | in progress | 5 / 6 |
+| 2     | Topics & single message     | done        | 6 / 6 |
 | 3     | Contacts & Stories          | not started | 0 / 2 |
 | 4     | Multiple accounts & proxies | not started | 0 / 2 |
 
@@ -56,7 +56,7 @@ Legend: `[x]` done · `[ ] 🔄` in progress · `[ ]` not started.
 - [x] 2.2 Single message — `fetch message <msg-uid>` (URL anchor applied)
 - [x] 2.3 Media download — `fetch media --dialog=<uid> --dir <path>` (`gotd` downloader) — [[IDXIT-4]]
 - [x] 2.4 Peer cards — `fetch peer <ref>…`: channels, groups and invite links described without joining — [[IDXIT-8]]
-- [ ] 🔄 2.5 User and bot cards — `fetch peer` reads `users.getFullUser`: bio, personal channel, bot description and commands — [[IDXIT-9]]
+- [x] 2.5 User and bot cards — `fetch peer` reads `users.getFullUser`: bio, personal channel, bot description and commands — [[IDXIT-9]]
 
 ### Phase 3 — Contacts & Stories
 
@@ -82,4 +82,4 @@ Functional behaviour is in place; these are tracked, not blocking:
 - [x] [[IDXIT-3]] — fetch: list forum topics of a dialog
 - [x] [[IDXIT-4]] — fetch: download message media from a dialog or topic
 - [x] [[IDXIT-8]] — fetch: describe channels, groups and invite links as peer cards
-- [ ] [[IDXIT-9]] — fetch: describe users and bots as peer cards
+- [x] [[IDXIT-9]] — fetch: describe users and bots as peer cards
