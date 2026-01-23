@@ -84,7 +84,7 @@ the cached identity with `peer_type` `user` and `error.code` `rpc`.
 | --- | --- |
 | `bad_ref` | not a Telegram address |
 | `not_found` | the username is free or invalid |
-| `cold_peer` | numeric ID not in the peer cache, or a user known only from a passing mention; such a user keeps its `uid`, `title`, `username`, a never-seen ID has none; run `fetch dialogs` or pass a username |
+| `cold_peer` | numeric ID not in the peer cache, or a user known only from a passing mention; such a user keeps its `uid`, `title`, `username`, a never-seen ID has none; after an account switch the cache starts empty; run `fetch dialogs` or pass a username |
 | `invite_not_member` | invite to a chat the account isn't in; only a preview without an ID |
 | `invite_expired` | invite expired or revoked |
 | `rpc` | any other Telegram error, e.g. a private channel or a stale cached user; known identity is kept |

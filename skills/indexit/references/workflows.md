@@ -152,6 +152,11 @@ indexit telegram --session ./work/session.json \
 ```
 
 Keep each session and peer cache pair together on every run of that account.
+The cache records the account it belongs to: under another account, or when it
+records none (caches from earlier versions), a command starts it empty with a
+stderr warning (hidden by `-q`), and `fetch dialogs` refills it. Two accounts
+sharing one cache file empty it on every switch. `auth status` shows the
+cache's account.
 
 ## Proxy
 

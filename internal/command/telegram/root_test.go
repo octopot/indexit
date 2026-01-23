@@ -3,6 +3,7 @@ package telegram
 import (
 	"bytes"
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -28,13 +29,34 @@ func TestAuthStatusWithoutSession(t *testing.T) {
 	command := New()
 	command.SetOut(&out)
 	command.SetErr(&bytes.Buffer{})
+	dir := t.TempDir()
 	command.SetArgs([]string{
-		"--session", filepath.Join(t.TempDir(), "session.json"),
+		"--session", filepath.Join(dir, "session.json"),
+		"--peer-cache", filepath.Join(dir, "peers.json"),
 		"auth", "status",
 	})
 
 	require.NoError(t, command.Execute())
 	assert.Contains(t, out.String(), "authorized: false")
+	assert.Contains(t, out.String(), "peer cache: "+filepath.Join(dir, "peers.json"))
+	assert.Contains(t, out.String(), "peer cache account: none")
+}
+
+func TestAuthStatusReportsUnreadablePeerCache(t *testing.T) {
+	var out bytes.Buffer
+	command := New()
+	command.SetOut(&out)
+	command.SetErr(&bytes.Buffer{})
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "peers.json"), []byte("{not json"), 0600))
+	command.SetArgs([]string{
+		"--session", filepath.Join(dir, "session.json"),
+		"--peer-cache", filepath.Join(dir, "peers.json"),
+		"auth", "status",
+	})
+
+	require.NoError(t, command.Execute(), "a corrupt cache does not fail status")
+	assert.Contains(t, out.String(), "peer cache account: unreadable (decode peer cache:")
 }
 
 func TestFetchMessagesBadUIDIsUsageError(t *testing.T) {

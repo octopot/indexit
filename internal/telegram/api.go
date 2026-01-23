@@ -32,6 +32,7 @@ type API interface {
 	// deliberately absent from this surface: indexit never joins a chat.
 	MessagesCheckChatInvite(context.Context, string) (tg.ChatInviteClass, error)
 	UsersGetFullUser(context.Context, tg.InputUserClass) (*tg.UsersUserFull, error)
+	UsersGetUsers(context.Context, []tg.InputUserClass) ([]tg.UserClass, error)
 	AuthLogOut(context.Context) (*tg.AuthLoggedOut, error)
 }
 
@@ -50,6 +51,7 @@ type Runner interface {
 
 type Client struct {
 	client     *gotd.Client
+	session    *SessionRecorder
 	log        *slog.Logger
 	heartbeat  time.Duration
 	dispatcher *tg.UpdateDispatcher
@@ -84,10 +86,11 @@ func NewClient(apiID int, apiHash, sessionPath string, opts ClientOptions) *Clie
 		})
 	}
 
+	session := NewSessionRecorder(&gotd.FileSessionStorage{Path: sessionPath})
 	gotdOpts := gotd.Options{
 		NoUpdates:      true,
 		Logger:         logzap.New(gotdLog),
-		SessionStorage: &gotd.FileSessionStorage{Path: sessionPath},
+		SessionStorage: session,
 		Middlewares:    middlewares,
 		Device: gotd.DeviceConfig{
 			DeviceModel:    "indexit",
@@ -109,10 +112,16 @@ func NewClient(apiID int, apiHash, sessionPath string, opts ClientOptions) *Clie
 	}
 	return &Client{
 		client:     gotd.NewClient(apiID, apiHash, gotdOpts),
+		session:    session,
 		log:        logger,
 		heartbeat:  opts.Heartbeat,
 		dispatcher: dispatcher,
 	}
+}
+
+// Session tells which session the running client uses.
+func (c *Client) Session() Fingerprinter {
+	return c.session
 }
 
 func (c *Client) Run(ctx context.Context, fn func(context.Context, API, *auth.Client) error) error {

@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -26,6 +27,36 @@ func pathsFromFlags(opt *options) (tgsession.Paths, error) {
 		paths.Peers = opt.peersPath
 	}
 	return paths, nil
+}
+
+// openPeerCache loads the peer cache for a command that reads or fills it.
+// Its entries reach the fetchers only through Bind inside the running client,
+// which checks that the cache belongs to the account of the session.
+func openPeerCache(log *slog.Logger, paths tgsession.Paths, client *tgsvc.Client) (*tgsvc.PeerCache, error) {
+	cache, err := tgsvc.OpenPeerCache(paths.Peers, client.Session(), log)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("cache: loaded", "path", paths.Peers)
+	return cache, nil
+}
+
+// savePeerCache saves the peer cache when the run verified its owner and
+// folds a save error into the error of the run.
+func savePeerCache(log *slog.Logger, cache *tgsvc.PeerCache, err error) error {
+	saved, saveErr := cache.Save()
+	if err != nil {
+		return err
+	}
+	if saveErr != nil {
+		return saveErr
+	}
+	if saved {
+		log.Info("cache: persisted", "peers", cache.Len(), "path", cache.Path())
+	} else {
+		log.Info("cache: not persisted, the account is not verified", "path", cache.Path())
+	}
+	return nil
 }
 
 func contextFromFlags(cmd *cobra.Command, opt *options) (context.Context, context.CancelFunc, error) {

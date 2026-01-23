@@ -129,6 +129,10 @@ func (f fakeAPI) MessagesCheckChatInvite(context.Context, string) (tg.ChatInvite
 	return nil, errors.New("unexpected MessagesCheckChatInvite call")
 }
 
+func (f fakeAPI) UsersGetUsers(context.Context, []tg.InputUserClass) ([]tg.UserClass, error) {
+	return nil, errors.New("unexpected UsersGetUsers call")
+}
+
 func (f fakeAPI) UsersGetFullUser(context.Context, tg.InputUserClass) (*tg.UsersUserFull, error) {
 	return nil, errors.New("unexpected UsersGetFullUser call")
 }

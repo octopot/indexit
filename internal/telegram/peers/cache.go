@@ -19,7 +19,19 @@ type Entry struct {
 	LastSeen   time.Time `json:"last_seen"`
 }
 
+// Account is the Telegram account that owns the access hashes of a cache:
+// they are issued per account and are worthless to any other. AuthKeyID
+// fingerprints the session the owner was last verified with, so an unchanged
+// session needs no request to trust the cache again.
+type Account struct {
+	ID        int64  `json:"id"`
+	AuthKeyID string `json:"auth_key_id,omitempty"`
+}
+
+// Cache is the peer cache of one account. A cache without Account, as written
+// before the owner was recorded, cannot be shown to belong to anyone.
 type Cache struct {
+	Account *Account         `json:"account,omitempty"`
 	Entries map[string]Entry `json:"entries"`
 }
 
@@ -45,11 +57,14 @@ func Load(path string) (*Cache, error) {
 	return &cache, nil
 }
 
+// Save writes the cache atomically: a temporary file in the same directory
+// replaces the old one, so a failed write never leaves half a cache behind.
 func (c *Cache) Save(path string) error {
 	if c == nil {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("create peer cache directory: %w", err)
 	}
 	data, err := json.MarshalIndent(c, "", "  ")
@@ -57,10 +72,37 @@ func (c *Cache) Save(path string) error {
 		return fmt.Errorf("encode peer cache: %w", err)
 	}
 	data = append(data, '\n')
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".*.tmp")
+	if err != nil {
+		return fmt.Errorf("write peer cache: %w", err)
+	}
+	defer func() { _ = os.Remove(tmp.Name()) }()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write peer cache: %w", err)
+	}
+	if err := tmp.Chmod(0600); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write peer cache: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write peer cache: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("write peer cache: %w", err)
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
 		return fmt.Errorf("write peer cache: %w", err)
 	}
 	return nil
+}
+
+// Reset drops every entry and the owner: what the cache knew is not to be
+// trusted.
+func (c *Cache) Reset() {
+	c.Account = nil
+	c.Entries = map[string]Entry{}
 }
 
 func (c *Cache) Get(kind uid.Kind, id int64) (Entry, bool) {

@@ -34,9 +34,9 @@ indexit telegram auth status
 indexit telegram auth logout
 ```
 
-`status` reports the session path, authorization state, and available account/DC information. With an existing session, it connects to Telegram to check authorization.
+`status` reports the session path, authorization state, and available account/DC information, then the peer cache path and the account the cache belongs to. With an existing session, it connects to Telegram to check authorization.
 
-`logout` attempts to revoke the Telegram session and removes the local session file. If the network request fails, local removal can still occur; use Telegram’s Devices screen to revoke a remaining remote session. Logout does not delete your exports or peer cache.
+`logout` attempts to revoke the Telegram session and removes the local session file. If the network request fails, local removal can still occur; use Telegram’s Devices screen to revoke a remaining remote session. Logout does not delete your exports or peer cache: signing in again as the same account keeps the cache, and another account never uses it (see below).
 
 ## Where the files live
 
@@ -46,6 +46,8 @@ indexit telegram auth logout
 | Peer cache | `~/.cache/indexit/telegram/peers.json` |
 
 `XDG_CONFIG_HOME` and `XDG_CACHE_HOME` replace the respective base directories when set, including on macOS.
+
+The peer cache holds the addresses Telegram issued to one account, which are worthless to any other, so it records the account it belongs to. Before a command uses the cache, indexit checks that the account of the session is that account. While the session is unchanged, the check costs no request; after a new login, one request confirms the account. If the cache belongs to another account, or records none, as caches written by earlier versions do, the command starts with an empty cache and warns `the peer cache belongs to another account` or `records no account`; run `fetch dialogs` to refill it. If indexit cannot tell the account, the command runs without the cache and leaves the file as it was.
 
 The session grants access to your account. Keep it private. On macOS and Linux, an existing session file must have permissions `0600`.
 
@@ -61,6 +63,6 @@ indexit telegram --session ./work/session.json \
   --peer-cache ./work/peers.json fetch dialogs
 ```
 
-Keep the same pair together on later runs. v0.2.1 has no account registry or automatic multi-account orchestration.
+Keep the same pair together on later runs. Two accounts sharing one cache file empty it on every switch. v0.2.1 has no account registry or automatic multi-account orchestration.
 
 New sessions identify the device as `indexit`. The application name shown by Telegram comes from your API application registration.

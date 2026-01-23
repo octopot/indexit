@@ -12,7 +12,7 @@ Use `indexit <command> --help` for help at any level. All examples describe the 
 | Command prefix: `indexit telegram` | Purpose |
 | --- | --- |
 | `auth login [--qr]` | Sign in interactively |
-| `auth status` | Report the session and authorization state |
+| `auth status` | Report the session, the authorization state, and the account the peer cache belongs to |
 | `auth logout` | Revoke the session and remove its local file |
 | `fetch dialogs` | List dialogs with account status and populate the peer cache |
 | `fetch topics --dialog UID` | List a forum’s topics |
@@ -98,7 +98,7 @@ Required credentials are `TELEGRAM_API_ID` and `TELEGRAM_API_HASH`. Proxy settin
 | `https://t.me/s/example_channel` | Public channel preview, same as the username |
 | `https://t.me/+<hash>`, `https://t.me/joinchat/<hash>` | Invite link; only `fetch peer` accepts it |
 
-Four-letter usernames are accepted. Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks.
+Four-letter usernames are accepted. Bare positive numbers are ambiguous and rejected. Numeric user/channel IDs and `t.me/c/` links require the peer cache. Run `fetch dialogs` first. A cache entry does not grant access your account lacks, and a cache written for another account is never used: see [where the files live](/guide/authentication/#where-the-files-live).
 
 ## Account status
 
@@ -165,7 +165,7 @@ A failed ref does not stop the run; its record carries `error.code`:
 | --- | --- |
 | `bad_ref` | The ref is not a Telegram address |
 | `not_found` | The username is free or invalid |
-| `cold_peer` | A numeric ID is not in the peer cache, or names a user known only from a passing mention such as a message in a large group; such a user keeps the identity it left (`uid`, `title`, `username`), a never-seen ID has none. Run `fetch dialogs` or pass a username |
+| `cold_peer` | A numeric ID is not in the peer cache, or names a user known only from a passing mention such as a message in a large group; such a user keeps the identity it left (`uid`, `title`, `username`), a never-seen ID has none. After you switch accounts, the cache starts empty. Run `fetch dialogs` or pass a username |
 | `invite_not_member` | The invite leads to a chat the account is not in |
 | `invite_expired` | The invite link is expired or revoked |
 | `rpc` | Any other Telegram error, such as a private channel or a stale cached user; the record keeps the identity already known |

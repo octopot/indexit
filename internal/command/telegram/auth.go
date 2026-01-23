@@ -17,6 +17,7 @@ import (
 
 	indexlog "go.octolab.org/toolset/indexit/internal/log"
 	tgsvc "go.octolab.org/toolset/indexit/internal/telegram"
+	"go.octolab.org/toolset/indexit/internal/telegram/peers"
 	tgproxy "go.octolab.org/toolset/indexit/internal/telegram/proxy"
 )
 
@@ -110,8 +111,19 @@ func authStatusCommand(opt *options) *cobra.Command {
 					"host", descriptor.Host,
 					"port", descriptor.Port)
 			}
+			// A corrupt cache fails the fetch commands; status only reports it.
+			var owner *peers.Account
+			cache, cacheErr := peers.Load(paths.Peers)
+			if cacheErr == nil {
+				owner = cache.Account
+			}
 			if _, err := os.Stat(paths.Session); os.IsNotExist(err) {
-				return tgsvc.PrintStatus(cmd.OutOrStdout(), tgsvc.Status{SessionPath: paths.Session})
+				return tgsvc.PrintStatus(cmd.OutOrStdout(), tgsvc.Status{
+					SessionPath:    paths.Session,
+					PeerCachePath:  paths.Peers,
+					PeerCacheOwner: owner,
+					PeerCacheError: cacheErr,
+				})
 			} else if err != nil {
 				return err
 			}
@@ -128,6 +140,7 @@ func authStatusCommand(opt *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			status.PeerCachePath, status.PeerCacheOwner, status.PeerCacheError = paths.Peers, owner, cacheErr
 			return tgsvc.PrintStatus(cmd.OutOrStdout(), status)
 		},
 	}

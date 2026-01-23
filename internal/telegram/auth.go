@@ -10,6 +10,8 @@ import (
 	gotdsession "github.com/gotd/td/session"
 	"github.com/gotd/td/telegram/auth"
 	"github.com/gotd/td/tg"
+
+	"go.octolab.org/toolset/indexit/internal/telegram/peers"
 )
 
 // CodeResender is an optional interface a UserAuthenticator may implement to
@@ -53,6 +55,12 @@ type Status struct {
 	Authorized  bool
 	DC          int
 	User        *tg.User
+	// PeerCachePath is the peer cache of the session; PeerCacheOwner, the
+	// account recorded in it, or nil when it records none; PeerCacheError,
+	// why the cache could not be read.
+	PeerCachePath  string
+	PeerCacheOwner *peers.Account
+	PeerCacheError error
 }
 
 func GetStatus(ctx context.Context, runner Runner, sessionPath string) (Status, error) {
@@ -92,10 +100,28 @@ func PrintStatus(w io.Writer, status Status) error {
 		}
 	}
 	if status.User != nil {
-		_, err := fmt.Fprintf(w, "user: %d %s\n", status.User.ID, displayUser(status.User))
+		if _, err := fmt.Fprintf(w, "user: %d %s\n", status.User.ID, displayUser(status.User)); err != nil {
+			return err
+		}
+	}
+	if status.PeerCachePath == "" {
+		return nil
+	}
+	if _, err := fmt.Fprintf(w, "peer cache: %s\n", status.PeerCachePath); err != nil {
 		return err
 	}
-	return nil
+	owner := "none"
+	switch {
+	case status.PeerCacheError != nil:
+		owner = fmt.Sprintf("unreadable (%v)", status.PeerCacheError)
+	case status.PeerCacheOwner != nil:
+		owner = fmt.Sprintf("%d", status.PeerCacheOwner.ID)
+		if status.User != nil && status.User.ID != status.PeerCacheOwner.ID {
+			owner += " (another account: the next fetch starts it empty)"
+		}
+	}
+	_, err := fmt.Fprintf(w, "peer cache account: %s\n", owner)
+	return err
 }
 
 func displayUser(user *tg.User) string {

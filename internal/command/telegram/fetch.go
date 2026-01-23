@@ -111,11 +111,10 @@ func fetchDialogsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				return err
 			}
 			log := indexlog.FromContext(cmd.Context()).Logger
-			cache, err := peers.Load(paths.Peers)
+			peerCache, err := openPeerCache(log, paths, client)
 			if err != nil {
 				return err
 			}
-			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
 			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
 			if err != nil {
 				return err
@@ -124,15 +123,16 @@ func fetchDialogsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			counter := &countingWriter{inner: writer}
 			start := time.Now()
 			err = client.Run(ctx, func(ctx context.Context, api tgsvc.API, _ *auth.Client) error {
+				cache, err := peerCache.Bind(ctx, api, tgsvc.RateGuard{})
+				if err != nil {
+					return err
+				}
 				return tgsvc.FetchDialogs(ctx, api, cache, counter, tgsvc.DialogsOptions{
 					Limit:    fetchOpt.limit,
 					PageSize: fetchOpt.pageSize,
 				}, tgsvc.RateGuard{})
 			})
-			if saveErr := cache.Save(paths.Peers); err == nil {
-				err = saveErr
-				log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
-			}
+			err = savePeerCache(log, peerCache, err)
 			log.Info("done", "dialogs", counter.count, "elapsed", time.Since(start).Round(time.Millisecond))
 			return err
 		},
@@ -268,11 +268,10 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				return err
 			}
 			log := indexlog.FromContext(cmd.Context()).Logger
-			cache, err := peers.Load(paths.Peers)
+			peerCache, err := openPeerCache(log, paths, client)
 			if err != nil {
 				return err
 			}
-			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
 			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
 			if err != nil {
 				return err
@@ -281,6 +280,10 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			counter := &countingWriter{inner: writer}
 			start := time.Now()
 			err = client.Run(ctx, func(ctx context.Context, api tgsvc.API, _ *auth.Client) error {
+				cache, err := peerCache.Bind(ctx, api, tgsvc.RateGuard{})
+				if err != nil {
+					return err
+				}
 				for _, group := range groups {
 					limit := 0
 					if fetchOpt.limit > 0 {
@@ -289,7 +292,7 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 							return nil
 						}
 					}
-					err := tgsvc.FetchMessagesByID(ctx, api, cache, counter, tgsvc.MessageOptions{
+					err = tgsvc.FetchMessagesByID(ctx, api, cache, counter, tgsvc.MessageOptions{
 						Peer:  group.ref,
 						IDs:   group.ids,
 						Limit: limit,
@@ -303,10 +306,7 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				}
 				return nil
 			})
-			if saveErr := cache.Save(paths.Peers); err == nil {
-				err = saveErr
-				log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
-			}
+			err = savePeerCache(log, peerCache, err)
 			log.Info("done", "messages", counter.count, "elapsed", time.Since(start).Round(time.Millisecond))
 			return err
 		},
@@ -352,11 +352,10 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				return err
 			}
 			log := indexlog.FromContext(cmd.Context()).Logger
-			cache, err := peers.Load(paths.Peers)
+			peerCache, err := openPeerCache(log, paths, client)
 			if err != nil {
 				return err
 			}
-			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
 			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
 			if err != nil {
 				return err
@@ -365,7 +364,11 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			counter := &countingWriter{inner: writer}
 			start := time.Now()
 			err = client.Run(ctx, func(ctx context.Context, api tgsvc.API, _ *auth.Client) error {
-				err := tgsvc.FetchMessages(ctx, api, cache, counter, tgsvc.MessagesOptions{
+				cache, err := peerCache.Bind(ctx, api, tgsvc.RateGuard{})
+				if err != nil {
+					return err
+				}
+				err = tgsvc.FetchMessages(ctx, api, cache, counter, tgsvc.MessagesOptions{
 					Peer:     ref,
 					Limit:    fetchOpt.limit,
 					PageSize: fetchOpt.pageSize,
@@ -379,10 +382,7 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				}
 				return err
 			})
-			if saveErr := cache.Save(paths.Peers); err == nil {
-				err = saveErr
-				log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
-			}
+			err = savePeerCache(log, peerCache, err)
 			log.Info("done", "messages", counter.count, "elapsed", time.Since(start).Round(time.Millisecond))
 			return err
 		},
@@ -424,11 +424,10 @@ func fetchTopicsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				return err
 			}
 			log := indexlog.FromContext(cmd.Context()).Logger
-			cache, err := peers.Load(paths.Peers)
+			peerCache, err := openPeerCache(log, paths, client)
 			if err != nil {
 				return err
 			}
-			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
 			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
 			if err != nil {
 				return err
@@ -437,7 +436,11 @@ func fetchTopicsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			counter := &countingWriter{inner: writer}
 			start := time.Now()
 			err = client.Run(ctx, func(ctx context.Context, api tgsvc.API, _ *auth.Client) error {
-				err := tgsvc.FetchTopics(ctx, api, cache, counter, tgsvc.TopicsOptions{
+				cache, err := peerCache.Bind(ctx, api, tgsvc.RateGuard{})
+				if err != nil {
+					return err
+				}
+				err = tgsvc.FetchTopics(ctx, api, cache, counter, tgsvc.TopicsOptions{
 					Peer:     ref,
 					Limit:    fetchOpt.limit,
 					PageSize: fetchOpt.pageSize,
@@ -447,10 +450,7 @@ func fetchTopicsCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				}
 				return err
 			})
-			if saveErr := cache.Save(paths.Peers); err == nil {
-				err = saveErr
-				log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
-			}
+			err = savePeerCache(log, peerCache, err)
 			log.Info("done", "topics", counter.count, "elapsed", time.Since(start).Round(time.Millisecond))
 			return err
 		},
@@ -513,11 +513,10 @@ func fetchPeerCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				return err
 			}
 			log := indexlog.FromContext(cmd.Context()).Logger
-			cache, err := peers.Load(paths.Peers)
+			peerCache, err := openPeerCache(log, paths, client)
 			if err != nil {
 				return err
 			}
-			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
 			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
 			if err != nil {
 				return err
@@ -526,16 +525,14 @@ func fetchPeerCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			start := time.Now()
 			var stats tgsvc.PeerStats
 			err = client.Run(ctx, func(ctx context.Context, api tgsvc.API, _ *auth.Client) error {
-				var err error
+				cache, err := peerCache.Bind(ctx, api, tgsvc.RateGuard{})
+				if err != nil {
+					return err
+				}
 				stats, err = tgsvc.FetchPeers(ctx, api, cache, writer, tgsvc.PeerOptions{Refs: args}, tgsvc.RateGuard{})
 				return err
 			})
-			if saveErr := cache.Save(paths.Peers); err == nil {
-				err = saveErr
-				if saveErr == nil {
-					log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
-				}
-			}
+			err = savePeerCache(log, peerCache, err)
 			log.Info("done", "peers", stats.Fetched, "failed", stats.Failed, "elapsed", time.Since(start).Round(time.Millisecond))
 			if err != nil {
 				return err
@@ -609,11 +606,10 @@ func fetchMediaCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				return err
 			}
 			log := indexlog.FromContext(cmd.Context()).Logger
-			cache, err := peers.Load(paths.Peers)
+			peerCache, err := openPeerCache(log, paths, client)
 			if err != nil {
 				return err
 			}
-			log.Info("cache: loaded", "peers", cache.Len(), "path", paths.Peers)
 			writer, err := output.New(fetchOpt.output, cmd.OutOrStdout())
 			if err != nil {
 				return err
@@ -622,7 +618,11 @@ func fetchMediaCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			counter := &countingWriter{inner: writer}
 			start := time.Now()
 			err = client.RunMedia(ctx, func(ctx context.Context, api tgsvc.MediaAPI) error {
-				err := tgsvc.FetchMedia(ctx, api, cache, counter, tgsvc.MediaOptions{
+				cache, err := peerCache.Bind(ctx, api, tgsvc.RateGuard{})
+				if err != nil {
+					return err
+				}
+				err = tgsvc.FetchMedia(ctx, api, cache, counter, tgsvc.MediaOptions{
 					Peer:      ref,
 					Dir:       mediaOpt.dir,
 					Kinds:     mediaOpt.kinds,
@@ -639,10 +639,7 @@ func fetchMediaCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				}
 				return err
 			})
-			if saveErr := cache.Save(paths.Peers); err == nil {
-				err = saveErr
-				log.Info("cache: persisted", "peers", cache.Len(), "path", paths.Peers)
-			}
+			err = savePeerCache(log, peerCache, err)
 			log.Info("done", "files", counter.count, "elapsed", time.Since(start).Round(time.Millisecond))
 			return err
 		},

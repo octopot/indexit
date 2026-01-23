@@ -119,6 +119,10 @@ func (f *scriptedAPI) MessagesGetFullChat(context.Context, int64) (*tg.MessagesC
 	return nil, fmt.Errorf("unexpected MessagesGetFullChat call")
 }
 
+func (f *scriptedAPI) UsersGetUsers(context.Context, []tg.InputUserClass) ([]tg.UserClass, error) {
+	return nil, fmt.Errorf("unexpected UsersGetUsers call")
+}
+
 func (f *scriptedAPI) UsersGetFullUser(context.Context, tg.InputUserClass) (*tg.UsersUserFull, error) {
 	return nil, fmt.Errorf("unexpected UsersGetFullUser call")
 }
