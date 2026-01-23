@@ -89,9 +89,9 @@ func buildClient(cmd *cobra.Command, paths tgsession.Paths, withUpdates bool) (*
 	if err != nil {
 		return nil, err
 	}
-	descriptor, err := tgproxy.FromEnv()
+	descriptor, err := proxyFromEnv()
 	if err != nil {
-		return nil, usageErr(err)
+		return nil, err
 	}
 	settings := indexlog.FromContext(cmd.Context())
 	opts := tgsvc.ClientOptions{
@@ -106,12 +106,30 @@ func buildClient(cmd *cobra.Command, paths tgsession.Paths, withUpdates bool) (*
 			return nil, fmt.Errorf("build proxy resolver: %w", err)
 		}
 		opts.Resolver = resolver
-		settings.Logger.Info("proxy",
-			"type", string(descriptor.Type),
-			"host", descriptor.Host,
-			"port", descriptor.Port)
 	}
+	logProxy(cmd, descriptor)
 	return tgsvc.NewClient(apiID, apiHash, paths.Session, opts), nil
+}
+
+// proxyFromEnv reads the proxy settings; malformed ones are a usage error.
+func proxyFromEnv() (*tgproxy.Descriptor, error) {
+	descriptor, err := tgproxy.FromEnv()
+	if err != nil {
+		return nil, usageErr(err)
+	}
+	return descriptor, nil
+}
+
+// logProxy logs the proxy in use, if any. Every command logs it once: when
+// it builds a client, or itself when it does not.
+func logProxy(cmd *cobra.Command, descriptor *tgproxy.Descriptor) {
+	if descriptor == nil {
+		return
+	}
+	indexlog.FromContext(cmd.Context()).Logger.Info("proxy",
+		"type", string(descriptor.Type),
+		"host", descriptor.Host,
+		"port", descriptor.Port)
 }
 
 func validateFormat(format string) error {

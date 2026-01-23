@@ -15,10 +15,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 
-	indexlog "go.octolab.org/toolset/indexit/internal/log"
 	tgsvc "go.octolab.org/toolset/indexit/internal/telegram"
 	"go.octolab.org/toolset/indexit/internal/telegram/peers"
-	tgproxy "go.octolab.org/toolset/indexit/internal/telegram/proxy"
 )
 
 func authCommand(opt *options) *cobra.Command {
@@ -103,13 +101,10 @@ func authStatusCommand(opt *options) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if descriptor, derr := tgproxy.FromEnv(); derr != nil {
-				return usageErr(derr)
-			} else if descriptor != nil {
-				indexlog.FromContext(cmd.Context()).Logger.Info("proxy",
-					"type", string(descriptor.Type),
-					"host", descriptor.Host,
-					"port", descriptor.Port)
+			// Validate the proxy up front; the client logs it when one is built.
+			descriptor, err := proxyFromEnv()
+			if err != nil {
+				return err
 			}
 			// A corrupt cache fails the fetch commands; status only reports it.
 			var owner *peers.Account
@@ -118,6 +113,7 @@ func authStatusCommand(opt *options) *cobra.Command {
 				owner = cache.Account
 			}
 			if _, err := os.Stat(paths.Session); os.IsNotExist(err) {
+				logProxy(cmd, descriptor)
 				return tgsvc.PrintStatus(cmd.OutOrStdout(), tgsvc.Status{
 					SessionPath:    paths.Session,
 					PeerCachePath:  paths.Peers,
