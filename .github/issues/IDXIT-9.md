@@ -20,8 +20,8 @@ state: OPEN
 stateReason: null
 duplicateOf: null
 createdAt: 2026-10-16T12:05:08Z
-updatedAt: 2026-10-18T07:38:40Z
-lastEditedAt: 2026-10-18T07:38:40Z
+updatedAt: 2026-10-18T12:18:19Z
+lastEditedAt: 2026-10-18T12:18:19Z
 closedAt: null
 ---
 
@@ -32,6 +32,8 @@ closedAt: null
 `fetch peer` describes channels and groups in full since [[IDXIT-8]], but a user or a bot gets only its identity and the error `not_channel`: no bio, no personal channel, nothing a consumer can file. The case behind it is the same notes vault: a person's Telegram account is a note of its own, next to their contact card and their channel, and that note wants the account's bio and the channel the account itself points to. Today the bio is copied by hand from the `t.me/<username>` web preview, which is blocked on some networks and never names the personal channel; the channel is guessed from the bio text.
 
 Telegram answers this with one call, `users.getFullUser`: the bio, the personal channel (`personal_channel_id`), the birthday and business card, and for a bot its description and commands. The card carries everything the profile shows, the phone number included when Telegram returns it.
+
+A user card is only as good as the address it is fetched by, and that address is account-bound: the peer cache keeps an access hash per user and channel, and Telegram issues it to one account only. `auth logout` removes the session but keeps the cache, so after logging in as another account — or pointing `--session` at another account's file — every cached `user:<id>` and `channel:<id>` goes out with a foreign hash and fails. Accounts will multiply once several sessions are supported, so the cache has to know whose it is.
 
 ## PoC
 
@@ -50,7 +52,12 @@ $ indexit telegram fetch peer @example_person @example_bot
 - [ ] whatever else the profile shows is on the card when Telegram returns it: the phone number, the birthday (with or without the year), the business location, hours and intro, the Stars rating and the price of a paid message;
 - [ ] a failed full request still yields the identity, with the error;
 - [ ] `not_channel` is retired: a user or a bot is a full card, not an error, and the guide's card fields and reasons are updated;
-- [ ] still one card per ref, in order, and the account is not changed.
+- [ ] still one card per ref, in order, and the account is not changed;
+- [ ] a peer cache written for one account is never used for another, whether the switch came through logout and login, `--session` or `--peer-cache`: the other account starts with an empty cache and a warning that says how to refill it;
+- [ ] a cache that cannot be shown to belong to the current account, including one written before this change, is not trusted;
+- [ ] the same account keeps its cache across a re-login, and the check costs no request while the session is unchanged;
+- [ ] when the account cannot be determined, the command still runs without the cache and does not overwrite it;
+- [ ] `auth status` shows which account the peer cache belongs to.
 
 ## Out of scope
 
