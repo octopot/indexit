@@ -111,16 +111,17 @@ flowchart TB
 - **The agent skill ships with the release.** `skills/indexit/` is embedded in
   the binary and packed into every archive; `release.mjs skill` checks that the
   source, the archives and `indexit skill info` agree on its digest. For a
-  stable tag, the `skill` job then runs the pinned `octolab/skills` publish
-  action: it copies the skill from the tag into the catalog, with a commit
-  signed as the App and a tag `indexit--vX.Y.Z`, and the digest it published
-  is compared with the source. The catalog token is minted separately, from
+  stable tag, the `skill` job then runs
+  [octomation/skills-action](https://github.com/octomation/skills-action),
+  pinned to a release tag: it copies the skill from the tag into the
+  catalog, with a commit signed as the App and a tag `indexit--vX.Y.Z`, and
+  the digest it published is compared with the source. The catalog token is minted separately, from
   the same App installed on `octolab/skills`: the tap token is scoped to the
   tap. Prerelease tags are not published to the catalog. The job is separate
   so that a failed publication can be rerun alone
   (`gh run rerun <run-id> --failed`) while the release stays as it is; the
-  action is idempotent. Update the action's pin only after reviewing the
-  catalog's changes.
+  action is idempotent. Dependabot proposes the action's next release with
+  its release note; review the note before accepting it.
 - A manual run on a branch builds a snapshot and publishes nothing; it still
   checks the skill in the archives.
 

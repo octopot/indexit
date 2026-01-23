@@ -146,7 +146,7 @@ jobs:
           permission-contents: write
       - name: Publish the agent skill
         id: skill
-        uses: octolab/skills/.github/actions/publish@60605c44e841ffd83eb6c92fa44c8398b1a39429
+        uses: octomation/skills-action@v0.1.1
         with:
           tool: indexit
           token: ${{ steps.catalog.outputs.token }}
