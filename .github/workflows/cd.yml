@@ -93,7 +93,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum', '.goreleaser.yml') }}
+          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum', '.goreleaser.yml', '.github/workflows/warmup.caches.yml') }}
           restore-keys: |
             release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-
             release-${{ runner.os }}-

@@ -205,9 +205,10 @@ flowchart LR
 
 - **The release build cache lives on main.** A tag can restore only caches of
   its own ref and of the default branch, so the cache `cd` restores is made
-  here: `goreleaser build` of every target, keyed by the Go version and
-  `go.sum`, `tools/go.sum` and `.goreleaser.yml`. A push to main that changes
-  one of them rebuilds it, incrementally from the previous one, a run twice a
+  here: `goreleaser build` of every target, then the tools and the tests that
+  `cd` runs, keyed by the Go version and `go.sum`, `tools/go.sum`,
+  `.goreleaser.yml` and the warmup itself. A push to main that changes one of
+  them rebuilds it, incrementally from the previous one, a run twice a
   week keeps it inside GitHub's 7-day eviction window, and the other jobs run
   only after the cleanup or on demand.
 - `cd` builds with full parallelism only on the exact key; any other match

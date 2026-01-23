@@ -117,7 +117,7 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum', '.goreleaser.yml') }}
+          key: release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-${{ hashFiles('go.sum', 'tools/go.sum', '.goreleaser.yml', '.github/workflows/warmup.caches.yml') }}
           restore-keys: |
             release-${{ runner.os }}-go${{ steps.go.outputs.go-version }}-
             release-${{ runner.os }}-
@@ -130,6 +130,11 @@ jobs:
           distribution: goreleaser
           version: v2.18.2
           args: build --snapshot --clean --parallelism 2
+      # cd also builds the tools and the tests, with and without -race, for
+      # the runner itself: the same commands keep those warm too
+      - name: Build the release checks
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: make tools go-check test TIMEOUT=2m
       - name: Save the release build cache
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6.1.0
