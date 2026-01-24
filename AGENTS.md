@@ -162,7 +162,7 @@ gh run watch --exit-status "$(gh run list -w cd.yml -c "$(git rev-parse 'vX.Y.Z^
 gh release view vX.Y.Z --json name,assets -q '.name, .assets[].name'
 gh api repos/octolab/homebrew-tap/commits/main -q '.commit.verification.verified, .commit.message'
 gh api repos/octolab/skills/commits/indexit--vX.Y.Z -q '.commit.verification.verified, .commit.message'
-gh run list -R octolab/skills -w ci.indexit.yml -L 1
+gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
 ```
 
 - `cd` is green; for a prerelease, its skill job is skipped. If `gh run watch`
@@ -171,12 +171,20 @@ gh run list -R octolab/skills -w ci.indexit.yml -L 1
   `checksums.txt`.
 - The Cask commit for vX.Y.Z is verified.
 - A stable release only: the catalog tag `indexit--vX.Y.Z` points at a
-  verified commit, and `ci.indexit` there is green for it.
+  verified commit, and `ci (install)` there is green for that tag.
 - `brew update && brew upgrade --cask octolab/tap/indexit && indexit version`
   shows vX.Y.Z.
-- `indexit skill install --agent claude-code,codex --replace`, then
-  `indexit skill status --agent claude-code,codex --exact` passes. Update a
-  catalog plugin that `status` lists with its agent's plugin manager first.
+- A stable release only: the catalog plugins are updated, then
+  `indexit skill status --agent claude-code,codex --exact` passes:
+
+  ```sh
+  claude plugin marketplace update octolab && claude plugin update indexit@octolab
+  codex plugin marketplace upgrade octolab && codex plugin add indexit@octolab
+  ```
+
+  The skill comes from the catalog, not from `indexit skill install`; `ci`
+  checks that install on every change. A copy that `status` reports next to
+  the plugin is a leftover: remove it, the agent would load both.
 - The site shows the new changelog page and release band once `cd.docs`
   finishes for the release commit.
 
