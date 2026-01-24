@@ -1,5 +1,6 @@
 export default {
   index: { title: 'All releases', theme: { toc: false, breadcrumb: false } },
+  'v0.2.3': 'v0.2.3 — Every copy in sight.',
   'v0.2.2': 'v0.2.2 — Cards for people, too.',
   'v0.2.1': 'v0.2.1 — Know your role.',
   'v0.2.0': 'v0.2.0 — Put channels in context.',
