@@ -158,6 +158,7 @@ func Message(dialogUID string, topicID int, msg tg.NotEmptyMessage, entities got
 
 	if full, ok := msg.(*tg.Message); ok {
 		rec.Text = full.Message
+		rec.GroupedID = full.GroupedID
 		if edit, ok := full.GetEditDate(); ok && edit > 0 {
 			rec.EditDate = unix(edit)
 		}

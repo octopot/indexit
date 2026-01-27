@@ -18,9 +18,10 @@ import (
 const maxIDsPerRequest = 100
 
 type MessageOptions struct {
-	Peer  uid.PeerRef
-	IDs   []int
-	Limit int
+	Previews *PreviewWriter
+	Peer     uid.PeerRef
+	IDs      []int
+	Limit    int
 }
 
 // FetchMessagesByID fetches specific messages by MTProto ID from one dialog
@@ -100,7 +101,8 @@ func FetchMessagesByID(ctx context.Context, api API, cache *peers.Cache, out Wri
 				skipped[msg.ID] = "different topic"
 				continue
 			}
-			records[msg.ID] = mapper.Message(resolved.UID, resolved.TopicID, msg, entities)
+			rec := mapper.Message(resolved.UID, resolved.TopicID, msg, entities)
+			records[msg.ID] = opt.Previews.Enrich(ctx, api, cache, resolved, msg, rec, guard)
 		}
 		for _, id := range chunk {
 			rec, ok := records[id]

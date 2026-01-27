@@ -8,6 +8,7 @@ export default {
   setup: { type: 'separator', title: 'Make it yours' },
   authentication: 'Accounts & sessions',
   proxy: 'Connect through a proxy',
+  'local-images': 'Local image service',
   agents: 'Use with coding agents',
   reference: 'CLI & configuration',
   troubleshooting: 'Troubleshooting',

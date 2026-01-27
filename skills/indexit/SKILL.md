@@ -34,7 +34,7 @@ This skill describes indexit `>=0.2.3 <0.3.0`. Before anything else:
      command's flags.
    - Older or newer: don't rely on the recipes here. Read the skill that ships
      with the binary, `indexit skill show`, and tell the user the versions
-     differ; suggest upgrading indexit (`brew upgrade --cask octolab/tap/indexit`)
+     differ; suggest upgrading indexit (`brew upgrade --formula octolab/tap/indexit`)
      or reinstalling the skill from the binary
      (`indexit skill install --agent claude-code --replace`, or `codex`).
    - `dev` or unknown: treat compatibility as unknown and rely on `--help`.
@@ -110,6 +110,11 @@ Every command and flag of this release:
 
 ## 4. Read the results
 
+- Ordinary photo messages include `media.preview_url` by default, pointing to
+  the local `http://indexit.local/` service. For albums inspect
+  `media.album.photos`, `complete` and `error`; keep every photograph URL.
+  URLs need the local service to display but are generated without it.
+  Saved photos remain available after the Telegram source disappears.
 - Records carry `_kind`: `dialog`, `topic`, `peer`, `message`, `media`.
   Fields: [references/output.md](references/output.md).
 - `-q` hides progress **and warnings**. Omit it when you need to know why
@@ -131,3 +136,13 @@ malformed proxy); `1` is a runtime failure. Common causes and fixes:
 
 Report what you ran, what came back, and anything skipped or failed. Don't
 claim an export succeeded without checking its records.
+
+## Local photograph service
+
+`indexit service run --listen 127.0.0.1:17840` starts the image server for local
+testing. Permanent URLs remain `http://indexit.local/`; on macOS the
+`octolab/tap/indexit` Homebrew Formula supplies `brew services` integration and an
+explicit administrator networking script. Never run the image process as root.
+The service uses the CLI's configuration and authorization. Saved photographs
+live in `~/.local/share/indexit` (or `INDEXIT_DATA_DIR`) and are never evicted
+automatically; uninstall preserves them. Do not delete them as routine cleanup.

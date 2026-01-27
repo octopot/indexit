@@ -11,6 +11,8 @@ import (
 	"github.com/gotd/td/telegram/auth"
 	"github.com/spf13/cobra"
 
+	"go.octolab.org/toolset/indexit/internal/preview"
+
 	indexlog "go.octolab.org/toolset/indexit/internal/log"
 	tgsvc "go.octolab.org/toolset/indexit/internal/telegram"
 	"go.octolab.org/toolset/indexit/internal/telegram/output"
@@ -239,7 +241,9 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			"order within each group and duplicates in that group are fetched once.\n" +
 			"Missing, service, and out-of-scope messages are skipped with a warning.\n" +
 			"--limit caps emitted records across all groups. Requests use at most 100 IDs;\n" +
-			"--page-size does not apply to this command.",
+			"--page-size does not apply to this command.\n\n" +
+			"Photo media includes a stable local preview_url; album.photos lists its photographs.\n" +
+			"Check album.complete and album.error before treating an album as complete.",
 		Example: `  indexit telegram fetch message https://t.me/example_channel/11 https://t.me/example_channel/46
   indexit telegram fetch message --dialog @example_channel --id 11 --id 46,47`,
 		Args: cobra.ArbitraryArgs,
@@ -253,6 +257,10 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			groups, err := collectMessageRefs(args, msgOpt.dialog, msgOpt.ids)
 			if err != nil {
 				return usageErr(err)
+			}
+			previewStore, err := preview.Default()
+			if err != nil {
+				return err
 			}
 			paths, err := pathsFromFlags(opt)
 			if err != nil {
@@ -293,9 +301,10 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 						}
 					}
 					err = tgsvc.FetchMessagesByID(ctx, api, cache, counter, tgsvc.MessageOptions{
-						Peer:  group.ref,
-						IDs:   group.ids,
-						Limit: limit,
+						Previews: &tgsvc.PreviewWriter{Store: previewStore},
+						Peer:     group.ref,
+						IDs:      group.ids,
+						Limit:    limit,
 					}, tgsvc.RateGuard{})
 					if errors.Is(err, tgsvc.ErrColdPeer) {
 						return usageErr(tgsvc.ColdPeerHint(err, group.ref.String()))
@@ -338,6 +347,10 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			if err != nil {
 				return usageErr(err)
 			}
+			previewStore, err := preview.Default()
+			if err != nil {
+				return err
+			}
 			paths, err := pathsFromFlags(opt)
 			if err != nil {
 				return err
@@ -369,6 +382,7 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 					return err
 				}
 				err = tgsvc.FetchMessages(ctx, api, cache, counter, tgsvc.MessagesOptions{
+					Previews: &tgsvc.PreviewWriter{Store: previewStore},
 					Peer:     ref,
 					Limit:    fetchOpt.limit,
 					PageSize: fetchOpt.pageSize,

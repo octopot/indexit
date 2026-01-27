@@ -76,3 +76,24 @@ Missing, inaccessible, service, and out-of-scope messages are skipped. A success
 **`messages` explores history; `message` selects exact messages.** For history, a link identifies the dialog and any explicit topic; its final message number is not applied as a cursor. Use window flags to restrict history.
 
 Continue with [topics and media](/guide/media/) to bring photos home, or [jq filters](/guide/jsonl/) to extract just the fields you need.
+
+## Local photograph URLs
+
+Both message commands include `media.preview_url` by default for ordinary cloud
+photographs. URLs point to `http://indexit.local/` and identify the account, dialog,
+message and exact Telegram photo. Producing a URL does not require a running
+service or download the picture. A single photo uses the existing API metadata.
+
+For an album, `media.album.photos` contains message IDs and local URLs for all
+accessible photographs, including when you select an item in the middle.
+`media.album.complete` and `media.album.error` report whether the history window
+was sufficient; never treat an incomplete album as a complete export. Failure to
+store an individual source appears in `media.preview_error`; the caption remains.
+
+The local service downloads the largest available Telegram JPEG on first GET,
+using your existing Telegram authorization and MTProto proxy. It does not scrape
+Telegram web pages or use temporary public CDN links. Saved bytes survive source
+post deletion, edits, logout, account changes and service upgrades. An uncached
+old URL fails if the original photo has disappeared; it never returns a replacement.
+
+See [Local image service](/guide/local-images/) for explicit setup and lifecycle.

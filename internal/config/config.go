@@ -26,6 +26,8 @@ type LoadResult struct {
 
 // Options controls Load.
 type Options struct {
+	// IgnoreWorkingDir makes background services independent of the launch directory.
+	IgnoreWorkingDir bool
 	// EnvFile, if non-empty, forces this exact path. When Explicit is true and
 	// EnvFile is empty, loading is disabled.
 	EnvFile string
@@ -86,7 +88,7 @@ func resolvePath(opts Options) (string, error) {
 		}
 		return abs, nil
 	}
-	if cwd, err := os.Getwd(); err == nil {
+	if cwd, err := os.Getwd(); err == nil && !opts.IgnoreWorkingDir {
 		candidate := filepath.Join(cwd, ".env")
 		if _, err := os.Stat(candidate); err == nil {
 			return candidate, nil

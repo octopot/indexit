@@ -32,11 +32,23 @@ type PeerDescriptor struct {
 	Display  string `json:"display,omitempty"`
 }
 
+type PreviewPhoto struct {
+	MessageID int    `json:"message_id"`
+	URL       string `json:"url"`
+}
+type PhotoAlbum struct {
+	Photos   []PreviewPhoto `json:"photos"`
+	Complete bool           `json:"complete"`
+	Error    string         `json:"error,omitempty"`
+}
 type MediaDescriptor struct {
-	Type     string `json:"type"`
-	MIME     string `json:"mime,omitempty"`
-	Size     int64  `json:"size,omitempty"`
-	Duration int    `json:"duration,omitempty"`
+	PreviewURL   string      `json:"preview_url,omitempty"`
+	PreviewError string      `json:"preview_error,omitempty"`
+	Album        *PhotoAlbum `json:"album,omitempty"`
+	Type         string      `json:"type"`
+	MIME         string      `json:"mime,omitempty"`
+	Size         int64       `json:"size,omitempty"`
+	Duration     int         `json:"duration,omitempty"`
 }
 
 type ReplyDescriptor struct {
@@ -69,6 +81,7 @@ type MessageRecord struct {
 	ForwardedFrom *ForwardDescriptor `json:"forwarded_from,omitempty"`
 	Views         int                `json:"views,omitempty"`
 	Reactions     *ReactionSummary   `json:"reactions,omitempty"`
+	GroupedID     int64              `json:"grouped_id,omitempty"`
 }
 
 // TopicRecord is one forum topic of a dialog.

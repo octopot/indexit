@@ -93,3 +93,17 @@ func TestLoad_IndexitEnvFile(t *testing.T) {
 	assert.Equal(t, custom, got.Path)
 	assert.Equal(t, "ok", os.Getenv("INDEXIT_TEST_CUSTOM"))
 }
+
+func TestServiceIgnoresWorkingDirectoryButExportsSharedConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	t.Setenv("INDEXIT_ENV_FILE", "")
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".env"), []byte("INDEXIT_DATA_DIR=wrong-directory\n"), 0600))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "indexit"), 0700))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "indexit", ".env"), []byte("INDEXIT_DATA_DIR=shared-directory\n"), 0600))
+	t.Setenv("INDEXIT_DATA_DIR", "")
+	_, err := Load(Options{IgnoreWorkingDir: true})
+	require.NoError(t, err)
+	assert.Equal(t, "shared-directory", os.Getenv("INDEXIT_DATA_DIR"))
+}

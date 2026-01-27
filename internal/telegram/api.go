@@ -2,7 +2,9 @@ package telegram
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 	"go.uber.org/zap"
 
 	"go.octolab.org/toolset/indexit/internal/buildinfo"
+	"go.octolab.org/toolset/indexit/internal/filelock"
 )
 
 type API interface {
@@ -50,11 +53,12 @@ type Runner interface {
 }
 
 type Client struct {
-	client     *gotd.Client
-	session    *SessionRecorder
-	log        *slog.Logger
-	heartbeat  time.Duration
-	dispatcher *tg.UpdateDispatcher
+	sessionPath string
+	client      *gotd.Client
+	session     *SessionRecorder
+	log         *slog.Logger
+	heartbeat   time.Duration
+	dispatcher  *tg.UpdateDispatcher
 }
 
 // ClientOptions carries optional knobs for NewClient. Zero value is valid.
@@ -69,6 +73,13 @@ type ClientOptions struct {
 }
 
 func NewClient(apiID int, apiHash, sessionPath string, opts ClientOptions) *Client {
+	// Normalize aliases before choosing a process lock for the session.
+	if abs, err := filepath.Abs(sessionPath); err == nil {
+		sessionPath = abs
+	}
+	if real, err := filepath.EvalSymlinks(sessionPath); err == nil {
+		sessionPath = real
+	}
 	logger := opts.Logger
 	if logger == nil {
 		logger = slog.Default()
@@ -111,11 +122,12 @@ func NewClient(apiID int, apiHash, sessionPath string, opts ClientOptions) *Clie
 		dispatcher = &d
 	}
 	return &Client{
-		client:     gotd.NewClient(apiID, apiHash, gotdOpts),
-		session:    session,
-		log:        logger,
-		heartbeat:  opts.Heartbeat,
-		dispatcher: dispatcher,
+		sessionPath: sessionPath,
+		client:      gotd.NewClient(apiID, apiHash, gotdOpts),
+		session:     session,
+		log:         logger,
+		heartbeat:   opts.Heartbeat,
+		dispatcher:  dispatcher,
 	}
 }
 
@@ -141,6 +153,17 @@ func (c *Client) RunMedia(ctx context.Context, fn func(context.Context, MediaAPI
 // run connects, emits the lifecycle markers and the optional "still connecting"
 // heartbeat, then invokes fn within the live connection.
 func (c *Client) run(ctx context.Context, fn func(context.Context) error) error {
+	return c.runAfter(ctx, fn, nil)
+}
+
+// runAfter keeps the session lock through post-disconnect cleanup (logout).
+func (c *Client) runAfter(ctx context.Context, fn func(context.Context) error, after func(error) error) error {
+	c.log.Info("telegram: waiting for exclusive session access")
+	unlock, err := filelock.Acquire(ctx, c.sessionPath+".lock")
+	if err != nil {
+		return fmt.Errorf("wait for Telegram session: %w", err)
+	}
+	defer unlock()
 	c.log.Info("telegram: connecting")
 	start := time.Now()
 	connected := make(chan struct{})
@@ -163,11 +186,15 @@ func (c *Client) run(ctx context.Context, fn func(context.Context) error) error 
 		}()
 	}
 
-	return c.client.Run(ctx, func(ctx context.Context) error {
+	err = c.client.Run(ctx, func(ctx context.Context) error {
 		close(connected)
 		c.log.Info("telegram: connected", "elapsed", time.Since(start).Round(time.Second))
 		return fn(ctx)
 	})
+	if after != nil {
+		return after(err)
+	}
+	return err
 }
 
 // heartbeatMiddleware logs a "still waiting" line if a single RPC exceeds the

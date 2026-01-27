@@ -40,14 +40,20 @@ func Login(ctx context.Context, runner Runner, authenticator auth.UserAuthentica
 }
 
 func Logout(ctx context.Context, runner Runner, sessionPath string) error {
+	remove := func(err error) error {
+		if removeErr := os.Remove(sessionPath); removeErr != nil && !os.IsNotExist(removeErr) && err == nil {
+			return removeErr
+		}
+		return err
+	}
+	if client, ok := runner.(*Client); ok {
+		return client.runAfter(ctx, func(ctx context.Context) error { _, err := client.client.API().AuthLogOut(ctx); return err }, remove)
+	}
 	err := runner.Run(ctx, func(ctx context.Context, api API, client *auth.Client) error {
 		_, err := api.AuthLogOut(ctx)
 		return err
 	})
-	if removeErr := os.Remove(sessionPath); removeErr != nil && !os.IsNotExist(removeErr) && err == nil {
-		err = removeErr
-	}
-	return err
+	return remove(err)
 }
 
 type Status struct {

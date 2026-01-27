@@ -1,0 +1,240 @@
+// Package preview stores stable image coordinates separately from image bytes.
+package preview
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"go.octolab.org/toolset/indexit/internal/filelock"
+)
+
+const Prefix = "/preview/telegram/v1/"
+const Origin = "http://indexit.local"
+
+var ErrAccount = errors.New("image belongs to another Telegram account")
+var ErrSourceGone = errors.New("original source photograph is no longer available")
+
+type Source struct {
+	Account    int64  `json:"account"`
+	Peer       string `json:"peer"`
+	Message    int    `json:"message"`
+	Photo      int64  `json:"photo"`
+	AccessHash int64  `json:"access_hash,omitempty"`
+}
+
+func (s Source) Path() string {
+	return fmt.Sprintf("%sa%d/%s/%d/p%d.jpg", Prefix, s.Account, s.Peer, s.Message, s.Photo)
+}
+func (s Source) URL() string { return Origin + s.Path() }
+
+var route = regexp.MustCompile(`^/preview/telegram/v1/a([1-9][0-9]*)/([cgu][1-9][0-9]*)/([1-9][0-9]*)/p(-?[1-9][0-9]*)\.jpg$`)
+
+func Parse(path string) (Source, error) {
+	m := route.FindStringSubmatch(path)
+	if m == nil {
+		return Source{}, errors.New("invalid image address")
+	}
+	a, e1 := strconv.ParseInt(m[1], 10, 64)
+	_, e2 := strconv.ParseInt(m[2][1:], 10, 64)
+	id, e3 := strconv.ParseInt(m[3], 10, 32)
+	p, e4 := strconv.ParseInt(m[4], 10, 64)
+	if e1 != nil || e2 != nil || e3 != nil || e4 != nil {
+		return Source{}, errors.New("invalid image coordinates")
+	}
+	return Source{Account: a, Peer: m[2], Message: int(id), Photo: p}, nil
+}
+
+type Store struct{ Root string }
+
+func Default() (*Store, error) {
+	root := os.Getenv("INDEXIT_DATA_DIR")
+	if root == "" {
+		root = os.Getenv("XDG_DATA_HOME")
+		if root == "" {
+			h, e := os.UserHomeDir()
+			if e != nil {
+				return nil, e
+			}
+			root = filepath.Join(h, ".local", "share")
+		}
+		root = filepath.Join(root, "indexit")
+	}
+	return &Store{Root: root}, nil
+}
+func (s *Store) location(kind string, src Source) string {
+	return filepath.Join(s.Root, kind, strings.TrimPrefix(src.Path(), Prefix))
+}
+func (s *Store) ImagePath(src Source) string { return s.location("images", src) }
+func (s *Store) Save(src Source) error {
+	if _, err := Parse(src.Path()); err != nil {
+		return err
+	}
+	if saved, err := s.Read(src); err == nil && saved == src {
+		return nil
+	}
+	data, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	path := s.location("sources", src) + ".json"
+	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	f, err := os.CreateTemp(filepath.Dir(path), ".source-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	if _, err = f.Write(data); err != nil {
+		f.Close()
+		return err
+	}
+	if err = f.Sync(); err != nil {
+		f.Close()
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(f.Name(), path)
+}
+func (s *Store) Read(src Source) (Source, error) {
+	data, err := os.ReadFile(s.location("sources", src) + ".json")
+	if err != nil {
+		return Source{}, err
+	}
+	var saved Source
+	if err = json.Unmarshal(data, &saved); err != nil {
+		return Source{}, err
+	}
+	if saved.Path() != src.Path() {
+		return Source{}, errors.New("source coordinates mismatch")
+	}
+	return saved, nil
+}
+
+// Fetch writes a complete source photograph to path; the store publishes it
+// only after Fetch succeeds. Fetch must verify both account and photo identity.
+type Fetch func(context.Context, Source, string) error
+
+func (s *Store) Handler(fetch Fetch) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			w.Header().Set("Allow", "GET, HEAD")
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if r.URL.Path == "/" {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			fmt.Fprintln(w, "indexit image service is running")
+			return
+		}
+		src, err := Parse(r.URL.Path)
+		if err != nil || r.URL.RawQuery != "" {
+			http.NotFound(w, r)
+			return
+		}
+		path := s.ImagePath(src)
+		serve := func() bool {
+			f, e := os.Open(path)
+			if e != nil {
+				return false
+			}
+			defer f.Close()
+			st, e := f.Stat()
+			if e != nil || !st.Mode().IsRegular() || st.Size() == 0 {
+				return false
+			}
+			w.Header().Set("Content-Type", "image/jpeg")
+			w.Header().Set("Cache-Control", "private, max-age=31536000, immutable")
+			http.ServeContent(w, r, filepath.Base(path), st.ModTime(), f)
+			return true
+		}
+		if serve() {
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
+		defer cancel()
+		unlock, err := filelock.Acquire(ctx, s.location("locks", src)+".lock")
+		if err != nil {
+			http.Error(w, "image download is busy; retry later", http.StatusServiceUnavailable)
+			return
+		}
+		defer unlock()
+		if serve() {
+			return
+		}
+		saved, err := s.Read(src)
+		if err != nil {
+			http.Error(w, "source metadata unavailable; fetch the message again", http.StatusNotFound)
+			return
+		}
+		if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			http.Error(w, "image storage unavailable", http.StatusInsufficientStorage)
+			return
+		}
+		// A previous crash may have left a temporary download for this exact
+		// photograph. The per-photo lock proves no live writer owns these files.
+		prefix := fmt.Sprintf(".p%d-download-", src.Photo)
+		if entries, e := os.ReadDir(filepath.Dir(path)); e == nil {
+			for _, entry := range entries {
+				if strings.HasPrefix(entry.Name(), prefix) {
+					_ = os.Remove(filepath.Join(filepath.Dir(path), entry.Name()))
+				}
+			}
+		}
+		f, err := os.CreateTemp(filepath.Dir(path), prefix+"*")
+		if err != nil {
+			http.Error(w, "image storage unavailable", http.StatusInsufficientStorage)
+			return
+		}
+		tmp := f.Name()
+		f.Close()
+		defer os.Remove(tmp)
+		if err = fetch(ctx, saved, tmp); err != nil {
+			switch {
+			case errors.Is(err, ErrAccount):
+				http.Error(w, err.Error(), http.StatusForbidden)
+			case errors.Is(err, ErrSourceGone):
+				http.Error(w, err.Error(), http.StatusGone)
+			case errors.Is(err, context.DeadlineExceeded), errors.Is(err, context.Canceled):
+				http.Error(w, "Telegram operation timed out or is busy; retry later", http.StatusServiceUnavailable)
+			default:
+				http.Error(w, "source unavailable; check service logs and retry", http.StatusBadGateway)
+			}
+			return
+		}
+		f, err = os.OpenFile(tmp, os.O_RDWR, 0600)
+		if err != nil {
+			http.Error(w, "download incomplete", http.StatusBadGateway)
+			return
+		}
+		header := make([]byte, 512)
+		n, _ := f.Read(header)
+		st, statErr := f.Stat()
+		syncErr := f.Sync()
+		f.Close()
+		if statErr != nil || syncErr != nil || st.Size() == 0 || http.DetectContentType(header[:n]) != "image/jpeg" {
+			http.Error(w, "invalid or incomplete source photograph", http.StatusBadGateway)
+			return
+		}
+		if err = os.Rename(tmp, path); err != nil {
+			http.Error(w, "cannot save image", http.StatusInsufficientStorage)
+			return
+		}
+		if !serve() {
+			http.Error(w, "image storage unavailable", http.StatusInternalServerError)
+		}
+	})
+}

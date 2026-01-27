@@ -45,8 +45,9 @@ func New() *cobra.Command {
 			cmd.SetContext(indexlog.WithSettings(cmd.Context(), settings))
 
 			result, err := config.Load(config.Options{
-				EnvFile:  envFile,
-				Explicit: cmd.Flags().Changed("env-file"),
+				EnvFile:          envFile,
+				IgnoreWorkingDir: cmd.Parent() != nil && cmd.Parent().Name() == "service",
+				Explicit:         cmd.Flags().Changed("env-file"),
 			})
 			if err != nil {
 				return exitcode.New(exitcode.Usage, err)
@@ -76,6 +77,7 @@ func New() *cobra.Command {
 	/* configure instance */
 	command.AddCommand(
 		telegram.New(),
+		telegram.NewService(),
 		skillCommand(skills.Indexit()),
 		cli.NewVersionCommand(buildinfo.Version, buildinfo.Date, buildinfo.Commit),
 	)
