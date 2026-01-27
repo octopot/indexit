@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-
-make git-hooks go-deps-fetch go-tools-install

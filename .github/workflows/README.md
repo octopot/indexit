@@ -89,8 +89,10 @@ flowchart TB
   and HTML, no MDX, site-relative links. Commit it, tag the commit, and push the
   branch and the tag in one go: `git push --atomic origin main <tag>`.
 - **Guardrails come first and fail in seconds.** The `pre-push` hook
-  (`.github/hooks`, wired by `make setup`) runs `.github/scripts/release.mjs check`
-  before the push leaves your machine; `make release-check TAG=<tag>` runs it on
+  (`.github/hooks`, wired by `make git-hooks`, part of `make setup`) runs
+  `.github/scripts/release.mjs check` against the branch of the same push, then
+  the application checks of every push, `make go-deps-tidy verify`;
+  `make release-check TAG=<tag>` runs the tag check on
   demand, together with the `go mod tidy` + `git-check` that `fast-check` would
   otherwise fail on only after the tag is out (ci.yml and tools.yml check it on
   main too). The first steps here repeat it for pushes that bypassed the hook,

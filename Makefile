@@ -39,25 +39,21 @@ git-config:
 	$(AT) git config core.hooksPath .github/hooks
 .PHONY: git-config
 
-ifneq (, $(wildcard bin/lib/git/hooks/))
+ifneq (, $(wildcard .github/hooks/))
 ifdef GIT_HOOKS
 
-git-hooks: git-unhook
-	$(AT) for hook in $(GIT_HOOKS); do \
-		cp bin/lib/git/hooks/$$hook .git/hooks/; \
-	done
+# versioned hooks take effect in place, see octomation/makefiles#81
+git-hooks:
+	$(AT) git config --local core.hooksPath .github/hooks
 .PHONY: git-hooks
 
 git-unhook:
-	$(AT) ls .git/hooks \
-	| grep -v .sample \
-	| sed 's|.*|.git/hooks/&|' \
-	| xargs rm -f || true
+	$(AT) git config --local --unset core.hooksPath || true
 .PHONY: git-unhook
 
 define hook_tpl
 git-$(1):
-	$$(AT) bin/lib/git/hooks/$(1)
+	$$(AT) .github/hooks/$(1) < /dev/null
 .PHONY: git-$(1)
 endef
 
@@ -491,3 +487,7 @@ install: go-install
 
 verbose: make-verbose go-verbose
 .PHONY: verbose
+
+# the application checks of every push, see .github/hooks/pre-push
+verify: go-deps-check generate check git-check
+.PHONY: verify
