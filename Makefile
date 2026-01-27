@@ -32,7 +32,8 @@ make-verbose:
 .PHONY: make-verbose
 
 COMMIT  := $(shell git rev-parse --short --verify HEAD)
-RELEASE := $(shell git describe --tags 2>/dev/null | rev | cut -d - -f3- | rev)
+# Only a tagged commit represents a release; branch builds may embed a newer skill.
+RELEASE := $(shell git describe --tags --exact-match 2>/dev/null || printf dev)
 
 git-config:
 	$(AT) git config core.autocrlf input

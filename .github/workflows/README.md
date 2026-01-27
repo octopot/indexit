@@ -68,6 +68,8 @@ flowchart LR
   skill with it into an empty temporary home for Claude Code and Codex and
   requires `skill status --exact` to report both copies intact: the maintainer
   installs the skill through the catalog, so this keeps the CLI path checked.
+  Makefile builds use the exact tag as their version, or `dev` between tags.
+  A branch build must not claim the previous release while embedding a newer skill.
 
 ## cd
 
