@@ -3,7 +3,7 @@
 | Workflow | Name | Runs on | Does |
 | --- | --- | --- | --- |
 | [ci](#ci) | Continuous integration | PR and push to main (Go files, `skills/`), `v*` tag, monthly, manual | Lint, tests, coverage to Codecov |
-| [cd](#cd) | Continuous delivery | `v*` tag, manual | Check the tag, test, publish the release, the Homebrew Cask and the agent skill; a snapshot on manual runs |
+| [cd](#cd) | Continuous delivery | `v*` tag, manual | Check the tag, test, publish the release, the Homebrew Formula and the agent skill; a snapshot on manual runs |
 | [docs](#docs) | Documentation delivery | PR and push to main (`docs/`), monthly, manual, reusable | Build the site; deploy it to Pages from main |
 | [tools](#tools) | Tools validation | PR and push to main (`tools/`), monthly, manual | Install the tools module and check generated code |
 | [doctor](#doctor) | Repository doctor | manual | Compare the repository with GitHub and explain fixes |
@@ -44,7 +44,7 @@ flowchart LR
 
 | Secret | Used by | Purpose |
 | --- | --- | --- |
-| `OCTOLAB_RELEASER_CLIENT_ID` | cd, doctor | Client ID of the GitHub App "OctoLab Releaser" that pushes the Cask to the tap named in `.goreleaser.yml` and the skill to `octolab/skills` |
+| `OCTOLAB_RELEASER_CLIENT_ID` | cd, doctor | Client ID of the GitHub App "OctoLab Releaser" that pushes the Formula to the tap named in `.goreleaser.yml` and the skill to `octolab/skills` |
 | `OCTOLAB_RELEASER_KEY` | cd, doctor | Private key of that App |
 | `SLACK_WEBHOOK` | all but doctor | Notifications, optional |
 
@@ -80,7 +80,7 @@ flowchart TB
   tag([push v* tag]) --> check[check the tag and its note] --> signature[GitHub verifies the tag] --> secrets[check release secrets] --> token[mint the tap token] --> pages[resolve the Pages URL] --> render[render the note]
   render --> go[set up Go, make tools] --> test[fast check and tests] --> publish[goreleaser release]
   publish --> release[(GitHub release: body and title from the note)]
-  publish --> tap[(Cask in the tap)]
+  publish --> tap[(Formula in the tap)]
   publish --> archives[check the skill in the archives]
   archives --> skill[skill job: publish the skill, stable tags only] --> catalog[(octolab/skills)]
   skill --> notify[notify]
@@ -106,16 +106,23 @@ flowchart TB
   to goreleaser (`release.name_template`).
 - **Policy lives in `.github/settings.json`**, documented by `.github/settings.cue`:
   tag pattern, maintenance branches (e.g. `v5.*` tags on branch `v5`), note path.
-- The release uses the workflow token. The Cask goes to the tap named in
+- The release uses the workflow token. The Formula goes to the tap named in
   `.goreleaser.yml` with a token minted per run by `actions/create-github-app-token`
   from a GitHub App installed on the tap only, with Contents: Read and write.
   goreleaser then omits the committer (`commit_author.use_github_app_token`),
-  so GitHub signs the Cask commit as the App; a personal token does not get
-  signed commits, see [#108](https://github.com/octopot/indexit/issues/108). After the first Cask release,
-  install with `brew install --cask octolab/tap/indexit`. macOS signing and
-  notarization are not configured yet, so the Cask preflight clears the
-  quarantine attribute. It has to run before the completions are generated,
-  which execute the binary, so a `postflight` hook would be too late.
+  so GitHub signs the Formula commit as the App; a personal token does not get
+  signed commits, see [#108](https://github.com/octopot/indexit/issues/108). install with `brew install --formula octolab/tap/indexit`.
+  The Formula installs the CLI, shell completions and the macOS service definition;
+  `brew services start octolab/tap/indexit` starts the same binary as the CLI.
+  Existing Cask installations require the one-time migration in the
+  [local image guide](../../docs/content/guide/local-images.mdx).
+  GoReleaser generates and publishes the Formula directly through `brews`;
+  no companion package or custom publisher is involved. `skip_upload: auto`
+  keeps prereleases out of the stable tap. GoReleaser v2.18.2 supports the
+  service block but marks `brews` deprecated. `make release-check` and doctor
+  accept only that known deprecation; invalid config and other deprecations fail.
+  Revisit the packaging before upgrading to a version that removes `brews`.
+
 - **The agent skill ships with the release.** `skills/indexit/` is embedded in
   the binary and packed into every archive; `release.mjs skill` checks that the
   source, the archives and `indexit skill info` agree on its digest. For a

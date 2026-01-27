@@ -105,6 +105,8 @@ jobs:
 
       - name: Install tools for release checks
         run: make tools
+      - name: Check GoReleaser configuration policy
+        run: node --test .github/scripts/goreleaser-check.test.mjs
       - name: Run fast check and tests
         run: make fast-check test TIMEOUT=2m
       - name: Publish the release

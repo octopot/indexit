@@ -7,34 +7,47 @@ archives:
     files:
       - LICENSE
       - skills/indexit/**
+      - scripts/macos-service-network.sh
     formats: [tar.gz]
     name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
 
-homebrew_casks:
+# brews is deprecated upstream, but supplies the Formula service DSL needed
+# for one package managed by brew services. Keep GoReleaser pinned in CI.
+brews:
   - name: indexit
     ids: [indexit]
-    binaries: [indexit]
+    skip_upload: auto
     commit_author:
       use_github_app_token: true
     description: CLI for indexing personal data.
-    directory: Casks
+    license: MIT
+    directory: Formula
     homepage: https://github.com/octopot/indexit
     repository:
       owner: octolab
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    generate_completions_from_executable:
-      executable: indexit
-      shell_parameter_format: cobra
-      shells: [bash, zsh, fish]
-    # Homebrew 7 deprecates the preflight hook that `hooks` renders. Clear the
-    # quarantine before completions run the unsigned binary.
-    custom_block: |
-      preflight_steps do
-        on_macos do
-          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ "{{staged_path}}" }}/indexit"]
-        end
-      end
+    install: |
+      bin.install "indexit"
+      libexec.install "scripts/macos-service-network.sh"
+      generate_completions_from_executable(bin/"indexit", "completion")
+    service: |
+      run macos: [opt_bin/"indexit", "service", "run", "--listen", "127.0.0.1:17840"]
+      keep_alive true
+      working_dir Dir.home
+      log_path var/"log/indexit.log"
+      error_log_path var/"log/indexit.log"
+    caveats: |
+      On macOS, configure the local hostname and port explicitly:
+        sudo sh #{opt_libexec}/macos-service-network.sh install
+      Start the image service as your normal user:
+        brew services start octolab/tap/indexit
+      Before uninstalling, remove networking explicitly:
+        sudo sh #{opt_libexec}/macos-service-network.sh uninstall
+      Photographs and configuration survive upgrades and uninstall.
+    test: |
+      system "#{bin}/indexit", "version"
+      system "#{bin}/indexit", "service", "run", "--help"
 
 builds:
   - id: indexit

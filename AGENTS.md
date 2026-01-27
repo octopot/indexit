@@ -48,6 +48,12 @@ make doctor
   catalog.
 - `make doctor` has no `fail`.
 
+The CLI and macOS service ship as one Formula through GoReleaser `brews`.
+The known `brews` deprecation is checked by `.github/scripts/goreleaser-check.mjs`;
+other deprecations and invalid configuration remain errors. Existing Cask users
+need the one-time migration documented in the local image guide. Published
+changelogs retain their original Cask commands.
+
 ### 1. Changelog
 
 Write `docs/content/changelog/vX.Y.Z.md`; it becomes the GitHub release:
@@ -68,7 +74,7 @@ Lead paragraph: what the release does, in terms of commands and results.
 
 [Explore messages →](/guide/messages/)
 
-**Upgrade:** on macOS, run `brew update` followed by `brew upgrade --cask octolab/tap/indexit`. For a manual installation, use a [vX.Y.Z release archive](https://github.com/octopot/indexit/releases/tag/vX.Y.Z). Run `indexit version` to check the installed version.
+**Upgrade:** on macOS, run `brew update` followed by `brew upgrade --formula octolab/tap/indexit`. For a manual installation, use a [vX.Y.Z release archive](https://github.com/octopot/indexit/releases/tag/vX.Y.Z). Run `indexit version` to check the installed version.
 ```
 
 - English; a short slogan ending with a period ("One message, one entry.").
@@ -169,10 +175,13 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   says the run is not found, `cd` hasn't started yet: run the line again.
 - The release has the note's title and body, four archives and
   `checksums.txt`.
-- The Cask commit for vX.Y.Z is verified.
+- The Formula commit for vX.Y.Z is verified.
+- On the first Formula release, retire `Casks/indexit.rb` in `octolab/homebrew-tap`
+  as a separate reviewed maintainer change, after the Formula is available.
+  GoReleaser creates the Formula but does not delete the old Cask.
 - A stable release only: the catalog tag `indexit--vX.Y.Z` points at a
   verified commit, and `ci (install)` there is green for that tag.
-- `brew update && brew upgrade --cask octolab/tap/indexit && indexit version`
+- `brew update && brew upgrade --formula octolab/tap/indexit && indexit version`
   shows vX.Y.Z.
 - A stable release only: the catalog plugins are updated, then
   `indexit skill status --agent claude-code,codex --exact` passes:
@@ -194,7 +203,7 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   `gh release view vX.Y.Z` finds no release): nothing is published. Delete
   the tag with `git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`, fix the
   cause on `main` or in your signing setup, and go back to step 4.
-- **Only the skill job failed**: the release and the Cask are out and stay.
+- **Only the skill job failed**: the release and the Formula are out and stay.
   Fix the cause, for example the App's installation on `octolab/skills`, and
   run the failed job again: `gh run rerun <run-id> --failed`.
 - **Anything else after the release exists**: it is frozen; ship the fix in

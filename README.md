@@ -11,7 +11,7 @@ Export conversations as JSONL, fetch individual messages by link, and save photo
 On macOS with [Homebrew](https://brew.sh/):
 
 ```sh
-brew install --cask octolab/tap/indexit
+brew install --formula octolab/tap/indexit
 indexit version
 ```
 

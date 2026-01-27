@@ -12,6 +12,7 @@
 //   release.mjs signature <tag>                              (CI: GitHub verifies the tag's signature)
 //   release.mjs skill [--published <digest>]                 (CI: one agent skill in the source, archives and binary, or in the catalog)
 
+import { checkGoreleaser } from './goreleaser-check.mjs'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { appendFileSync, existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -551,8 +552,9 @@ async function doctor() {
   const arch = { x64: 'amd64', ia32: '386' }[process.arch] || process.arch
   const goreleaser = [`bin/${process.platform}/${arch}`, ...(process.env.PATH || '').split(':')]
   try {
-    execFileSync('goreleaser', ['check'], { stdio: 'ignore', env: { ...process.env, PATH: goreleaser.join(':') } })
-    ok('goreleaser check')
+    const result = checkGoreleaser({ ...process.env, PATH: goreleaser.join(':') })
+    if (result.ok) ok(result.accepted ? 'goreleaser check (accepted brews deprecation)' : 'goreleaser check')
+    else fail('goreleaser check failed; run node .github/scripts/goreleaser-check.mjs for details')
   } catch (e) {
     if (e.code === 'ENOENT') skip('goreleaser is not installed; run: make tools')
     else fail('goreleaser check failed; run it to see the details')

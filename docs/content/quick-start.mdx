@@ -26,9 +26,11 @@ Prefer to run the commands yourself? Follow the steps below.
 On macOS, install the stable release with [Homebrew](https://brew.sh/):
 
 ```sh
-brew install --cask octolab/tap/indexit
+brew install --formula octolab/tap/indexit
 indexit version
 ```
+
+Previously installed the Cask? Follow the [one-time Formula migration](/guide/local-images/#install-and-start) first.
 
 For Linux or a manual installation, use a ready-to-run archive below. Go is not required.
 
@@ -120,7 +122,7 @@ Use `--agent codex` for Codex. Start a new agent session, then ask for `/indexit
 
 | Step | By hand | Ask your agent |
 | --- | --- | --- |
-| Install | `brew install --cask octolab/tap/indexit` | “Set up indexit.” With the setup instruction above, it installs indexit for your system and checks `indexit version`. |
+| Install | `brew install --formula octolab/tap/indexit` | “Set up indexit.” With the setup instruction above, it installs indexit for your system and checks `indexit version`. |
 | Credentials | Write `TELEGRAM_API_ID` and `TELEGRAM_API_HASH` into `.env` | “Help me add my Telegram API credentials.” It tells you where to get them; you type them into `.env` yourself. |
 | Sign in | `indexit telegram auth login --qr` | “Connect my Telegram account.” It gives you the login command to run in your terminal, then confirms with `auth status`. |
 | Read messages | `indexit -q telegram fetch messages --dialog @example_channel --limit 200 \| fx` | “What has @example_channel posted lately?” It fetches a small batch and answers from the records. |
