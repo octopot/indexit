@@ -7,6 +7,7 @@
 //   release.mjs preflight                                    (CI: required secrets are present; outputs the tap)
 //   release.mjs doctor                                       (on demand: config vs GitHub, with remediation)
 //   release.mjs pages  <base-url>                            (CI: the Pages URL matches settings.json pages)
+//   release.mjs site-env                                     (CI: SITE_URL and BASE_PATH of a preview, from settings.json pages)
 //   release.mjs smoke  <site-url> [--retries <n>]            (CI: the deployed site serves pages and assets)
 //   release.mjs vanity                                       (vanity imports in go.mod resolve over verified HTTPS)
 //   release.mjs signature <tag>                              (CI: GitHub verifies the tag's signature)
@@ -592,6 +593,13 @@ try {
       for (const [status, msg] of report) console.log(`${status.padEnd(10)} ${msg}`)
       process.exit(report.some(([s]) => s === 'fail') ? 1 : 0)
     }
+    case 'site-env': {
+      const site = expectedSite(settings().pages, repoSlug())
+      if (!site) throw new Error('cannot resolve the Pages URL')
+      console.log(`SITE_URL=${site}`)
+      console.log(`BASE_PATH=${new URL(site).pathname.replace(/\/$/, '')}`)
+      break
+    }
     case 'pages': {
       const errors = pagesCheck(opts._[0])
       errors.forEach((e) => console.error(`pages: ${e}`))
@@ -621,7 +629,7 @@ try {
       process.exit(errors.length ? 1 : 0)
     }
     default:
-      console.error('usage: release.mjs check|render|preflight|doctor|pages|smoke|vanity|signature|skill ...')
+      console.error('usage: release.mjs check|render|preflight|doctor|pages|site-env|smoke|vanity|signature|skill ...')
       process.exit(2)
   }
 } catch (e) {

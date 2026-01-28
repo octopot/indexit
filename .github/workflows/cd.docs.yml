@@ -8,6 +8,9 @@ on:
       - '.github/settings.json'
       - '.github/workflows/cd.docs.yml'
       - 'docs/**'
+      - 'Taskfile'
+      - 'bin/lib/**'
+      - '.github/actions/**'
 
   push:
     branches: [ main ]
@@ -16,6 +19,9 @@ on:
       - '.github/settings.json'
       - '.github/workflows/cd.docs.yml'
       - 'docs/**/*'
+      - 'Taskfile'
+      - 'bin/lib/**'
+      - '.github/actions/**'
 
   schedule:
     - cron: 0 7 1 * * # at 07:00 on day-of-month 1, UTC
@@ -57,23 +63,29 @@ jobs:
           cache-dependency-path: docs/package-lock.json
           check-latest: true
       - name: Set up GitHub Pages
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         id: pages
         uses: actions/configure-pages@v6.0.0
       # the build bakes the base path and the origin in: refuse a domain
       # that .github/settings.json does not expect
       - name: Check the Pages domain
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           BASE_URL: ${{ steps.pages.outputs.base_url }}
         run: node .github/scripts/release.mjs pages "${BASE_URL}"
       - name: Install dependencies
         run: ./Taskfile docs npm ci
 
+      - name: Resolve the preview URL
+        if: github.event_name == 'pull_request' || github.ref != 'refs/heads/main'
+        run: |
+          node .github/scripts/release.mjs site-env >> "$GITHUB_ENV"
       - name: Build the documentation
         run: ./Taskfile docs build
         env:
           TARGET: static
-          BASE_PATH: ${{ steps.pages.outputs.base_path }}
-          SITE_URL: ${{ steps.pages.outputs.base_url }}
+          BASE_PATH: ${{ steps.pages.outputs.base_path || env.BASE_PATH }}
+          SITE_URL: ${{ steps.pages.outputs.base_url || env.SITE_URL }}
       - name: Upload the documentation
         uses: actions/upload-pages-artifact@v5.0.0
         with: { path: docs/dist }

@@ -29,13 +29,15 @@ function fixture(fn) {
   try { fn({ cwd, settings, run, withEnv }) } finally { rmSync(cwd, { recursive: true, force: true }) }
 }
 
-test('Pages check resolves default and custom domains and rejects drift', () => fixture(({ settings, run }) => {
+test('Pages preview resolves default and custom domains and rejects drift', () => fixture(({ settings, run }) => {
   settings()
   assert.equal(run('pages', 'https://octopot.github.io/indexit/').status, 0)
   assert.equal(run('pages', 'https://octopot.github.io/maintainer/').status, 1)
+  assert.equal(run('site-env').stdout, 'SITE_URL=https://octopot.github.io/indexit/\nBASE_PATH=/indexit\n')
   settings({ cname: 'indexit.example.com' })
   assert.equal(run('pages', 'https://indexit.example.com').status, 0)
   assert.equal(run('pages', 'https://octopot.github.io/indexit/').status, 1)
+  assert.equal(run('site-env').stdout, 'SITE_URL=https://indexit.example.com/\nBASE_PATH=\n')
 }))
 
 test('release notes render site links but preserve code examples', () => fixture(({ cwd, settings, run }) => {

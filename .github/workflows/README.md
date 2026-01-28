@@ -152,14 +152,18 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  check[Pages URL matches settings.json pages] --> build[build: npm ci, static export with BASE_PATH and SITE_URL from Pages] --> deploy{main, not a PR?}
+  check[Pages URL matches settings.json pages] --> build[build: npm ci, static export with BASE_PATH and SITE_URL] --> deploy{main, not a PR?}
   deploy -- yes --> pages[(GitHub Pages)] --> smoke[smoke test: pages, assets, og:image, 404, redirect]
   deploy -- no --> skip([artifact only])
   build & pages --> notify[notify]
 ```
 
-- Runs on PRs and pushes to main that touch `docs/`, `.github/settings.json`
-  or `release.mjs`; monthly; manually; as a reusable workflow.
+- Runs on PRs and pushes to main that touch `docs/`, `.github/settings.json`,
+  `release.mjs`, `Taskfile`, `bin/lib/` or the notify action; monthly;
+  manually; as a reusable workflow.
+- On main, `BASE_PATH` and `SITE_URL` come from the Pages configuration; PR
+  previews take them from `.github/settings.json` (`release.mjs site-env`)
+  and need no Pages access.
 - Pages must use **GitHub Actions** as its source, and the `github-pages`
   environment must allow deployments from main. No `CNAME` file is needed: a
   custom domain is set in Settings → Pages and declared as `pages.cname` in
