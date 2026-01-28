@@ -19,6 +19,7 @@ on:
           - Continuous integration
           - Documentation delivery
           - Pull request caches cleanup
+          - Repository doctor
           - Stale issues cleanup
           - Tools validation
           - Workflow caches cleanup
