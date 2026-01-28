@@ -322,7 +322,7 @@ workflow-doctor:
 
 release-check: config-vet
 	$(AT) test -n "$(TAG)" || { echo 'usage: git tag vX.Y.Z && make release-check TAG=vX.Y.Z'; exit 2; }
-	$(AT) node .github/scripts/release.mjs check $(TAG) --pushed "$$(git rev-parse --abbrev-ref HEAD)=$$(git rev-parse HEAD)"
+	$(AT) node .github/scripts/release.mjs check $(TAG) --local
 	$(AT) $(MAKE) go-deps-tidy go-tools-tidy git-check
 	$(AT) node .github/scripts/goreleaser-check.mjs
 .PHONY: release-check

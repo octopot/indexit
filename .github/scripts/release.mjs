@@ -2,7 +2,7 @@
 // Release guardrails shared by the pre-push hook, make targets and CI.
 // Zero dependencies: Node and git only.
 //
-//   release.mjs check  <tag> [--sha <commit>] [--pushed <branch>=<sha>]...
+//   release.mjs check  <tag> [--local] [--sha <commit>] [--pushed <branch>=<sha>]...
 //   release.mjs render <tag> --site-url <url> --out <file>   (prints the title)
 //   release.mjs preflight                                    (CI: required secrets are present; outputs the tap)
 //   release.mjs doctor                                       (on demand: config vs GitHub, with remediation)
@@ -61,6 +61,8 @@ function args(argv) {
     if (a === '--pushed') {
       const [b, s] = argv[++i].split('=')
       out.pushed[b] = s
+    } else if (a === '--local') {
+      out.local = true
     } else if (a.startsWith('--')) {
       out[a.slice(2)] = argv[++i]
     } else {
@@ -158,7 +160,10 @@ function check(tag, opts) {
   if (!branch) {
     errors.push(`${tag}: cannot resolve the default branch; run: git remote set-head origin --auto`)
   } else {
-    const tip = opts.pushed[branch] || tryGit('rev-parse', '--verify', '-q', `refs/remotes/origin/${branch}`)?.trim()
+    // Local preparation may precede a branch push; hooks and CI validate the
+    // actual push transaction or the fetched remote branch instead.
+    const ref = opts.local ? `refs/heads/${branch}` : `refs/remotes/origin/${branch}`
+    const tip = opts.pushed[branch] || tryGit('rev-parse', '--verify', '-q', ref)?.trim()
     if (!tip) {
       errors.push(`${tag}: branch ${branch} is unknown; push it together with the tag: git push --atomic origin ${branch} ${tag}`)
     } else if (tryGit('merge-base', '--is-ancestor', sha, tip) === null) {
@@ -266,7 +271,7 @@ function pagesCheck(baseUrl) {
 
 async function probe(url, init = {}) {
   try {
-    const res = await fetch(url, { redirect: 'manual', ...init })
+    const res = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(15000), ...init })
     return { status: res.status, type: res.headers.get('content-type') || '', location: res.headers.get('location'), text: init.method === 'HEAD' ? '' : await res.text() }
   } catch (e) {
     return { status: 0, type: '', location: null, text: '', error: e.cause?.code || e.message }
@@ -353,7 +358,7 @@ function vanityModules(files = ['go.mod', 'tools/go.mod']) {
 async function vanityCheck(path) {
   let res
   try {
-    res = await fetch(`https://${path}?go-get=1`, { redirect: 'follow' })
+    res = await fetch(`https://${path}?go-get=1`, { redirect: 'follow', signal: AbortSignal.timeout(15000) })
   } catch (e) {
     return `https://${path}: ${e.cause?.code || e.message}; the host serves no valid certificate for its name, ` +
       'check Custom domain and Enforce HTTPS in the Pages settings of the repository that hosts it'
@@ -532,7 +537,7 @@ async function doctor() {
   const { secrets } = settings()
   const names = Object.keys(secrets)
   const workflows = existsSync('.github/workflows')
-    ? git('ls-files', '.github/workflows').trim().split('\n').filter(Boolean)
+    ? git('ls-files', '.github/workflows').trim().split('\n').filter((f) => existsSync(f))
     : []
   const list = (flag, target) => {
     try { return new Set(JSON.parse(gh('secret', 'list', flag, target, '--json', 'name')).map((s) => s.name)) } catch { return null }
@@ -550,7 +555,8 @@ async function doctor() {
 
   // make tools installs into bin/<os>/<arch>, named as Go names them
   const arch = { x64: 'amd64', ia32: '386' }[process.arch] || process.arch
-  const goreleaser = [`bin/${process.platform}/${arch}`, ...(process.env.PATH || '').split(':')]
+  const hostArch = execFileSync('uname', ['-m'], { encoding: 'utf8' }).trim()
+  const goreleaser = [`bin/${process.platform}/${hostArch}`, `bin/${process.platform}/${arch}`, ...(process.env.PATH || '').split(':')]
   try {
     const result = checkGoreleaser({ ...process.env, PATH: goreleaser.join(':') })
     if (result.ok) ok(result.accepted ? 'goreleaser check (accepted brews deprecation)' : 'goreleaser check')

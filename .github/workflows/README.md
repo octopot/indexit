@@ -2,7 +2,7 @@
 
 | Workflow | Name | Runs on | Does |
 | --- | --- | --- | --- |
-| [ci](#ci) | Continuous integration | PR and push to main (Go files, `skills/`), `v*` tag, monthly, manual | Lint, tests, coverage to Codecov |
+| [ci](#ci) | Continuous integration | PR and push to main (Go files, `skills/`, release helpers and hooks), `v*` tag, monthly, manual | Lint, tests, coverage to Codecov, release helpers, vulnerabilities |
 | [cd](#cd) | Continuous delivery | `v*` tag, manual | Check the tag, test, publish the release, the Homebrew Formula and the agent skill; a snapshot on manual runs |
 | [docs](#docs) | Documentation delivery | PR and push to main (`docs/`), monthly, manual, reusable | Build the site; deploy it to Pages from main |
 | [tools](#tools) | Tools validation | PR and push to main (`tools/`), monthly, manual | Install the tools module and check generated code |
@@ -56,11 +56,15 @@ flowchart LR
 flowchart LR
   lint[lint: golangci-lint]
   test[test: fast check, tests, coverage, install and skill install checks] --> report[report: Codecov via OIDC]
-  lint & report --> notify[notify]
+  vulns[vulns: release helpers and hooks, application vulnerabilities]
+  lint & report & vulns --> notify[notify]
 ```
 
 - Runs on PRs and pushes to main that touch Go code, `go.mod`, `Makefile`,
-  `Taskfile`, the agent skill in `skills/` or the workflow itself; on `v*` tags; monthly; manually.
+  `Taskfile`, the agent skill in `skills/`, the release helpers or hooks, or
+  the workflow itself; on `v*` tags; monthly; manually.
+- `vulns` runs `node --test .github/scripts/*.test.mjs` first: a broken release
+  helper or hook fails on main, not on the tag.
 - Codecov uses GitHub OIDC (`id-token: write`). The repository must be activated
   in Codecov; no `CODECOV_TOKEN` is needed.
 - PRs get no notification.
@@ -88,19 +92,21 @@ flowchart TB
 
 - **A release is a curated note plus a tag.** Write `docs/content/changelog/<tag>.md`:
   frontmatter `title` and `description`, the first line `# <title>`, Markdown
-  and HTML, no MDX, site-relative links. Commit it, tag the commit, and push the
-  branch and the tag in one go: `git push --atomic origin main <tag>`.
-- **Guardrails come first and fail in seconds.** The `pre-push` hook
-  (`.github/hooks`, wired by `make git-hooks`, part of `make setup`) runs
-  `.github/scripts/release.mjs check` against the branch of the same push, then
-  the application checks of every push, `make go-deps-tidy verify`;
-  `make release-check TAG=<tag>` runs the tag check on
-  demand, together with the `go mod tidy` + `git-check` that `fast-check` would
-  otherwise fail on only after the tag is out (ci.yml and tools.yml check it on
-  main too). The first steps here repeat it for pushes that bypassed the hook,
-  check that GitHub verifies the tag's signature (`release.mjs signature`; the
-  catalog refuses an unverified tag, by then too late to replace it), then mint
-  the tap token, all before Go is even installed.
+  and HTML, no MDX, site-relative links. Commit it, tag the commit with a
+  signed tag, run `make release-check TAG=<tag>`, then push the branch and the
+  tag in one go: `git push --atomic origin main <tag>`.
+- **Guardrails come first and fail in seconds.** `make release-check` checks the
+  tag against the local branch, before it is pushed, together with the
+  `go mod tidy` + `git-check` that `fast-check` would otherwise fail on only
+  after the tag is out (ci.yml and tools.yml check it on main too) and
+  `goreleaser check`. The `pre-push` hook (`.github/hooks`, wired by
+  `make git-hooks`, part of `make setup`) runs `.github/scripts/release.mjs check`
+  against the branch of the same push, then the application checks of every
+  push, `make go-deps-tidy verify`. The first steps here repeat the tag check
+  against `origin` for pushes that bypassed the hook, check that GitHub
+  verifies the tag's signature (`release.mjs signature`; the catalog refuses an
+  unverified tag, by then too late to replace it), then mint the tap token, all
+  before Go is even installed.
 - **The note becomes the release.** `release.mjs render` strips the frontmatter
   and the H1, makes site links absolute from the Pages URL and hands the title
   to goreleaser (`release.name_template`).
