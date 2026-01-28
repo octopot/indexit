@@ -34,7 +34,7 @@ jobs:
   deps:
     name: Caching deps
     runs-on: ubuntu-24.04
-    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
 
     strategy:
       fail-fast: false
@@ -59,7 +59,7 @@ jobs:
   docs:
     name: Caching docs deps
     runs-on: ubuntu-24.04
-    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout the repository
@@ -78,7 +78,7 @@ jobs:
   tools:
     name: Caching tools
     runs-on: ubuntu-24.04
-    if: github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
+    if: github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout the repository

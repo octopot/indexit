@@ -57,7 +57,7 @@ flowchart LR
   lint[lint: golangci-lint]
   test[test: fast check, tests, coverage, install and skill install checks] --> report[report: Codecov via OIDC]
   vulns[vulns: release helpers and hooks, application vulnerabilities]
-  lint & report & vulns --> notify[notify]
+  lint & test & report & vulns --> notify[notify]
 ```
 
 - Runs on PRs and pushes to main that touch Go code, `go.mod`, `Makefile`,
@@ -222,7 +222,7 @@ flowchart LR
 
 ## warmup
 
-[warmup.caches.yml](warmup.caches.yml) refills the caches right after the cleanup.
+[warmup.caches.yml](warmup.caches.yml) refills the caches right after a successful cleanup.
 
 ```mermaid
 flowchart LR
@@ -236,7 +236,7 @@ flowchart LR
   `.goreleaser.yml` and the warmup itself. A push to main that changes one of
   them rebuilds it, incrementally from the previous one, a run twice a
   week keeps it inside GitHub's 7-day eviction window, and the other jobs run
-  only after the cleanup or on demand.
+  only after a successful cleanup or on demand.
 - `cd` builds with full parallelism only on the exact key; any other match
   brings the modules but not a warm build cache, so it keeps `--parallelism 2`
   (a cold cross-compile of gotd takes ~5GB per target on a 16GB runner).

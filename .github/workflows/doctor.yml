@@ -48,7 +48,7 @@ jobs:
           OCTOLAB_RELEASER_KEY: ${{ secrets.OCTOLAB_RELEASER_KEY }}
         run: node .github/scripts/release.mjs preflight
       - name: Mint the tap token
-        if: steps.preflight.outcome == 'success'
+        if: (success() || failure()) && steps.preflight.outcome == 'success'
         uses: actions/create-github-app-token@v3.3.0
         with:
           client-id: ${{ secrets.OCTOLAB_RELEASER_CLIENT_ID }}

@@ -178,7 +178,7 @@ jobs:
 
   notify:
     name: Notifying
-    needs: [ lint, report, vulns ]
+    needs: [ lint, test, report, vulns ]
     runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request'
       && (failure() || success())
