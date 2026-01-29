@@ -6,14 +6,14 @@
 | [cd](#cd) | Continuous delivery | `v*` tag, manual | Check the tag, test, publish the release, the Homebrew Formula and the agent skill; a snapshot on manual runs |
 | [docs](#docs) | Documentation delivery | PR and push to main (`docs/`), monthly, manual, reusable | Build the site; deploy it to Pages from main |
 | [tools](#tools) | Tools validation | PR and push to main (`tools/`), monthly, manual | Install the tools module and check generated code |
-| [doctor](#doctor) | Repository doctor | manual | Compare the repository with GitHub and explain fixes |
+| [doctor](#doctor) | Repository doctor | daily, manual | Compare the repository with GitHub and explain fixes |
 | [caches](#caches) | Workflow caches cleanup | monthly, manual, reusable | Delete all Actions caches |
 | [warmup](#warmup) | Workflow caches warmup | after caches cleanup, push to main (`go.sum`, `tools/go.sum`, `.goreleaser.yml`), twice a week, manual | Refill Go, docs and tools caches; keep the release build cache warm |
 | [pulls](#pulls) | Pull request caches cleanup | PR closed, daily, manual | Delete the caches of closed PRs |
 | [runs](#runs) | Workflow runs cleanup | monthly on day 2, manual, reusable | Delete completed runs, with a dry run |
 | [stale](#stale) | Stale issues cleanup | daily, manual, reusable | Mark and close stale issues and PRs |
 
-Schedules are in UTC: cleanups at 06:00, checks at 07:00, monthly on day 1;
+Schedules are in UTC: cleanups and the doctor at 06:00, checks at 07:00, monthly on day 1;
 runs cleanup on day 2, so the runs of day 1 stay readable until then; the release warmup on Mondays and Thursdays.
 
 ```mermaid
@@ -21,10 +21,9 @@ flowchart LR
   dev([developer]) -- PR / push main --> ci & docs & tools
   dev -- "git push --atomic origin main vX.Y.Z" --> hook{{pre-push hook}}
   hook -- tag --> cd & ci
-  cron([schedule]) --> ci & docs & tools & caches & runs & stale & warmup & pulls
+  cron([schedule]) --> ci & docs & tools & doctor & caches & runs & stale & warmup & pulls
   caches -- completed --> warmup
   dev -- PR closed --> pulls
-  you([maintainer]) -- manual --> doctor
   cd --> release[(GitHub release)] & tap[(Homebrew tap)] & catalog[(octolab/skills)]
   docs --> pages[(GitHub Pages)]
 ```
@@ -193,12 +192,17 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  doctor[compare with GitHub: default branch, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets] --> token[mint the tap token] & catalog[mint the catalog token]
+  doctor[compare with GitHub: default branch, workflows, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets] --> token[mint the tap token] & catalog[mint the catalog token]
 ```
 
 - Daily and manual: a Pages domain change triggers no workflow, so a site
   built for the old domain is caught here. Each problem is printed with what
   to fix and where.
+- Every workflow must be active, except those that `workflows` in
+  `.github/settings.json` keeps off on purpose, with the reason the doctor
+  prints: `cleanup.stale.yml` for now. Enable a workflow disabled by hand
+  after pushing the YAML that should run:
+  `gh workflow enable <file> -R octopot/indexit`.
 - `go.octolab.org` is in `GOPRIVATE`, so `go` resolves it directly: every
   vanity module in `go.mod` and `tools/go.mod` must answer `?go-get=1` over
   verified HTTPS with a `go-import` tag. A lapsed certificate fails here before
@@ -208,7 +212,7 @@ flowchart LR
   the preflight step checks the ones a release needs, and minting the tap and
   catalog tokens proves the App is still installed on the tap and on
   `octolab/skills` with write access.
-  Locally, `gh` needs `admin:org` to see organization secrets.
+  Locally, `gh` sees the organization secrets shared with the repository.
 
 ## caches
 
@@ -274,3 +278,9 @@ flowchart LR
 flowchart LR
   check[mark and close stale issues and PRs] --> notify[notify]
 ```
+
+- Issues and PRs with an assignee, a milestone or `status: pending` are exempt.
+- Disabled by hand for now and declared so in `.github/settings.json`: the open
+  issues and PRs to keep need an exemption first, see [doctor](#doctor).
+- [.github/integrations/stale/stale.yml](../integrations/stale/stale.yml) keeps
+  the settings of the retired Stale app for reference; nothing reads it.

@@ -52,7 +52,7 @@ function gh(...args) {
 function settings(sha) {
   const raw = sha ? tryGit('show', `${sha}:${SETTINGS}`) : (existsSync(SETTINGS) ? readFileSync(SETTINGS, 'utf8') : null)
   const cfg = raw ? JSON.parse(raw) : {}
-  return { release: { ...DEFAULTS, ...(cfg['x-release'] || {}) }, secrets: cfg.secrets || {}, pages: cfg.pages || null }
+  return { release: { ...DEFAULTS, ...(cfg['x-release'] || {}) }, secrets: cfg.secrets || {}, pages: cfg.pages || null, workflows: cfg.workflows || {} }
 }
 
 function args(argv) {
@@ -505,6 +505,25 @@ async function doctor() {
   if (local === remote) ok(`default branch ${remote}`)
   else fail(`local origin/HEAD is ${local ?? 'unset'}, GitHub says ${remote}; run: git remote set-head origin --auto`)
 
+  try {
+    const workflows = JSON.parse(gh('api', `repos/${slug}/actions/workflows`, '--paginate', '--slurp'))
+      .flatMap((page) => page.workflows)
+    const declared = settings().workflows
+    for (const workflow of workflows.filter((w) => w.path.startsWith('.github/workflows/'))) {
+      const file = workflow.path.split('/').at(-1)
+      const want = declared[file]?.state || 'active'
+      if (workflow.state === want) {
+        if (want !== 'active') ok(`${workflow.name} is ${want} on purpose: ${declared[file].reason || SETTINGS}`)
+      } else if (want === 'active') {
+        fail(`${workflow.name} is ${workflow.state}; after pushing the reviewed YAML, run: gh workflow enable ${file} -R ${slug}`)
+      } else {
+        fail(`${workflow.name} is ${workflow.state}, ${SETTINGS} wants ${want}; run: gh workflow disable ${file} -R ${slug}, or drop it from ${SETTINGS}`)
+      }
+    }
+  } catch (e) {
+    skip(`workflow activation state is not readable (${e.message})`)
+  }
+
   let pages = null
   try {
     pages = JSON.parse(gh('api', `repos/${slug}/pages`))
@@ -544,12 +563,20 @@ async function doctor() {
     try { return new Set(JSON.parse(gh('secret', 'list', flag, target, '--json', 'name')).map((s) => s.name)) } catch { return null }
   }
   const repoSecrets = list('-R', slug)
-  const orgSecrets = list('-o', owner)
+  // organization secrets this repository can use; unlike the organization
+  // listing, it needs no admin:org and honours per-repository visibility
+  const shared = () => {
+    try {
+      return new Set(JSON.parse(gh('api', `repos/${slug}/actions/organization-secrets`, '--paginate', '--slurp'))
+        .flatMap((page) => page.secrets).map((s) => s.name))
+    } catch { return null }
+  }
+  const orgSecrets = shared() ?? list('-o', owner)
   for (const name of names) {
     const used = workflows.filter((f) => readFileSync(f, 'utf8').includes(`secrets.${name}`))
     if (!used.length) fail(`secret ${name} is declared but no workflow passes it; reference \${{ secrets.${name} }} where it is needed`)
     if (repoSecrets?.has(name)) ok(`secret ${name} is set on ${slug}${used.length ? `, used by ${used.join(', ')}` : ''}`)
-    else if (orgSecrets?.has(name)) ok(`secret ${name} is set on organization ${owner}${used.length ? `, used by ${used.join(', ')}` : ''}`)
+    else if (orgSecrets?.has(name)) ok(`secret ${name} is shared by organization ${owner}${used.length ? `, used by ${used.join(', ')}` : ''}`)
     else if (orgSecrets === null) skip(`secret ${name} is not on ${slug}; organization secrets are not readable (gh auth refresh -s admin:org); if missing: ${secretGuide(name, t)}`)
     else fail(`secret ${name} is missing; ${secretGuide(name, t)}`)
   }
