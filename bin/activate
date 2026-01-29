@@ -81,8 +81,8 @@ _OLD_PATH="${PATH:-}"
 export GO111MODULE=on
 export GOBIN="${_GOBINPATH}"
 export GOFLAGS=-mod=
-export GOPRIVATE=go.octolab.net
-export GOPROXY=direct
+export GOPRIVATE=go.octolab.org
+export GOPROXY=https://proxy.golang.org,direct
 export PATH="${_NPMBINPATH}:${_GOBINPATH}:${PATH}"
 
 _OLD_PS1="${PS1:-}"
