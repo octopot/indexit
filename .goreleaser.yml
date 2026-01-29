@@ -72,5 +72,7 @@ release:
   # the repository comes from the git remote; the title from the release note,
   # see .github/scripts/release.mjs render
   name_template: '{{ envOrDefault "RELEASE_TITLE" .Tag }}'
+  # a prerelease tag (vX.Y.Z-rcN) is published as a prerelease, never as Latest
+  prerelease: auto
   preflight:
     fail_on_error: true
