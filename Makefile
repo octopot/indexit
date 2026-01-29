@@ -333,7 +333,7 @@ release-check: config-vet
 	$(AT) test -n "$(TAG)" || { echo 'usage: git tag vX.Y.Z && make release-check TAG=vX.Y.Z'; exit 2; }
 	$(AT) node .github/scripts/release.mjs check $(TAG) --local
 	$(AT) $(MAKE) go-deps-tidy go-tools-tidy git-check
-	$(AT) node .github/scripts/goreleaser-check.mjs
+	$(AT) $(MAKE) release-config-check
 .PHONY: release-check
 
 go-dist-clean:
@@ -496,6 +496,20 @@ install: go-install
 
 verbose: make-verbose go-verbose
 .PHONY: verbose
+
+# Repository checks shared with GitHub Actions.
+source-check:
+	$(AT) go vet ./...
+	$(AT) test -z "$$(gofmt -l $$(git ls-files '*.go' ':!:tools/**'))"
+.PHONY: source-check
+
+release-config-check:
+	$(AT) node .github/scripts/goreleaser-check.mjs
+.PHONY: release-config-check
+
+# Tools-module vulnerability checks run in tools.yml, independently of releases.
+release-verify: config-vet source-check go-deps-check go-deps-tidy go-generate git-check
+.PHONY: release-verify
 
 # the application checks of every push, see .github/hooks/pre-push
 verify: go-deps-check generate check git-check
