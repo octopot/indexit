@@ -1,0 +1,26 @@
+# Development tools
+
+`tools/go.mod` is a separate module that declares the development tools with Go's `tool` directive. It follows the current stable Go release, as the application does.
+
+```sh
+make tools                  # install into bin/<os>/<arch>
+source bin/activate         # put these tools on PATH
+make go-tools-tidy          # maintain tools/go.mod and tools/go.sum
+make go-tools-check         # verify modules and scan the tool packages
+make go-tools-update        # go get tool, tidy, reinstall
+```
+
+| Tool | Used for |
+| --- | --- |
+| `cue` | `make config-vet`: validate `.github/settings.json` against `.github/settings.cue` and the config fixtures in `internal/config/testdata` against `internal/config/config.cue` |
+| `golangci-lint` | `make lint`; the version matches `ci.yml` |
+| `goreleaser` | `make go-dist-check`, `make release-config-check`; the version matches `cd.yml` |
+| `govulncheck` | `make go-deps-check` for the application, `make go-tools-check` for the tools |
+| `mockgen` | mocks for `go:generate`; the application has none yet |
+| `goimports` | `make format`, and `make generate` after `go generate` rewrites the skill reference |
+
+Every binary comes from `go install tool`, and `tools.yml` checks that `go list tool` matches the installed executables. Modules behind the `tool` directive are required as `// indirect`, so the tool pattern is the only way to select them.
+
+Dependabot skips indirect requirements, so its `/tools/` entry raises only security updates ([dependabot-core#12050](https://github.com/dependabot/dependabot-core/issues/12050)). Update with `make go-tools-update` and review the diff; when `golangci-lint` or `goreleaser` moves, update the pinned versions in the workflows too: `make tool-pins-check` names each one left behind.
+
+`go-tools-check` runs only in `tools.yml`: a vulnerability in a tool fails that workflow, not the application CI or a release, which scan the application with `go-deps-check`. It currently reports [GO-2026-6225](https://pkg.go.dev/vuln/GO-2026-6225) and [GO-2026-5932](https://pkg.go.dev/vuln/GO-2026-5932), which have no fixed version; neither is suppressed.

@@ -30,7 +30,7 @@ For GitHub Pages:
 TARGET=static SITE_URL=https://indexit.octolab.org/ ./Taskfile docs build
 ```
 
-Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH=/indexit` only when hosting under a path, as on the default `octopot.github.io/indexit/`. The [Pages workflow](../.github/workflows/cd.docs.yml) supplies both automatically. Local development remains available while the static build runs.
+Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH=/indexit` only when hosting under a path, as on the default `octopot.github.io/indexit/`. The [Pages workflow](../.github/workflows/cd.docs.yml) supplies both: from the Pages configuration on main, from `.github/settings.json` for PR previews. Local development remains available while the static build runs.
 
 ## Edit the content
 
@@ -62,7 +62,7 @@ The public origin in metadata comes from `SITE_URL` (see `site.mjs`); the Pages 
 
 Quick start lives at `/quick-start/`. The sidebar groups the quick start with the guide pages through `_meta.js`.
 
-Changelog is a section of the same sidebar, with All releases first. `navigation.mjs` groups release pages into expandable `v0.1.x`, `v0.2.x`, and later branches, newest first. Add each release note and its label to `content/changelog/_meta.js` as before; the version group is created automatically. Keep the notes at `content/changelog/{tag}.md` so published links and the release workflow stay valid. Top-level navbar links use separate `type: 'page'` aliases; content folders use `display: 'children'` to keep the full sidebar available across guides and releases.
+Changelog is a section of the same sidebar, with All releases first. `navigation.mjs` groups release pages into expandable `v0.1.x`, `v0.2.x`, and later branches, newest first. Add each release note and its label to `content/changelog/_meta.js` as before; the version group is created automatically. A prerelease note, such as `v0.3.0-rc1`, is not grouped: add it with `display: 'hidden'`, so its page exists for the GitHub release but the sidebar shows stable releases only. Keep the notes at `content/changelog/{tag}.md` so published links and the release workflow stay valid. Top-level navbar links use separate `type: 'page'` aliases; content folders use `display: 'children'` to keep the full sidebar available across guides and releases.
 
 ## Change the domain
 
@@ -76,11 +76,11 @@ The docs build stops while the two disagree, the deployment is smoke-tested, and
 
 ## Keep the release accurate
 
-The CLI implementation is the source of truth. Specs in `.github/notes/` include future work and older behavior; closed issues provide context, not a substitute for checking the current code.
+The CLI implementation is the source of truth: check examples against command help and tests. Closed issues provide context, not a substitute for checking the current code.
 
 The documentation is prepared for v0.2.3. Publish the matching release archives before directing users to its download links. Lead installation instructions with Homebrew and release binaries; keep source builds as an optional contributor workflow. Lead usage examples with direct pipes into fx, jq, or fzf; avoid intermediate JSONL files. Use readable public usernames and Telegram links in commands, keeping numeric UID grammar in the reference. Archive names and supported platforms must match `.goreleaser.yml`. Do not describe planned features as shipped.
 
-Release notes describe changes to indexit's behavior and Telegram compatibility. Keep documentation, development tools, CI/CD, and repository inventory changes out of the product changelog. Preserve historical release notes when updating the current installation instructions.
+Release notes describe changes to indexit's behavior and Telegram compatibility. Keep documentation, development tools, CI/CD, and repository inventory changes out of the product changelog. A release note describes its release as published, with examples that reproduce on the built binary. Preserve historical release notes when updating the current installation instructions. How to write a note and cut a release: [AGENTS.md](../AGENTS.md#releasing).
 
 Maintain these details near the relevant examples:
 
@@ -97,3 +97,5 @@ No live-account export is needed to build the docs. Check examples against comma
 For `speech-rule-engine@4.1.4`, an override replaces its pinned xmldom dependency with `@xmldom/xmldom@^0.9.12` to include the security fixes while allowing later `0.9.x` patches. The lockfile records the resolved version. This override stops applying when speech-rule-engine changes version; run `npm audit` after that update and remove or revise the rule as needed.
 
 The interactive illustrations run entirely in the browser on fictional data. They demonstrate exploration and selection, not an embedded copy of fx or fzf. The fx illustration uses literal text search and simple subsequence path matching; the native tools provide the full search syntax. No CLI commands or account connections are executed by these components.
+
+Search is disabled: static search indexing is not configured.

@@ -18,16 +18,19 @@ A new service takes the next free port and adds it to both tables.
 
 A release is a curated note plus a signed tag. A stable release also publishes
 the agent skill to the [octolab/skills](https://github.com/octolab/skills)
-catalog. Pipeline mechanics, secrets and hooks are in
+catalog. A prerelease (`vX.Y.Z-rcN`) is a release too: it has its own note and
+tag and is frozen once published. GoReleaser publishes it as a prerelease that
+never becomes *Latest* and leaves the tap as it is, and the catalog keeps
+stable releases only. Pipeline mechanics, secrets and hooks are in
 [.github/workflows/README.md](.github/workflows/README.md); docs conventions
 are in [docs/README.md](docs/README.md#keep-the-release-accurate).
 
 ### Ground rules
 
 - The maintainer commits, tags and pushes. Stage one self-contained change at a
-  time and propose its message in a code block: a Conventional Commit subject,
-  with issues as `fix #N` or `refs #N`, and a body wrapped at 72 columns that
-  says what changed and why.
+  time and propose its message in a code block: one line,
+  `type(scope): summary`, with issues as `, issue #N` or `, closes #N`; no
+  body.
 - Product changes first, release commit last: `chore(release): prepare vX.Y.Z`.
   A guide that explains new behavior changes with the product commit, and so
   does the agent skill in `skills/indexit/`; `go test ./skills` keeps its
@@ -36,7 +39,8 @@ are in [docs/README.md](docs/README.md#keep-the-release-accurate).
 - The CLI is the source of truth for what the docs, the notes and the skill
   claim.
 - A published release is frozen: its note, annotation, image and catalog entry
-  stay as tagged. A missed fix ships in the next patch.
+  stay as tagged. A missed fix ships in the next patch, or in the next
+  candidate before the final tag.
 
 ### Before you start
 
@@ -53,20 +57,29 @@ make doctor
 - `tools` is green, or fails only on govulncheck advisories in `tools/` that
   have no fixed version (`Fixed in: N/A`): `cd` installs the tools but doesn't
   scan them.
-- `doctor` is green: it mints the tap and catalog tokens, which proves the App
-  can publish to both. If the App, its installations, the secrets or
-  `doctor.yml` changed since its last run, run it again:
+- `doctor` is green: it mints the tap and catalog tokens from the OctoLab
+  Releaser App, which proves the App can publish to both. If the App, its
+  installations, the `OCTOLAB_RELEASER_*` secrets or `doctor.yml` changed
+  since its last run, run it again:
   `make workflow-doctor REASON="before vX.Y.Z"` dispatches it on `main` and
   waits for the result; `REASON` is optional.
 - `ci` in `octolab/skills` is green: the publish action refuses an invalid
   catalog.
 - `make doctor` has no `fail`.
 
-The CLI and macOS service ship as one Formula through GoReleaser `brews`.
-The known `brews` deprecation is checked by `.github/scripts/goreleaser-check.mjs`;
-other deprecations and invalid configuration remain errors. Existing Cask users
-need the one-time migration documented in the local image guide. Published
-changelogs retain their original Cask commands.
+On the candidate commit:
+
+```sh
+make verify
+make go-dist-check
+make release-config-check
+```
+
+`make release-config-check` accepts exactly the GoReleaser `brews`
+deprecation and nothing else: `brews` ships the CLI and the macOS service as
+one Formula. Existing Cask users need the one-time migration documented in
+the local image guide. Published changelogs retain their original Cask
+commands.
 
 ### 1. Changelog
 
@@ -94,9 +107,15 @@ Lead paragraph: what the release does, in terms of commands and results.
 - English; a short slogan ending with a period ("One message, one entry.").
 - Only what users get: behavior and Telegram compatibility, no docs, tools or
   CI/CD. Explain jargon in user terms; no comparisons to release candidates.
-- Links are site-relative with a trailing slash.
+- Links are site-relative with a trailing slash. Markdown and HTML, no MDX.
 - After v0.2.0, end the **Upgrade:** paragraph with
   `If you use the agent skill, [replace it](/guide/agents/#keep-it-in-step) with the new binary’s copy.`
+
+A prerelease note, `vX.Y.Z-rcN.md`, is short and self-contained: what to try,
+what to report, and links only to pages that are already on the site, not to
+the final note. Add it to `changelog/_meta.js` with `display: 'hidden'` and
+give it no card. Of the list below, a prerelease changes only
+`skills/indexit/SKILL.md`: the current version elsewhere stays the stable one.
 
 Then, in the same release commit:
 
@@ -111,7 +130,7 @@ Then, in the same release commit:
 - `skills/indexit/SKILL.md`: `metadata.version` is the tag without `v`;
   `tool-version-range`, the `compatibility` line and the ranges in the skill's
   text become `>=0.Y.Z <0.(Y+1).0` before 1.0, `>=X.Y.Z <(X+1).0.0` after,
-  and `=X.Y.Z-rc.N` for a prerelease.
+  and the exact tag without `v` for a prerelease, such as `=0.3.0-rc1`.
   `make release-check` rejects another version, `go test ./skills` mismatched
   ranges.
 
@@ -119,10 +138,11 @@ Then, in the same release commit:
 grep -rn 'X\.Y\.W' README.md docs/README.md docs/content docs/public skills  # only old notes, cards and "since" facts may remain
 go test ./skills
 node .github/scripts/release.mjs render vX.Y.Z --site-url https://indexit.octolab.org/ --out "$(mktemp -d)/notes.md"
-(cd docs && SITE_URL=https://indexit.octolab.org/ npx next build)
+(cd docs && TARGET=static SITE_URL=https://indexit.octolab.org/ npx next build)
 ```
 
-Check the sidebar: All releases first, then version groups with the new note.
+Check the sidebar: All releases first, then version groups with the new note;
+no prerelease note in it.
 
 ### 2. Social preview image
 
@@ -157,6 +177,15 @@ annotation="$(mktemp -d)/annotation.txt"
 
 ### 4. Tag, check, push
 
+For a prerelease, record the stable channels first:
+
+```sh
+gh release view --json tagName -q .tagName
+gh api repos/octolab/homebrew-tap/contents/Formula/indexit.rb -q .sha
+```
+
+Then:
+
 ```sh
 git tag -s vX.Y.Z -F "$annotation"
 git tag -v vX.Y.Z
@@ -166,11 +195,14 @@ git push --atomic origin main vX.Y.Z
 
 Run them on `main` with the release commit checked out: `make release-check`
 checks the tag against the branch you are about to push, as the `pre-push`
-hook does.
+hook does, together with tidy modules and the GoReleaser config.
 
 `git tag -v` must report a good signature from a key GitHub knows for your
 email. The catalog publishes only from a tag GitHub verifies, so `cd` checks
 that before anything is published.
+
+If the push lock is set (`remote.origin.pushurl` is `no_push`), lift it for
+this push only and set it again afterwards.
 
 Never push the tag separately. A tag pushed by mistake can be deleted only
 before the GitHub release exists; after that, ship the next patch.
@@ -179,7 +211,7 @@ before the GitHub release exists; after that, ship the next patch.
 
 ```sh
 gh run watch --exit-status "$(gh run list -w cd.yml -c "$(git rev-parse 'vX.Y.Z^{commit}')" -L 1 --json databaseId -q '.[0].databaseId')"
-gh release view vX.Y.Z --json name,assets -q '.name, .assets[].name'
+gh release view vX.Y.Z --json name,isPrerelease,assets -q '.name, .isPrerelease, .assets[].name'
 gh api repos/octolab/homebrew-tap/commits/main -q '.commit.verification.verified, .commit.message'
 gh api repos/octolab/skills/commits/indexit--vX.Y.Z -q '.commit.verification.verified, .commit.message'
 gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
@@ -189,7 +221,11 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   says the run is not found, `cd` hasn't started yet: run the line again.
 - The release has the note's title and body, four archives and
   `checksums.txt`.
-- The Formula commit for vX.Y.Z is verified.
+- A stable release: the Formula commit for vX.Y.Z in the tap is verified,
+  signed as the App.
+- A prerelease: `isPrerelease` is `true`,
+  `gh release view --json tagName -q .tagName` still names the previous stable
+  release, and the Formula has the recorded `sha`.
 - On the first Formula release, retire `Casks/indexit.rb` in `octolab/homebrew-tap`
   as a separate reviewed maintainer change, after the Formula is available.
   GoReleaser creates the Formula but does not delete the old Cask.
@@ -217,6 +253,9 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   `gh release view vX.Y.Z` finds no release): nothing is published. Delete
   the tag with `git push --delete origin vX.Y.Z && git tag -d vX.Y.Z`, fix the
   cause on `main` or in your signing setup, and go back to step 4.
+- **A prerelease reached a stable channel** (*Latest* or the tap changed):
+  restore the previous stable release as *Latest* and the Formula, then
+  file an issue before the next candidate.
 - **Only the skill job failed**: the release and the Formula are out and stay.
   Fix the cause, for example the App's installation on `octolab/skills`, and
   run the failed job again: `gh run rerun <run-id> --failed`.
@@ -234,6 +273,7 @@ Propose a row for "Latest contributions" in the
 [oi012]:  https://github.com/octopot/indexit/releases/tag/v0.1.2
 ```
 
-Newest first, one row per release day. The reference label is `o` + project
+Newest first, one row per release day; a prerelease gets no row. The
+reference label is `o` + project
 initials + version digits. Notes is a short phrase, no longer than the
 existing ones, saying what the user gets.
