@@ -134,7 +134,7 @@ jobs:
       # the runner itself: the same commands keep those warm too
       - name: Build the release checks
         if: steps.cache.outputs.cache-hit != 'true'
-        run: make tools go-check test
+        run: make tools source-check test
       - name: Save the release build cache
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6.1.0

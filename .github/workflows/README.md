@@ -54,8 +54,8 @@ flowchart LR
 ```mermaid
 flowchart LR
   lint[lint: golangci-lint]
-  test[test: fast check, tests, coverage, install and skill install checks] --> report[report: Codecov via OIDC]
-  vulns[vulns: release helpers and hooks, application vulnerabilities]
+  test[test: vet and format, tests, coverage, install and skill install checks] --> report[report: Codecov via OIDC]
+  vulns[vulns: tool pins, release helpers and hooks, application vulnerabilities]
   lint & test & report & vulns --> notify[notify]
 ```
 
@@ -81,7 +81,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   tag([push v* tag]) --> check[check the tag and its note] --> signature[GitHub verifies the tag] --> secrets[check release secrets] --> token[mint the tap token] --> pages[resolve the Pages URL] --> render[render the note]
-  render --> go[set up Go, make tools] --> test[fast check and tests] --> publish[goreleaser release]
+  render --> go[set up Go, make tools] --> test[release checks and tests] --> publish[goreleaser release]
   publish --> release[(GitHub release: body and title from the note)]
   publish --> tap[(Formula in the tap)]
   publish --> archives[check the skill in the archives]
@@ -96,7 +96,7 @@ flowchart TB
   tag in one go: `git push --atomic origin main <tag>`.
 - **Guardrails come first and fail in seconds.** `make release-check` checks the
   tag against the local branch, before it is pushed, together with the
-  `go mod tidy` + `git-check` that `fast-check` would otherwise fail on only
+  `go mod tidy` + `git-check` that `release-verify` would otherwise fail on only
   after the tag is out (ci.yml and tools.yml check it on main too) and
   `goreleaser check`. The `pre-push` hook (`.github/hooks`, wired by
   `make git-hooks`, part of `make setup`) runs `.github/scripts/release.mjs check`
@@ -180,11 +180,18 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  check[make tools, check git state] --> notify[notify]
+  check[make tools, check git state and tool pins] --> notify[notify]
 ```
 
 - Runs on PRs and pushes to main that touch `tools/` or the `Makefile`; monthly; manually.
 - The job fails if installing the tools changes tracked files.
+- `make tool-pins-check` catches what `make go-tools-update` leaves behind:
+  the golangci-lint and goreleaser versions that ci, cd and warmup pass to
+  their actions must be the ones `tools/go.mod` requires; the Go versions in
+  `tools/go.mod`, the workflows, `GO_VERSIONS` of the `Makefile` and "Go X.Y
+  or newer" in the docs must be on the Go line of `go.mod`; the workflows
+  must agree on Node.js. It runs here before the scan of the tools, in ci
+  `vulns` and in the doctor.
 
 ## doctor
 
@@ -192,7 +199,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  doctor[compare with GitHub: default branch, workflows, Pages, site smoke test, go.octolab.org imports, secrets, goreleaser check] --> preflight[check release secrets] --> token[mint the tap token] & catalog[mint the catalog token]
+  doctor[compare with GitHub: default branch, workflows, Pages, site smoke test, go.octolab.org imports, secrets, tool pins, goreleaser check] --> preflight[check release secrets] --> token[mint the tap token] & catalog[mint the catalog token]
 ```
 
 - Daily and manual: a Pages domain change triggers no workflow, so a site

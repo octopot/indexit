@@ -315,6 +315,11 @@ config-vet:
 	$(AT) cue vet -c .github/settings.cue .github/settings.json
 .PHONY: config-vet
 
+# the tool versions the workflows pin follow tools/go.mod, the Go versions go.mod
+tool-pins-check:
+	$(AT) node .github/scripts/tool-pins-check.mjs
+.PHONY: tool-pins-check
+
 doctor:
 	$(AT) node .github/scripts/release.mjs doctor
 .PHONY: doctor
@@ -454,8 +459,7 @@ deps: go-deps-fetch
 tools: go-tools-install
 .PHONY: tools
 
-update:
-	@true # TODO:implement go-deps-update go-tools-update generate
+update: go-deps-update go-tools-update
 .PHONY: update
 
 format: go-fmt

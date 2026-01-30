@@ -581,6 +581,12 @@ async function doctor() {
     else fail(`secret ${name} is missing; ${secretGuide(name, t)}`)
   }
 
+  // imported here, so the other modes run without it, as in the hook tests
+  const { toolPins } = await import('./tool-pins-check.mjs')
+  const pins = toolPins()
+  pins.errors.forEach((e) => fail(`tool pin ${e}; align it, then run: make tool-pins-check`))
+  if (!pins.errors.length) ok(`tool pins follow tools/go.mod and go.mod: ${pins.summary}`)
+
   // make tools installs into bin/<os>/<arch>, named as Go names them
   const arch = { x64: 'amd64', ia32: '386' }[process.arch] || process.arch
   const hostArch = execFileSync('uname', ['-m'], { encoding: 'utf8' }).trim()
