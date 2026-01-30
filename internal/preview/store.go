@@ -14,11 +14,15 @@ import (
 	"strings"
 	"time"
 
+	"go.octolab.org/toolset/indexit/internal/config"
 	"go.octolab.org/toolset/indexit/internal/filelock"
 )
 
 const Prefix = "/preview/telegram/v1/"
-const Origin = "http://indexit.local"
+
+// DefaultOrigin is where the local service answers: .localhost names resolve
+// to loopback without a hosts entry or any other system configuration.
+const DefaultOrigin = "http://indexit.localhost:17840"
 
 var ErrAccount = errors.New("image belongs to another Telegram account")
 var ErrSourceGone = errors.New("original source photograph is no longer available")
@@ -34,7 +38,6 @@ type Source struct {
 func (s Source) Path() string {
 	return fmt.Sprintf("%sa%d/%s/%d/p%d.jpg", Prefix, s.Account, s.Peer, s.Message, s.Photo)
 }
-func (s Source) URL() string { return Origin + s.Path() }
 
 var route = regexp.MustCompile(`^/preview/telegram/v1/a([1-9][0-9]*)/([cgu][1-9][0-9]*)/([1-9][0-9]*)/p(-?[1-9][0-9]*)\.jpg$`)
 
@@ -53,9 +56,25 @@ func Parse(path string) (Source, error) {
 	return Source{Account: a, Peer: m[2], Message: int(id), Photo: p}, nil
 }
 
-type Store struct{ Root string }
+// Store keeps sources and images under Root; Origin, DefaultOrigin when
+// empty, is the scheme, host and port of the URLs written into exports.
+type Store struct{ Root, Origin string }
 
+// Default returns the store of the CLI and the service: the data directory
+// from INDEXIT_DATA_DIR or XDG_DATA_HOME, the origin from config.toml.
 func Default() (*Store, error) {
+	path, err := config.FilePath()
+	if err != nil {
+		return nil, err
+	}
+	file, err := config.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	origin := file.Service.Origin
+	if origin == "" {
+		origin = DefaultOrigin
+	}
 	root := os.Getenv("INDEXIT_DATA_DIR")
 	if root == "" {
 		root = os.Getenv("XDG_DATA_HOME")
@@ -68,7 +87,15 @@ func Default() (*Store, error) {
 		}
 		root = filepath.Join(root, "indexit")
 	}
-	return &Store{Root: root}, nil
+	return &Store{Root: root, Origin: origin}, nil
+}
+
+// URL returns the permanent address of src.
+func (s *Store) URL(src Source) string {
+	if s.Origin == "" {
+		return DefaultOrigin + src.Path()
+	}
+	return s.Origin + src.Path()
 }
 func (s *Store) location(kind string, src Source) string {
 	return filepath.Join(s.Root, kind, strings.TrimPrefix(src.Path(), Prefix))

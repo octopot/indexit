@@ -24,26 +24,19 @@ brew install --formula octolab/tap/indexit
 ```
 
 Do not use `--zap`: keep your Telegram configuration and saved photographs.
-Then configure networking explicitly once:
+Then start the service and check it:
 
 ```sh
-sudo sh "$(brew --prefix octolab/tap/indexit)/libexec/macos-service-network.sh" install
 brew services start octolab/tap/indexit
-curl -4 http://indexit.local/
+curl http://indexit.localhost:17840/
 ```
 
-The service uses IPv4 loopback. On macOS, `curl -4` avoids waiting for an IPv6
-mDNS answer for `.local`; image URLs in Obsidian remain unchanged.
-
-The administrator step adds a marked `127.0.0.1 indexit.local` hosts entry and a
-loopback-only PF rule forwarding port 80 to 17840, restored at boot by a small
-system networking job. It leaves the main PF ruleset intact. The image service
-runs as your normal user and listens only on `127.0.0.1:17840`. Installing the
-package alone neither configures networking nor starts a privileged image service.
-Custom PF configurations or another application already using local port 80 need
-manual resolution. While the rule is active, local traffic to `127.0.0.1:80`
-belongs to indexit; do not start another server on that address. Do not run
-`sudo brew services`.
+Photograph URLs point to `http://indexit.localhost:17840/`. A `.localhost` name
+always means this Mac: macOS resolves it to loopback, `127.0.0.1` and `::1`,
+without a hosts entry, sudo or any other system setup. The image service runs
+as your normal user and listens only on loopback, `127.0.0.1:17840` and
+`[::1]:17840`; without IPv6 it serves on `127.0.0.1` alone. Installing the
+package alone does not start it. Do not run `sudo brew services`.
 
 The service reads the same `~/.config/indexit/.env` and Telegram session as the CLI.
 The service ignores working-directory `.env` files and uses the shared config
@@ -51,6 +44,26 @@ directory; explicit `--env-file` and `INDEXIT_ENV_FILE` still override it. Ordin
 CLI commands retain their working-directory lookup. Use the same account and
 data-directory settings for both processes. Sign in through
 the CLI before requesting an uncached photograph. No separate HTTP proxy is needed.
+
+## Change the URL origin
+
+Each export carries its URLs as they were written. To write new ones with
+another origin, set it in `~/.config/indexit/config.toml`, or
+`$XDG_CONFIG_HOME/indexit/config.toml`, next to the shared `.env`:
+
+```toml
+[service]
+origin = "http://photos.localhost:17840"
+```
+
+The origin is `http://` or `https://`, a host name or an IPv4 address and an
+optional port, with nothing after them but an optional slash. Any `.localhost`
+name on port 17840 reaches the service as well. Another port, or a host that
+does not resolve to this Mac, needs your own proxy in front of the service,
+which keeps listening on its loopback addresses. The CLI and the service read
+the same file, which accepts only this key: an unknown key or a malformed
+origin stops the command with an error naming the file and the key. Without
+the file, URLs use `http://indexit.localhost:17840`.
 
 ## Storage and availability
 
@@ -70,7 +83,7 @@ They are not promised to work from a phone, another machine or a web page that
 blocks local HTTP. Clearing browser cache does not delete the saved photograph.
 
 If Obsidian opens a note before the service is ready, failed image elements may
-remain visible after the service starts. Check `curl -4 http://indexit.local/`,
+remain visible after the service starts. Check `curl http://indexit.localhost:17840/`,
 then reopen the note or switch to reading view to reload its images.
 
 ## Upgrade, stop and remove
@@ -82,11 +95,10 @@ brew services restart octolab/tap/indexit
 brew services stop octolab/tap/indexit
 ```
 
-Old URLs, configuration and saved data survive updates and restarts. Before
-removing the Formula, remove its system networking explicitly:
+Old URLs, configuration and saved data survive updates and restarts. To
+remove the Formula:
 
 ```sh
-sudo sh "$(brew --prefix octolab/tap/indexit)/libexec/macos-service-network.sh" uninstall
 brew services stop octolab/tap/indexit
 brew uninstall --formula octolab/tap/indexit
 ```
@@ -99,10 +111,12 @@ and your Telegram configuration alone. Deleted remote sources cannot be recovere
 
 ```sh
 go build -o ./bin/indexit .
-./bin/indexit service run --listen 127.0.0.1:17840
+./bin/indexit service run
 ```
 
-For a temporary transport check, replace the URL origin with
-`http://127.0.0.1:17840`. This is not the permanent URL stored in notes.
-The ordinary Linux CLI still works; automatic Linux hostname, port and service
-setup is outside this iteration. Root `/` is a health page without an image index.
+Repeat `--listen` with a literal loopback address and port, such as
+`--listen 127.0.0.1:8080`, to replace both default addresses. Without
+`--listen`, a system without IPv6 serves on `127.0.0.1` alone.
+
+The ordinary Linux CLI still works; automatic Linux service setup is outside
+this iteration. Root `/` is a health page without an image index.

@@ -313,6 +313,10 @@ go-dist-check:
 
 config-vet:
 	$(AT) cue vet -c .github/settings.cue .github/settings.json
+	$(AT) for f in internal/config/testdata/valid/*.toml; do cue vet -c internal/config/config.cue "$$f"; done
+	$(AT) for f in internal/config/testdata/invalid/*.toml; do \
+		! cue vet -c internal/config/config.cue "$$f" 2>/dev/null || { echo "$$f: config.cue accepts it" >&2; exit 1; }; \
+	done
 .PHONY: config-vet
 
 # the tool versions the workflows pin follow tools/go.mod, the Go versions go.mod

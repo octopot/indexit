@@ -260,7 +260,7 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			}
 			previewStore, err := preview.Default()
 			if err != nil {
-				return err
+				return usageErr(err)
 			}
 			paths, err := pathsFromFlags(opt)
 			if err != nil {
@@ -349,7 +349,7 @@ func fetchMessagesCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			}
 			previewStore, err := preview.Default()
 			if err != nil {
-				return err
+				return usageErr(err)
 			}
 			paths, err := pathsFromFlags(opt)
 			if err != nil {

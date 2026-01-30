@@ -1,0 +1,3 @@
+[service]
+origin = "http://indexit.localhost:17840"
+Origin = "http://photos.localhost:17840"

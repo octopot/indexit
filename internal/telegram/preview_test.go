@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/gotd/td/tg"
@@ -37,7 +38,7 @@ func TestPreviewSingleNeedsNoAdditionalAPI(t *testing.T) {
 	if api.reads != 0 || rec.Media.PreviewURL == "" || rec.Media.PreviewError != "" {
 		t.Fatalf("%+v reads %d", rec.Media, api.reads)
 	}
-	src, e := preview.Parse(rec.Media.PreviewURL[len(preview.Origin):])
+	src, e := preview.Parse(strings.TrimPrefix(rec.Media.PreviewURL, preview.DefaultOrigin))
 	if e != nil {
 		t.Fatal(e)
 	}

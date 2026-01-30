@@ -1,5 +1,19 @@
 # Agent guide
 
+## Local services
+
+A local service listens on loopback only, on `127.0.0.1` and `::1`, and
+answers at `http://<name>.localhost:<port>/`; `brew services` runs it as the
+user, without root. Each one has its own port, recorded here and in the
+AGENTS.md of the other repository:
+
+| Port | Service |
+| --- | --- |
+| 17840 | indexit |
+| 17841 | maintainer |
+
+A new service takes the next free port and adds it to both tables.
+
 ## Releasing
 
 A release is a curated note plus a signed tag. A stable release also publishes

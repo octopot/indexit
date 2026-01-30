@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -42,6 +43,39 @@ func TestCoordinates(t *testing.T) {
 		if _, e := Parse(p); e == nil {
 			t.Errorf("accepted %s", p)
 		}
+	}
+}
+func TestURL(t *testing.T) {
+	src := testSource()
+	if got := (&Store{}).URL(src); got != "http://indexit.localhost:17840"+src.Path() {
+		t.Errorf("empty origin: %s", got)
+	}
+	if got := (&Store{Origin: "https://images.example:8443"}).URL(src); got != "https://images.example:8443"+src.Path() {
+		t.Errorf("configured origin: %s", got)
+	}
+}
+func TestDefaultOrigin(t *testing.T) {
+	config := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", config)
+	t.Setenv("INDEXIT_DATA_DIR", t.TempDir())
+	if s, e := Default(); e != nil || s.Origin != DefaultOrigin {
+		t.Fatalf("without config.toml: %+v %v", s, e)
+	}
+	path := filepath.Join(config, "indexit", "config.toml")
+	if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(path, []byte("[service]\norigin = \"http://photos.localhost:8080/\"\n"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	if s, e := Default(); e != nil || s.Origin != "http://photos.localhost:8080" {
+		t.Fatalf("from config.toml: %+v %v", s, e)
+	}
+	if e := os.WriteFile(path, []byte("[service]\nurl = \"http://photos.localhost:8080\"\n"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := Default(); e == nil || !strings.Contains(e.Error(), path+": unknown key service.url") {
+		t.Fatalf("unknown key: %v", e)
 	}
 }
 func TestConcurrentColdThenOfflineAfterRestart(t *testing.T) {

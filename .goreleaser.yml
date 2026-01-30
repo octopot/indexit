@@ -7,7 +7,6 @@ archives:
     files:
       - LICENSE
       - skills/indexit/**
-      - scripts/macos-service-network.sh
     formats: [tar.gz]
     name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
 
@@ -29,21 +28,17 @@ brews:
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     install: |
       bin.install "indexit"
-      libexec.install "scripts/macos-service-network.sh"
       generate_completions_from_executable(bin/"indexit", "completion")
     service: |
-      run macos: [opt_bin/"indexit", "service", "run", "--listen", "127.0.0.1:17840"]
+      run macos: [opt_bin/"indexit", "service", "run"]
       keep_alive true
       working_dir Dir.home
       log_path var/"log/indexit.log"
       error_log_path var/"log/indexit.log"
     caveats: |
-      On macOS, configure the local hostname and port explicitly:
-        sudo sh #{opt_libexec}/macos-service-network.sh install
       Start the image service as your normal user:
         brew services start octolab/tap/indexit
-      Before uninstalling, remove networking explicitly:
-        sudo sh #{opt_libexec}/macos-service-network.sh uninstall
+      It answers at http://indexit.localhost:17840/ on loopback, without sudo.
       Photographs and configuration survive upgrades and uninstall.
     test: |
       system "#{bin}/indexit", "version"

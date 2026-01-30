@@ -1,0 +1,2 @@
+[service]
+ORIGIN = "http://indexit.localhost:17840"

@@ -72,7 +72,7 @@ func (p *PreviewWriter) Enrich(ctx context.Context, api API, cache *peers.Cache,
 		if err = p.Store.Save(src); err != nil {
 			return "", err
 		}
-		return src.URL(), nil
+		return p.Store.URL(src), nil
 	}
 	var url string
 	if rec.Media.Type == "photo" {

@@ -111,7 +111,7 @@ Every command and flag of this release:
 ## 4. Read the results
 
 - Ordinary photo messages include `media.preview_url` by default, pointing to
-  the local `http://indexit.local/` service. For albums inspect
+  the local `http://indexit.localhost:17840/` service. For albums inspect
   `media.album.photos`, `complete` and `error`; keep every photograph URL.
   URLs need the local service to display but are generated without it.
   Saved photos remain available after the Telegram source disappears.
@@ -139,10 +139,12 @@ claim an export succeeded without checking its records.
 
 ## Local photograph service
 
-`indexit service run --listen 127.0.0.1:17840` starts the image server for local
-testing. Permanent URLs remain `http://indexit.local/`; on macOS the
-`octolab/tap/indexit` Homebrew Formula supplies `brew services` integration and an
-explicit administrator networking script. Never run the image process as root.
+`indexit service run` starts the image server on `127.0.0.1:17840` and
+`[::1]:17840`; a repeated `--listen` replaces them. Permanent URLs are
+`http://indexit.localhost:17840/`, which resolves to loopback without system
+setup, unless `origin` under `[service]` in `~/.config/indexit/config.toml`
+sets another; on macOS the `octolab/tap/indexit` Homebrew Formula supplies
+`brew services` integration. Never run the image process as root.
 The service uses the CLI's configuration and authorization. Saved photographs
 live in `~/.local/share/indexit` (or `INDEXIT_DATA_DIR`) and are never evicted
 automatically; uninstall preserves them. Do not delete them as routine cleanup.
