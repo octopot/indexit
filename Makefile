@@ -206,7 +206,7 @@ go-lint:
 .PHONY: go-lint
 
 go-pkg:
-	$(AT) open https://pkg.go.dev/$(MODULE)@$(RELEASE)
+	$(AT) open https://pkg.go.dev/$(MODULE)$(if $(filter dev,$(RELEASE)),,@$(RELEASE))
 .PHONY: go-pkg
 
 go-check:
