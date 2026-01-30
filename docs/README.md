@@ -1,6 +1,6 @@
 # indexit documentation
 
-An English, use-case-led site for the v0.2.3 feature set, built on the existing Nextra 4 / Next.js stack.
+An English, use-case-led site for the v0.3.0 feature set, built on the existing Nextra 4 / Next.js stack.
 
 ## Run locally
 
@@ -44,7 +44,8 @@ Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH
 | `components/agent-setup.jsx` | Copyable prompt linking to the agent instructions at the configured site URL |
 | `content/guide/` | Practical workflows, setup, and troubleshooting |
 | `content/changelog/index.mdx` | Release overview |
-| `content/changelog/v0.2.3.md` | Latest release notes |
+| `content/changelog/v0.3.0.md` | Latest release notes |
+| `content/changelog/v0.2.3.md` | Skill status for Codex plugins release notes |
 | `content/changelog/v0.2.2.md` | User and bot cards, account-bound peer cache release notes |
 | `content/changelog/v0.2.1.md` | Account status release notes |
 | `content/changelog/v0.2.0.md` | Channel cards, invite previews, and agent skill release notes |
@@ -78,7 +79,7 @@ The docs build stops while the two disagree, the deployment is smoke-tested, and
 
 The CLI implementation is the source of truth: check examples against command help and tests. Closed issues provide context, not a substitute for checking the current code.
 
-The documentation is prepared for v0.2.3. Publish the matching release archives before directing users to its download links. Lead installation instructions with Homebrew and release binaries; keep source builds as an optional contributor workflow. Lead usage examples with direct pipes into fx, jq, or fzf; avoid intermediate JSONL files. Use readable public usernames and Telegram links in commands, keeping numeric UID grammar in the reference. Archive names and supported platforms must match `.goreleaser.yml`. Do not describe planned features as shipped.
+The documentation is prepared for v0.3.0. Publish the matching release archives before directing users to its download links. Lead installation instructions with Homebrew and release binaries; keep source builds as an optional contributor workflow. Lead usage examples with direct pipes into fx, jq, or fzf; avoid intermediate JSONL files. Use readable public usernames and Telegram links in commands, keeping numeric UID grammar in the reference. Archive names and supported platforms must match `.goreleaser.yml`. Do not describe planned features as shipped.
 
 Release notes describe changes to indexit's behavior and Telegram compatibility. Keep documentation, development tools, CI/CD, and repository inventory changes out of the product changelog. A release note describes its release as published, with examples that reproduce on the built binary. Preserve historical release notes when updating the current installation instructions. How to write a note and cut a release: [AGENTS.md](../AGENTS.md#releasing).
 
