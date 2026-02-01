@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.octolab.org/toolset/indexit/internal/config"
 	"go.octolab.org/toolset/indexit/internal/exitcode"
 	"go.octolab.org/toolset/indexit/internal/preview"
 )
@@ -56,7 +57,13 @@ func TestServiceRunRejectsNonLoopbackAddresses(t *testing.T) {
 // reports and the result of the run.
 func startService(t *testing.T, ctx context.Context, args ...string) ([]string, <-chan error) {
 	t.Helper()
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	return startServiceWith(t, ctx, t.TempDir(), args...)
+}
+
+// startServiceWith is startService with the given XDG_CONFIG_HOME.
+func startServiceWith(t *testing.T, ctx context.Context, configHome string, args ...string) ([]string, <-chan error) {
+	t.Helper()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
 	t.Setenv("INDEXIT_DATA_DIR", t.TempDir())
 	stderr, logs := io.Pipe()
 	cmd := NewService()
@@ -102,6 +109,27 @@ func TestServiceRunServesEveryAddressUntilCancelled(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode, address)
 		assert.Equal(t, "indexit image service is running\n", string(body), address)
 	}
+	cancel()
+	assert.NoError(t, <-done)
+}
+
+func TestServiceRunWritesTheDefaultConfig(t *testing.T) {
+	configHome := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+	_, done := startServiceWith(t, ctx, configHome, "--listen", "127.0.0.1:0")
+	cancel()
+	require.NoError(t, <-done)
+	data, err := os.ReadFile(filepath.Join(configHome, "indexit", "config.toml"))
+	require.NoError(t, err)
+	assert.Equal(t, config.Template, data)
+}
+
+func TestServiceRunStartsWithoutAWritableConfigDirectory(t *testing.T) {
+	configHome := t.TempDir()
+	require.NoError(t, os.Chmod(configHome, 0o500))
+	t.Cleanup(func() { _ = os.Chmod(configHome, 0o700) })
+	ctx, cancel := context.WithCancel(context.Background())
+	_, done := startServiceWith(t, ctx, configHome, "--listen", "127.0.0.1:0")
 	cancel()
 	assert.NoError(t, <-done)
 }

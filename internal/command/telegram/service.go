@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"go.octolab.org/toolset/indexit/internal/config"
 	indexlog "go.octolab.org/toolset/indexit/internal/log"
 	"go.octolab.org/toolset/indexit/internal/preview"
 	tgsvc "go.octolab.org/toolset/indexit/internal/telegram"
@@ -36,7 +37,8 @@ func NewService() *cobra.Command {
 		"It runs as your user and listens on 127.0.0.1 and ::1 at port " + strconv.Itoa(Port) + "; a default\n" +
 		"address the system lacks, as ::1 with IPv6 turned off, is skipped.\n" +
 		"--listen replaces the defaults and may repeat. Photograph URLs use origin\n" +
-		"under [service] in config.toml, " + preview.DefaultOrigin + " by default.", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+		"under [service] in config.toml, " + preview.DefaultOrigin + " by default.\n" +
+		"Without a config.toml, it writes one with every key commented out.", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		for _, address := range listen {
 			host, port, err := net.SplitHostPort(address)
 			if err != nil {
@@ -50,6 +52,18 @@ func NewService() *cobra.Command {
 				return usageErr(fmt.Errorf("--listen must end with a port from 0 to 65535, not %q", port))
 			}
 		}
+		log := indexlog.FromContext(cmd.Context()).Logger
+		configPath, err := config.FilePath()
+		if err != nil {
+			return usageErr(err)
+		}
+		// The service writes the default config, so there is a file to edit;
+		// without one it still starts on the defaults.
+		if created, err := config.EnsureFile(configPath); err != nil {
+			log.Warn("config: cannot create the default file", "path", configPath, "error", err)
+		} else if created {
+			log.Info("config: created the default file", "path", configPath)
+		}
 		store, err := preview.Default()
 		if err != nil {
 			return usageErr(err)
@@ -58,7 +72,6 @@ func NewService() *cobra.Command {
 		if err != nil {
 			return err
 		}
-		log := indexlog.FromContext(cmd.Context()).Logger
 		handler := store.Handler(func(ctx context.Context, src preview.Source, path string) error {
 			client, err := newClient(cmd, paths)
 			if err != nil {

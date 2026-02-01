@@ -45,11 +45,19 @@ CLI commands retain their working-directory lookup. Use the same account and
 data-directory settings for both processes. Sign in through
 the CLI before requesting an uncached photograph. No separate HTTP proxy is needed.
 
-## Change the URL origin
+## Configuration
+
+`indexit service run` writes `~/.config/indexit/config.toml`, or
+`$XDG_CONFIG_HOME/indexit/config.toml`, next to the shared `.env`, when there
+is none: every key is there, commented out with its default. It never changes
+an existing file. `brew services` starts the service without your shell's
+environment, so it uses `~/.config` even if you set `XDG_CONFIG_HOME`; the
+service log names the file it wrote.
+
+### Change the URL origin
 
 Each export carries its URLs as they were written. To write new ones with
-another origin, set it in `~/.config/indexit/config.toml`, or
-`$XDG_CONFIG_HOME/indexit/config.toml`, next to the shared `.env`:
+another origin, uncomment `origin` under `[service]`:
 
 ```toml
 [service]
@@ -61,9 +69,9 @@ optional port, with nothing after them but an optional slash. Any `.localhost`
 name on port 17840 reaches the service as well. Another port, or a host that
 does not resolve to this Mac, needs your own proxy in front of the service,
 which keeps listening on its loopback addresses. The CLI and the service read
-the same file, which accepts only this key: an unknown key or a malformed
-origin stops the command with an error naming the file and the key. Without
-the file, URLs use `http://indexit.localhost:17840`.
+the same file, which accepts only the keys of the template: an unknown key or
+a malformed value stops the command with an error naming the file and the
+key. Without an origin, URLs use `http://indexit.localhost:17840`.
 
 ## Storage and availability
 

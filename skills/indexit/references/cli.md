@@ -33,6 +33,7 @@ It runs as your user and listens on 127.0.0.1 and ::1 at port 17840; a default
 address the system lacks, as ::1 with IPv6 turned off, is skipped.
 --listen replaces the defaults and may repeat. Photograph URLs use origin
 under [service] in config.toml, http://indexit.localhost:17840 by default.
+Without a config.toml, it writes one with every key commented out.
 
 ```text
 indexit service run [flags]

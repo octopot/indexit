@@ -1,0 +1,10 @@
+# indexit configuration, read by the CLI and by `indexit service run`.
+# `indexit service run` wrote this file because there was none; it never
+# changes it again. Every key is optional: a commented key keeps its default,
+# an unknown key is an error. Reference:
+# https://indexit.octolab.org/guide/local-images/
+
+[service]
+# Scheme, host and optional port of the photograph URLs written into exports.
+# Exports keep the origin they were written with.
+# origin = "http://indexit.localhost:17840"

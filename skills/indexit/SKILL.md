@@ -157,3 +157,4 @@ sets another; on macOS the `octolab/tap/indexit` Homebrew Formula supplies
 The service uses the CLI's configuration and authorization. Saved photographs
 live in `~/.local/share/indexit` (or `INDEXIT_DATA_DIR`) and are never evicted
 automatically; uninstall preserves them. Do not delete them as routine cleanup.
+The service writes a commented `config.toml` when there is none.
