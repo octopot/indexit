@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.octolab.org/toolset/indexit/internal/preview"
 	"go.octolab.org/toolset/indexit/internal/telegram/model"
 	"go.octolab.org/toolset/indexit/internal/telegram/peers"
 	"go.octolab.org/toolset/indexit/internal/telegram/uid"
@@ -425,6 +427,27 @@ func TestFetchMessagesByID_LargeAlbumIsReadToItsEnd(t *testing.T) {
 func TestFetchMessagesByID_AlbumCountsAgainstLimit(t *testing.T) {
 	api := &postsAPI{posts: albumPosts(11, 12, 13)}
 	assert.Equal(t, []int{11, 12}, fetchIDs(t, api, MessageOptions{IDs: []int{12}, Limit: 2}))
+}
+
+func TestFetchMessagesByID_WritesNothing(t *testing.T) {
+	root := t.TempDir()
+	api := &postsAPI{posts: albumPosts(11, 12, 13)}
+	cache := peers.New()
+	cache.Put(peers.Entry{Kind: uid.KindChannel, ID: 77, AccessHash: 555})
+	w := &recWriter{}
+	require.NoError(t, FetchMessagesByID(t.Context(), api, cache, w, MessageOptions{
+		Peer:     uid.PeerRef{Kind: uid.KindChannel, ID: 77},
+		IDs:      []int{12},
+		Previews: &PreviewWriter{Store: &preview.Store{Root: root}},
+	}, RateGuard{}))
+	require.Len(t, w.records, 3)
+	for i, r := range w.records {
+		assert.Equal(t, fmt.Sprintf("%s/preview/telegram/v1/c77/%d/p%d.jpg", preview.DefaultOrigin, 11+i, 11+i), r.(model.MessageRecord).Media.PreviewURL)
+	}
+	assert.Equal(t, "What the author wrote", w.records[0].(model.MessageRecord).Text)
+	entries, err := os.ReadDir(root)
+	require.NoError(t, err)
+	assert.Empty(t, entries, "a fetch writes nothing for the photographs it describes")
 }
 
 func TestFetchMessagesByID_NeighbouringAlbums(t *testing.T) {

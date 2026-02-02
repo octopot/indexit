@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	photo = preview.Source{Account: 42, Peer: "c123", Message: 7, Photo: 9}
-	other = preview.Source{Account: 42, Peer: "c123", Message: 8, Photo: 10}
+	photo = preview.Source{Channel: 123, Message: 7, Photo: 9}
+	other = preview.Source{Channel: 123, Message: 8, Photo: 10}
 )
 
 func discard() *slog.Logger { return slog.New(slog.NewTextHandler(io.Discard, nil)) }

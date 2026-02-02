@@ -88,17 +88,21 @@ Continue with [topics and media](/guide/media/) to bring photos home, or [jq fil
 ## Local photograph URLs
 
 Both message commands include `media.preview_url` by default for ordinary cloud
-photographs. URLs point to `http://indexit.localhost:17840/` and identify the account, dialog,
-message and exact Telegram photo. Producing a URL does not require a running
-service or download the picture. A single photo uses the existing API metadata.
-
-Every message of an album carries the URL of its own photograph. Failure to
-store an individual source appears in `media.preview_error`.
+photographs of channel and supergroup posts, the posts you can copy a message
+link to. URLs point to `http://indexit.localhost:17840/` and name the channel,
+the post and the exact Telegram photo:
+`/preview/telegram/v1/c<channel>/<message>/p<photo>.jpg`. Nothing in them
+identifies your account, so another computer can show them too. Producing a
+URL writes nothing, needs no running service and downloads nothing. Photographs
+of private chats and basic groups get no URL; `fetch media` downloads them. A
+photograph that cannot be kept, such as one that expires, gets
+`media.preview_error` instead.
 
 The local service downloads the largest available Telegram JPEG on first GET,
 using your existing Telegram authorization and MTProto proxy. It does not scrape
 Telegram web pages or use temporary public CDN links. Saved bytes survive source
 post deletion, edits, logout, account changes and service upgrades. An uncached
-old URL fails if the original photo has disappeared; it never returns a replacement.
+URL answers `410` if the original photo has disappeared or was replaced; it never
+returns a replacement.
 
 See [Local image service](/guide/local-images/) for explicit setup and lifecycle.

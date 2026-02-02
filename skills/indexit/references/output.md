@@ -120,10 +120,15 @@ Partial results with `0`:
 
 ## Local photo previews
 
-Photo `media` adds `preview_url` or `preview_error`. The URL identifies the account,
-dialog, message and exact Photo.ID; preserve its string verbatim. It is local to
-the user's machine, not a public share URL. The service downloads the largest
-Telegram JPEG unchanged on first GET and then serves its persistent disk copy.
+Photo `media` of a channel or supergroup post adds `preview_url`, or
+`preview_error` for a photograph that cannot be kept. The URL,
+`/preview/telegram/v1/c<channel>/<message>/p<photo>.jpg`, names the channel, the
+post and the exact Photo.ID and nothing about the account; preserve its string
+verbatim. Generating it writes nothing. Photographs of private chats and basic
+groups get neither field. The URL is local to the user's machine, not a public
+share URL. The service downloads the largest Telegram JPEG unchanged on first
+GET and then serves its persistent disk copy; `404` means the account cannot
+find the channel, `410` that the post or the photograph is gone or replaced.
 
 An album is one record per message; each photograph's URL is in its own
 record. Collect them by `grouped_id` in the order of `id`.

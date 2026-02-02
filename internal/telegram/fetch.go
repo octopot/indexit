@@ -155,7 +155,7 @@ func FetchMessages(ctx context.Context, api API, cache *peers.Cache, out Writer,
 	}
 	return walkMessages(ctx, api, cache, resolved, window, guard, "messages",
 		func(ctx context.Context, msg *tg.Message, entities gotdpeer.Entities) (bool, error) {
-			rec := opt.Previews.Enrich(ctx, api, cache, resolved, msg, mapper.Message(resolved.UID, resolved.TopicID, msg, entities), guard)
+			rec := opt.Previews.Enrich(msg, mapper.Message(resolved.UID, resolved.TopicID, msg, entities))
 			if err := out.Write(rec); err != nil {
 				return false, err
 			}

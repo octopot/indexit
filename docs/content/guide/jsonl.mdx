@@ -51,7 +51,7 @@ Optional fields can be absent, including most false flags and zero counters. The
 
 Dates are RFC3339 in UTC. Text is plain text; formatting entities are not exported. Reactions are a total, not a breakdown by emoji.
 
-`fetch messages` describes attachments. [Use `fetch media`](/guide/media/) for bytes, paths, and album IDs. A photo descriptor can contain only `type`; the download result carries its size. The messages of an album share `grouped_id`; `fetch message` with a link to one of them gives them all.
+`fetch messages` describes attachments. [Use `fetch media`](/guide/media/) for bytes, paths, and album IDs. A photo descriptor can contain only `type` and, for a channel or supergroup post, `preview_url`; the download result carries its size. The messages of an album share `grouped_id`; `fetch message` with a link to one of them gives them all.
 
 IDs can require 64-bit integer precision, particularly `grouped_id`. Use a JSON reader that preserves exact integers when IDs matter. Keep importers tolerant of optional and additional fields; v0.3.1 has no schema version.
 

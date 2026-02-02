@@ -35,6 +35,9 @@ address the system lacks, as ::1 with IPv6 turned off, is skipped.
 under [service] in config.toml, http://indexit.localhost:17840 by default.
 Without a config.toml, it writes one with every key commented out.
 
+A photograph is saved the first time its URL is requested and served from
+disk from then on.
+
 On this machine, / is a dashboard of the saved photographs. dashboard = false
 under [service] turns it off. Request counts go to stats/ in the data directory.
 
@@ -277,7 +280,8 @@ Missing, service, and out-of-scope messages are skipped with a warning.
 
 A message of an album brings every message of the album, in message order,
 whichever of them the link names; each message is emitted once per run.
-Photo media includes a stable local preview_url.
+A photograph of a channel or supergroup post includes a stable local
+preview_url; fetching it writes nothing.
 
 ```text
 indexit telegram fetch message [<t.me link> ...] [flags]

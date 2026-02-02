@@ -1,5 +1,5 @@
 // Package dashboard serves the statistics page of the image service: what
-// the data directory holds and what the service served, at / and as JSON.
+// the image directory holds and what the service served, at / and as JSON.
 //
 // The page lists every saved photograph, so it answers only requests that
 // name this machine (localhost, a .localhost name or a loopback IP address)
@@ -162,7 +162,7 @@ func (d *Dashboard) Handler(next http.Handler) http.Handler {
 				return
 			}
 			d.serve(w, r, d.html)
-		case p == "/api/v1/stats", p == "/api/v1/unsaved", strings.HasPrefix(p, "/assets/"), strings.HasPrefix(p, "/thumbnails/"):
+		case p == "/api/v1/stats", strings.HasPrefix(p, "/assets/"), strings.HasPrefix(p, "/thumbnails/"):
 			if r.Method != http.MethodGet && r.Method != http.MethodHead {
 				w.Header().Set("Allow", "GET, HEAD")
 				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -175,8 +175,6 @@ func (d *Dashboard) Handler(next http.Handler) http.Handler {
 			switch {
 			case p == "/api/v1/stats":
 				d.serve(w, r, d.json)
-			case p == "/api/v1/unsaved":
-				d.serve(w, r, d.unsaved)
 			case strings.HasPrefix(p, "/assets/"):
 				d.asset(w, r)
 			default:
@@ -203,7 +201,7 @@ func (d *Dashboard) html(w http.ResponseWriter, r *http.Request, s *state) {
 	if s != nil {
 		inv, totals = s.inv, s.totals
 	}
-	v := d.build(r, inv, totals, time.Now())
+	v := d.build(inv, totals, time.Now())
 	if s != nil && s.logErr != nil {
 		v.LogErr = s.logErr.Error()
 	}
@@ -215,19 +213,6 @@ func (d *Dashboard) html(w http.ResponseWriter, r *http.Request, s *state) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write(page.Bytes())
-}
-
-func (d *Dashboard) unsaved(w http.ResponseWriter, r *http.Request, s *state) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	if s == nil {
-		http.Error(w, "the dashboard is still counting; retry in a moment", http.StatusServiceUnavailable)
-		return
-	}
-	var list bytes.Buffer
-	for _, p := range s.inv.NotSaved() {
-		list.WriteString("http://" + r.Host + p + "\n")
-	}
-	_, _ = w.Write(list.Bytes())
 }
 
 func (d *Dashboard) asset(w http.ResponseWriter, r *http.Request) {
@@ -252,10 +237,10 @@ func (d *Dashboard) thumbnail(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// inImages reports whether the photograph of src is a file under images/,
-// not a link to one elsewhere; images/ itself may be a link.
+// inImages reports whether the photograph of src is a file in the image
+// directory, not a link to one elsewhere; the directory itself may be a link.
 func (d *Dashboard) inImages(src preview.Source) bool {
-	root, err := filepath.EvalSymlinks(filepath.Join(d.Store.Root, "images"))
+	root, err := filepath.EvalSymlinks(d.Store.ImageDir())
 	if err != nil {
 		return false
 	}
@@ -316,12 +301,9 @@ type apiStats struct {
 }
 
 type apiPhotos struct {
-	Saved      int   `json:"saved"`
-	Bytes      int64 `json:"bytes"`
-	Registered int   `json:"registered"`
-	NotSaved   int   `json:"not_saved"`
-	Orphaned   int   `json:"without_source"`
-	Invalid    int   `json:"invalid_files"`
+	Saved   int   `json:"saved"`
+	Bytes   int64 `json:"bytes"`
+	Invalid int   `json:"invalid_files"`
 }
 
 type apiRequests struct {
@@ -337,8 +319,7 @@ type apiRequests struct {
 
 type apiPhoto struct {
 	URL      string    `json:"url"`
-	Account  string    `json:"account"`
-	Peer     string    `json:"peer"`
+	Channel  string    `json:"channel"`
 	Message  int       `json:"message"`
 	Photo    string    `json:"photo"`
 	Bytes    int64     `json:"bytes"`
@@ -348,8 +329,7 @@ type apiPhoto struct {
 }
 
 type apiDialog struct {
-	Peer        string `json:"peer"`
-	Account     string `json:"account"`
+	Channel     string `json:"channel"`
 	Title       string `json:"title"`
 	Photographs int    `json:"photographs"`
 	Bytes       int64  `json:"bytes"`
@@ -377,7 +357,7 @@ func (d *Dashboard) json(w http.ResponseWriter, r *http.Request, s *state) {
 			out.Photographs.Bytes += photo.Size
 			key := peerKey(photo.Source)
 			if dialogs[key] == nil {
-				dialogs[key] = &apiDialog{Peer: photo.Source.Peer, Account: strconv.FormatInt(photo.Source.Account, 10), Title: peerTitle(inv, photo.Source)}
+				dialogs[key] = &apiDialog{Channel: strconv.FormatInt(photo.Source.Channel, 10), Title: peerTitle(inv, photo.Source)}
 				order = append(order, key)
 			}
 			dialogs[key].Photographs++
@@ -387,17 +367,14 @@ func (d *Dashboard) json(w http.ResponseWriter, r *http.Request, s *state) {
 			out.Dialogs = append(out.Dialogs, *dialogs[key])
 		}
 		out.Photographs.Saved = len(inv.Photos)
-		out.Photographs.Registered = len(inv.Sources)
-		out.Photographs.NotSaved = len(inv.NotSaved())
-		out.Photographs.Orphaned = inv.Orphans()
 		out.Photographs.Invalid = inv.Invalid
-		if free, ok := diskFree(filepath.Join(d.Store.Root, "images")); ok {
+		if free, ok := diskFree(d.Store.ImageDir()); ok {
 			n := int64(min(free, 1<<63-1))
 			out.DiskFree = &n
 		}
 		for _, photo := range inv.Photos[:min(10, len(inv.Photos))] {
 			out.Recent = append(out.Recent, apiPhoto{
-				URL: d.Store.URL(photo.Source), Account: strconv.FormatInt(photo.Source.Account, 10), Peer: photo.Source.Peer,
+				URL: d.Store.URL(photo.Source), Channel: strconv.FormatInt(photo.Source.Channel, 10),
 				Message: photo.Source.Message, Photo: strconv.FormatInt(photo.Source.Photo, 10), Bytes: photo.Size,
 				SavedAt: photo.Saved, Dialog: peerTitle(inv, photo.Source), Telegram: telegramLink(inv, photo.Source),
 			})

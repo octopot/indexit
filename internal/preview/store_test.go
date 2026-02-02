@@ -26,7 +26,11 @@ func jpegBytes(t *testing.T) []byte {
 	return b.Bytes()
 }
 func testSource() Source {
-	return Source{Account: 42, Peer: "c123", Message: 7, Photo: -9223372036854775808, AccessHash: 99}
+	return Source{Channel: 123, Message: 7, Photo: -9223372036854775808}
+}
+func saved(store *Store, src Source) bool {
+	st, err := os.Lstat(store.ImagePath(src))
+	return err == nil && st.Mode().IsRegular() && st.Size() > 0
 }
 func request(h http.Handler, path string) *httptest.ResponseRecorder {
 	r := httptest.NewRecorder()
@@ -36,10 +40,11 @@ func request(h http.Handler, path string) *httptest.ResponseRecorder {
 func TestCoordinates(t *testing.T) {
 	src := testSource()
 	got, e := Parse(src.Path())
-	if e != nil || got.Photo != src.Photo || got.Account != src.Account {
-		t.Fatalf("%+v %v", got, e)
+	if e != nil || got != src || src.Path() != "/preview/telegram/v1/c123/7/p-9223372036854775808.jpg" {
+		t.Fatalf("%s %+v %v", src.Path(), got, e)
 	}
-	for _, p := range []string{Prefix + "a0/c1/1/p1.jpg", Prefix + "a1/c1/1/p9223372036854775808.jpg", Prefix + "a1/c1/1/p-0.jpg", Prefix + "a1/c1/../p1.jpg", Prefix + "a1/x1/1/p1.jpg"} {
+	for _, p := range []string{Prefix + "c0/1/p1.jpg", Prefix + "c1/1/p9223372036854775808.jpg", Prefix + "c1/1/p-0.jpg", Prefix + "c1/../p1.jpg",
+		Prefix + "g1/1/p1.jpg", Prefix + "u1/1/p1.jpg", Prefix + "a1/c1/1/p1.jpg", Prefix + "c1/1/p1 (1).jpg"} {
 		if _, e := Parse(p); e == nil {
 			t.Errorf("accepted %s", p)
 		}
@@ -81,16 +86,13 @@ func TestDefaultOrigin(t *testing.T) {
 func TestConcurrentColdThenOfflineAfterRestart(t *testing.T) {
 	store := &Store{Root: t.TempDir()}
 	src := testSource()
-	if e := store.Save(src); e != nil {
-		t.Fatal(e)
-	}
 	data := jpegBytes(t)
 	var calls atomic.Int32
 	h := store.Handler(func(ctx context.Context, s Source, p string) error {
 		calls.Add(1)
 		time.Sleep(40 * time.Millisecond)
-		if s.AccessHash != 99 {
-			t.Error("lost source metadata")
+		if s != src {
+			t.Error("lost coordinates")
 		}
 		return os.WriteFile(p, data, 0600)
 	}, nil)
@@ -107,15 +109,14 @@ func TestConcurrentColdThenOfflineAfterRestart(t *testing.T) {
 	if calls.Load() != 1 {
 		t.Fatalf("downloads: %d", calls.Load())
 	}
-	// Metadata, session and network are no longer available; a new process/store
-	// must still serve exactly the original bytes.
-	if e := os.RemoveAll(filepath.Join(store.Root, "sources")); e != nil {
-		t.Fatal(e)
-	}
+	// Session and network are no longer available; a new process/store must
+	// still serve exactly the original bytes.
 	reopened := &Store{Root: store.Root}
-	offline := reopened.Handler(func(context.Context, Source, string) error {
-		t.Error("network called for cached photo")
-		return errors.New("logged out")
+	offline := reopened.Handler(func(_ context.Context, s Source, _ string) error {
+		if s == src {
+			t.Error("network called for cached photo")
+		}
+		return ErrSourceGone
 	}, nil)
 	r := request(offline, src.Path())
 	if r.Code != 200 || !bytes.Equal(r.Body.Bytes(), data) {
@@ -123,7 +124,7 @@ func TestConcurrentColdThenOfflineAfterRestart(t *testing.T) {
 	}
 	replacement := src
 	replacement.Photo++
-	if r = request(offline, replacement.Path()); r.Code != 404 {
+	if r = request(offline, replacement.Path()); r.Code != 410 {
 		t.Fatalf("replacement silently substituted: %d", r.Code)
 	}
 }
@@ -131,9 +132,6 @@ func TestFailureDoesNotPublishPartialAndRetries(t *testing.T) {
 	for _, bad := range []bool{true, false} {
 		store := &Store{Root: t.TempDir()}
 		src := testSource()
-		if e := store.Save(src); e != nil {
-			t.Fatal(e)
-		}
 		var calls int
 		data := jpegBytes(t)
 		h := store.Handler(func(_ context.Context, _ Source, p string) error {
@@ -172,76 +170,154 @@ func TestNoExternalSourcesOrDirectoryListing(t *testing.T) {
 	}
 }
 
-func TestSourceSaveDoesNotRewriteUnchangedMetadata(t *testing.T) {
-	store := &Store{Root: t.TempDir()}
-	src := testSource()
-	if err := store.Save(src); err != nil {
-		t.Fatal(err)
-	}
-	path := store.location("sources", src) + ".json"
-	old := time.Unix(1000, 0)
-	if err := os.Chtimes(path, old, old); err != nil {
-		t.Fatal(err)
-	}
-	if err := store.Save(src); err != nil {
-		t.Fatal(err)
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !info.ModTime().Equal(old) {
-		t.Fatal("unchanged source rewritten")
-	}
-	src.AccessHash++
-	if err := store.Save(src); err != nil {
-		t.Fatal(err)
-	}
-	got, err := store.Read(src)
-	if err != nil || got.AccessHash != src.AccessHash {
-		t.Fatal("updated access hash lost")
-	}
-}
 func TestStatusAndStaleDownloadCleanup(t *testing.T) {
 	for _, tc := range []struct {
 		err    error
 		status int
-	}{{ErrAccount, 403}, {ErrSourceGone, 410}, {context.DeadlineExceeded, 503}} {
+	}{{ErrNotFound, 404}, {ErrSourceGone, 410}, {context.DeadlineExceeded, 503}} {
 		store := &Store{Root: filepath.Join(t.TempDir(), "[data]")}
 		src := testSource()
-		if err := store.Save(src); err != nil {
-			t.Fatal(err)
-		}
 		dir := filepath.Dir(store.ImagePath(src))
 		if err := os.MkdirAll(dir, 0700); err != nil {
 			t.Fatal(err)
 		}
-		stale := filepath.Join(dir, ".p-9223372036854775808-download-dead.part")
-		if err := os.WriteFile(stale, []byte("old partial"), 0600); err != nil {
-			t.Fatal(err)
+		// a crash of this computer left one; another computer writes the other
+		own := filepath.Join(dir, ".p-9223372036854775808."+host()+".1.dead.part")
+		live := filepath.Join(dir, ".p-9223372036854775808."+host()+".2.live")
+		other := filepath.Join(dir, ".p-9223372036854775808.other-mac.3.live")
+		for _, path := range []string{own, live, other} {
+			if err := os.WriteFile(path, []byte("partial"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		old := time.Now().Add(-time.Hour)
+		for _, path := range []string{own, other} {
+			if err := os.Chtimes(path, old, old); err != nil {
+				t.Fatal(err)
+			}
 		}
 		h := store.Handler(func(context.Context, Source, string) error { return tc.err }, nil)
 		r := request(h, src.Path())
 		if r.Code != tc.status || r.Header().Get("Cache-Control") != "no-store" {
 			t.Fatalf("%d %v", r.Code, r.Header())
 		}
-		if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		if _, err := os.Stat(own); !os.IsNotExist(err) {
 			t.Fatal("crash leftover not removed")
+		}
+		if _, err := os.Stat(other); err != nil {
+			t.Fatal("removed a temporary file of another computer")
+		}
+		if _, err := os.Stat(live); err != nil {
+			t.Fatal("removed a download in progress of another service of this computer")
 		}
 	}
 }
+
+func TestImageDirectoryIsApart(t *testing.T) {
+	root, images := t.TempDir(), filepath.Join(t.TempDir(), "Google Drive", "images")
+	store := &Store{Root: root, Images: images}
+	src := testSource()
+	data := jpegBytes(t)
+	h := store.Handler(func(_ context.Context, _ Source, p string) error { return os.WriteFile(p, data, 0600) }, nil)
+	if r := request(h, src.Path()); r.Code != 200 {
+		t.Fatal(r.Code)
+	}
+	want := filepath.Join(images, "c123", "7", "p-9223372036854775808.jpg")
+	if got, err := os.ReadFile(want); err != nil || !bytes.Equal(got, data) {
+		t.Fatalf("the photograph is not the URL's path under the image directory: %v", err)
+	}
+	locks, err := filepath.Glob(filepath.Join(root, "locks", "*.lock"))
+	if err != nil || len(locks) != 1 || store.lockPath(src) != locks[0] {
+		t.Fatalf("the lock is not one of the shared ones in the data directory: %v", locks)
+	}
+	entries, _ := os.ReadDir(filepath.Dir(want))
+	if len(entries) != 1 {
+		t.Fatalf("left files next to the photograph: %v", entries)
+	}
+	// another computer, sharing the directory, without a session
+	other := (&Store{Root: t.TempDir(), Images: images}).Handler(func(context.Context, Source, string) error {
+		t.Error("network called for a photograph another computer saved")
+		return errors.New("no session")
+	}, nil)
+	if r := request(other, src.Path()); r.Code != 200 || !bytes.Equal(r.Body.Bytes(), data) {
+		t.Fatal(r.Code)
+	}
+}
+
+func TestUnreadablePhotographIsNotDownloadedAgain(t *testing.T) {
+	store := &Store{Root: t.TempDir()}
+	src := testSource()
+	path := store.ImagePath(src)
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for name, make := range map[string]func() error{
+		"empty":       func() error { return os.WriteFile(path, nil, 0600) },
+		"no access":   func() error { return os.WriteFile(path, jpegBytes(t), 0) },
+		"a directory": func() error { return os.Mkdir(path, 0700) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			if os.Getuid() == 0 && name == "no access" {
+				t.Skip("root reads anything")
+			}
+			_ = os.RemoveAll(path)
+			if err := make(); err != nil {
+				t.Fatal(err)
+			}
+			var outcomes []Outcome
+			h := store.Handler(func(context.Context, Source, string) error {
+				t.Error("downloaded over a saved photograph")
+				return nil
+			}, func(o Outcome) { outcomes = append(outcomes, o) })
+			if r := request(h, src.Path()); r.Code != 503 {
+				t.Fatalf("%d %s", r.Code, r.Body.String())
+			}
+			if len(outcomes) != 1 || outcomes[0].Kind != Failure {
+				t.Fatalf("%+v", outcomes)
+			}
+		})
+	}
+}
+
+func TestPublishNeverOverwrites(t *testing.T) {
+	dir := t.TempDir()
+	path, tmp := filepath.Join(dir, "p1.jpg"), filepath.Join(dir, ".p1.tmp")
+	for _, f := range []struct{ path, data string }{{path, "first"}, {tmp, "second"}} {
+		if err := os.WriteFile(f.path, []byte(f.data), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := publish(tmp, path); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "first" {
+		t.Fatalf("overwritten: %q", got)
+	}
+}
+
+func TestIncompleteJPEGIsNotPublished(t *testing.T) {
+	data := jpegBytes(t)
+	for name, body := range map[string][]byte{"cut short": data[:len(data)-10], "not a JPEG": []byte("<html>error</html>"), "markers only": {0xFF, 0xD8, 0xFF, 0xD9}} {
+		t.Run(name, func(t *testing.T) {
+			store := &Store{Root: t.TempDir()}
+			src := testSource()
+			h := store.Handler(func(_ context.Context, _ Source, p string) error { return os.WriteFile(p, body, 0600) }, nil)
+			if r := request(h, src.Path()); r.Code != 502 {
+				t.Fatal(r.Code)
+			}
+			if saved(store, src) {
+				t.Fatal("published an incomplete photograph")
+			}
+		})
+	}
+}
+
 func TestOutcomes(t *testing.T) {
 	store := &Store{Root: t.TempDir()}
 	src := testSource()
-	if e := store.Save(src); e != nil {
-		t.Fatal(e)
-	}
 	data := jpegBytes(t)
 	gone := src
 	gone.Message++
-	if e := store.Save(gone); e != nil {
-		t.Fatal(e)
-	}
 	var outcomes []Outcome
 	h := store.Handler(func(_ context.Context, s Source, p string) error {
 		if s.Message == gone.Message {
@@ -260,7 +336,7 @@ func TestOutcomes(t *testing.T) {
 	h.ServeHTTP(cached, revalidate)
 	request(h, gone.Path())
 	request(h, Prefix+"invalid")
-	if !store.Saved(src) || store.Saved(gone) {
+	if !saved(store, src) || saved(store, gone) {
 		t.Fatal("Saved disagrees with the disk")
 	}
 	want := []Outcome{
@@ -275,7 +351,6 @@ func TestOutcomes(t *testing.T) {
 	}
 	for i := range want {
 		got := outcomes[i]
-		got.Source.AccessHash = want[i].Source.AccessHash
 		if got != want[i] {
 			t.Errorf("outcome %d: %+v, want %+v", i, got, want[i])
 		}
@@ -302,9 +377,6 @@ func TestServeSavedNeverDownloads(t *testing.T) {
 func TestDownloadCountsWhenTheResponseFails(t *testing.T) {
 	store := &Store{Root: t.TempDir()}
 	src := testSource()
-	if e := store.Save(src); e != nil {
-		t.Fatal(e)
-	}
 	data := jpegBytes(t)
 	var outcomes []Outcome
 	h := store.Handler(func(_ context.Context, _ Source, p string) error { return os.WriteFile(p, data, 0600) },

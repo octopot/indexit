@@ -114,13 +114,13 @@ jq -r 'select(._kind == "message") | .media.preview_url // empty' post.jsonl
 3. Request every URL once, now: `curl -fsS -o /dev/null "<url>"`. The service
    downloads the photograph on its first request and keeps the copy; a
    photograph nobody requested is lost with the post. A cold request can wait
-   up to two minutes for a running indexit command; retry a failure.
-   `curl -fsS http://indexit.localhost:17840/api/v1/unsaved` lists the
-   photographs still without a local copy.
+   up to two minutes for a running indexit command; retry a failure. `404`
+   means the account cannot find the channel, `410` that the post or the
+   photograph is gone.
 4. Report what is missing: an `album member skipped` warning on stderr,
    `preview_error` instead of a URL. Don't present a partial album as the
-   whole post. Videos, GIFs and documents get no URL; link to the post for
-   them.
+   whole post. Videos, GIFs and documents get no URL, nor do photographs of
+   private chats and basic groups; link to the post for them.
 
 ## Work with a forum topic
 

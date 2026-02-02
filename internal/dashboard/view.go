@@ -31,29 +31,26 @@ type view struct {
 	Updated    time.Time
 	Origin     string
 	DataDir    string
+	ImageDir   string
 	Config     string
 	ScanErr    string
 	LogErr     string
 
-	Saved      int
-	SavedText  string
-	Registered int
-	NotSaved   int
-	Orphans    int
-	Invalid    int
-	Size       amount
-	Free       amount
-	HasFree    bool
+	Saved     int
+	SavedText string
+	Invalid   int
+	Size      amount
+	Free      amount
+	HasFree   bool
 
-	Served     amount
-	Sent       amount
-	Downloads  int
-	Reuse      string
-	Since      time.Time
-	Gone       int
-	Failed     int
-	Dropped    int64
-	WarmScript string
+	Served    amount
+	Sent      amount
+	Downloads int
+	Reuse     string
+	Since     time.Time
+	Gone      int
+	Failed    int
+	Dropped   int64
 
 	Dialogs  string
 	Activity activity
@@ -127,7 +124,7 @@ const (
 )
 
 // build turns an inventory and the log totals into the page.
-func (d *Dashboard) build(r *http.Request, inv *Inventory, totals stats.Totals, now time.Time) view {
+func (d *Dashboard) build(inv *Inventory, totals stats.Totals, now time.Time) view {
 	v := view{
 		Assets:     d.assets.paths,
 		Here:       here(),
@@ -136,6 +133,7 @@ func (d *Dashboard) build(r *http.Request, inv *Inventory, totals stats.Totals, 
 		Version:    d.Version,
 		Origin:     d.Store.Origin,
 		DataDir:    home(d.Store.Root),
+		ImageDir:   home(d.Store.ImageDir()),
 		Config:     home(d.ConfigPath),
 		Dropped:    d.dropped(),
 	}
@@ -152,10 +150,6 @@ func (d *Dashboard) build(r *http.Request, inv *Inventory, totals stats.Totals, 
 	}
 	v.Saved = len(inv.Photos)
 	v.SavedText = count(int64(v.Saved))
-	v.Registered = len(inv.Sources)
-	notSaved := inv.NotSaved()
-	v.NotSaved = len(notSaved)
-	v.Orphans = inv.Orphans()
 	v.Invalid = inv.Invalid
 	var size int64
 	for _, photo := range inv.Photos {
@@ -163,7 +157,7 @@ func (d *Dashboard) build(r *http.Request, inv *Inventory, totals stats.Totals, 
 	}
 	v.Size = bytesAmount(size)
 	// the disk of the photographs, which may be another than of the rest
-	if free, ok := diskFree(filepath.Join(d.Store.Root, "images")); ok {
+	if free, ok := diskFree(d.Store.ImageDir()); ok {
 		v.Free, v.HasFree = bytesAmount(int64(min(free, math.MaxInt64))), true
 	}
 
@@ -189,10 +183,6 @@ func (d *Dashboard) build(r *http.Request, inv *Inventory, totals stats.Totals, 
 			v.Gone++
 		}
 	}
-	if v.NotSaved > 0 {
-		v.WarmScript = "curl -fsS http://" + r.Host + "/api/v1/unsaved | xargs -n 1 curl -fsS -o /dev/null"
-	}
-
 	v.Activity = buildActivity(inv.Photos, now)
 	v.Top = buildChannels(inv)
 	dialogs := map[string]bool{}
@@ -200,7 +190,7 @@ func (d *Dashboard) build(r *http.Request, inv *Inventory, totals stats.Totals, 
 		dialogs[peerKey(photo.Source)] = true
 	}
 	if len(dialogs) > 0 {
-		v.Dialogs = plural(len(dialogs), "dialog")
+		v.Dialogs = plural(len(dialogs), "channel")
 	}
 	for i, photo := range inv.Photos[:min(10, len(inv.Photos))] {
 		title := peerTitle(inv, photo.Source)
@@ -332,7 +322,7 @@ func buildChannels(inv *Inventory) []channel {
 			for _, g := range sorted[top:] {
 				rest += g.photos
 			}
-			add(plural(len(sorted)-top, "other dialog"), "", rest)
+			add(plural(len(sorted)-top, "other channel"), "", rest)
 			break
 		}
 		add(peerTitle(inv, g.src), dialogLink(inv, g.src), g.photos)
@@ -340,7 +330,7 @@ func buildChannels(inv *Inventory) []channel {
 	return channels
 }
 
-// peerTitle names the dialog of src: its title, its username or its ID.
+// peerTitle names the channel of src: its title, its username or its ID.
 func peerTitle(inv *Inventory, src preview.Source) string {
 	peer := inv.Peers[peerKey(src)]
 	switch {
@@ -349,28 +339,24 @@ func peerTitle(inv *Inventory, src preview.Source) string {
 	case peer.Username != "":
 		return "@" + peer.Username
 	}
-	return src.Peer
+	return "Channel " + strconv.FormatInt(src.Channel, 10)
 }
 
-// dialogLink is the public address of a channel; chats and users have none
-// that works for everyone.
+// dialogLink is the public address of a channel with a username.
 func dialogLink(inv *Inventory, src preview.Source) string {
-	if peer := inv.Peers[peerKey(src)]; strings.HasPrefix(src.Peer, "c") && peer.Username != "" {
+	if peer := inv.Peers[peerKey(src)]; peer.Username != "" {
 		return "https://t.me/" + peer.Username
 	}
 	return ""
 }
 
-// telegramLink is the address of the message of src in Telegram, for a
-// channel only: t.me/<username>/<id>, or t.me/c/<id>/<id> for members.
+// telegramLink is the address of the post of src in Telegram:
+// t.me/<username>/<id>, or t.me/c/<id>/<id> for members.
 func telegramLink(inv *Inventory, src preview.Source) string {
-	if !strings.HasPrefix(src.Peer, "c") {
-		return ""
-	}
 	if peer := inv.Peers[peerKey(src)]; peer.Username != "" {
 		return "https://t.me/" + peer.Username + "/" + strconv.Itoa(src.Message)
 	}
-	return "https://t.me/c/" + src.Peer[1:] + "/" + strconv.Itoa(src.Message)
+	return "https://t.me/c/" + strconv.FormatInt(src.Channel, 10) + "/" + strconv.Itoa(src.Message)
 }
 
 // here names this machine: the service runs on a Mac with Homebrew, or by

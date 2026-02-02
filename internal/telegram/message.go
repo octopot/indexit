@@ -202,7 +202,7 @@ func (r *messageReader) get(ctx context.Context, ids []int) (map[int]fetched, ma
 			continue
 		}
 		rec := mapper.Message(r.resolved.UID, r.resolved.TopicID, msg, entities)
-		got[msg.ID] = fetched{msg: msg, rec: r.previews.Enrich(ctx, r.api, r.cache, r.resolved, msg, rec, r.guard)}
+		got[msg.ID] = fetched{msg: msg, rec: r.previews.Enrich(msg, rec)}
 	}
 	maps.Copy(r.read, got)
 	maps.Copy(r.skipped, skipped)

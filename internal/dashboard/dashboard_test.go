@@ -19,19 +19,16 @@ import (
 )
 
 var (
-	saved    = preview.Source{Account: 42, Peer: "c123", Message: 7, Photo: 9_007_199_254_740_993}
-	unsaved  = preview.Source{Account: 42, Peer: "c123", Message: 8, Photo: 11}
-	stranger = preview.Source{Account: 7, Peer: "g5", Message: 3, Photo: 12}
+	saved    = preview.Source{Channel: 123, Message: 7, Photo: 9_007_199_254_740_993}
+	unsaved  = preview.Source{Channel: 123, Message: 8, Photo: 11}
+	stranger = preview.Source{Channel: 5, Message: 3, Photo: 12}
 )
 
-// fixture lays out a data directory with saved, unsaved and foreign files
-// and a peer cache of account 42.
+// fixture lays out an image directory with saved, foreign and skipped files
+// and a peer cache that knows channel 123.
 func fixture(t *testing.T) (*preview.Store, string) {
 	t.Helper()
 	store := &preview.Store{Root: t.TempDir()}
-	for _, src := range []preview.Source{saved, unsaved, stranger} {
-		require.NoError(t, store.Save(src))
-	}
 	write := func(path string, data []byte, at time.Time) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 		require.NoError(t, os.WriteFile(path, data, 0o600))
@@ -40,15 +37,17 @@ func fixture(t *testing.T) (*preview.Store, string) {
 	now := time.Now()
 	write(store.ImagePath(saved), []byte("\xff\xd8\xff\xe0 jpeg"), now.Add(-time.Hour))
 	write(store.ImagePath(stranger), []byte("\xff\xd8\xff\xe0 other"), now.Add(-2*time.Hour))
-	images := filepath.Join(store.Root, "images")
-	write(filepath.Join(images, "a42", "c123", "9", "p1.jpg"), nil, now)                       // empty: invalid
-	write(filepath.Join(images, "notes.txt"), []byte("x"), now)                                // foreign: invalid
-	write(filepath.Join(images, "a42", "c123", "7", ".p9-download-x"), []byte("partial"), now) // in progress: skipped
-	require.NoError(t, os.Symlink(store.ImagePath(saved), filepath.Join(images, "a42", "c123", "7", "p13.jpg")))
+	images := store.ImageDir()
+	write(filepath.Join(images, "c123", "9", "p1.jpg"), nil, now)                               // empty: invalid
+	write(filepath.Join(images, "notes.txt"), []byte("x"), now)                                 // foreign: invalid
+	write(filepath.Join(images, "a42", "c123", "7", "p1.jpg"), []byte("x"), now)                // another layout: invalid
+	write(filepath.Join(images, "c123", "7", ".p9.mac.1.x"), []byte("partial"), now)            // in progress: skipped
+	write(filepath.Join(images, "c123", "7", "p9007199254740993 (1).jpg"), []byte("copy"), now) // cloud conflict: skipped
+	require.NoError(t, os.Symlink(store.ImagePath(saved), filepath.Join(images, "c123", "7", "p13.jpg")))
 	peers := filepath.Join(t.TempDir(), "peers.json")
 	write(peers, []byte(`{"account":{"id":42},"entries":{
 		"channel:123":{"kind":"channel","id":123,"access_hash":555,"username":"example","title":"Example <b>channel</b>"},
-		"chat:5":{"kind":"chat","id":5,"title":"Belongs to account 42, not 7"}}}`), now)
+		"chat:5":{"kind":"chat","id":5,"title":"A basic group, not channel 5"}}}`), now)
 	return store, peers
 }
 
@@ -86,13 +85,23 @@ func TestScan(t *testing.T) {
 	require.NoError(t, inv.Err)
 	require.Len(t, inv.Photos, 2, "a symbolic link, an empty and a foreign file are no photographs")
 	assert.Equal(t, saved.Path(), inv.Photos[0].Source.Path(), "the latest first")
-	assert.Equal(t, 3, inv.Invalid)
-	assert.Equal(t, []string{unsaved.Path()}, inv.NotSaved())
-	assert.Zero(t, inv.Orphans())
+	assert.Equal(t, 4, inv.Invalid, "temporary files and conflict copies are not counted")
 	assert.Equal(t, "Example <b>channel</b>", peerTitle(inv, saved))
-	assert.Equal(t, "g5", peerTitle(inv, stranger), "titles of another account stay unknown")
+	assert.Equal(t, "Channel 5", peerTitle(inv, stranger), "a basic group is not a channel")
 	assert.Equal(t, "https://t.me/example/7", telegramLink(inv, saved))
-	assert.Empty(t, telegramLink(inv, stranger), "a chat has no public link")
+	assert.Equal(t, "https://t.me/c/5/3", telegramLink(inv, stranger), "a link for members")
+}
+
+func TestScanOfASeparateImageDirectory(t *testing.T) {
+	store, peers := fixture(t)
+	moved := filepath.Join(t.TempDir(), "Google Drive", "images")
+	require.NoError(t, os.MkdirAll(filepath.Dir(moved), 0o700))
+	require.NoError(t, os.Rename(store.ImageDir(), moved))
+	store.Images = moved
+	assert.Len(t, Scan(store, peers, time.Now()).Photos, 2)
+	d := New(store, peers, stats.NewReader(t.TempDir()))
+	w := get(t, d.Handler(http.NotFoundHandler()), "/thumbnails/c123/7/p9007199254740993.jpg", nil)
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestScanFollowsALinkedDirectory(t *testing.T) {
@@ -102,7 +111,7 @@ func TestScanFollowsALinkedDirectory(t *testing.T) {
 	require.NoError(t, os.Symlink(moved, filepath.Join(store.Root, "images")))
 	assert.Len(t, Scan(store, peers, time.Now()).Photos, 2, "images/ on another disk")
 	d := New(store, peers, stats.NewReader(t.TempDir()))
-	w := get(t, d.Handler(http.NotFoundHandler()), "/thumbnails/a42/c123/7/p9007199254740993.jpg", nil)
+	w := get(t, d.Handler(http.NotFoundHandler()), "/thumbnails/c123/7/p9007199254740993.jpg", nil)
 	assert.Equal(t, http.StatusOK, w.Code, "a thumbnail from images/ on another disk")
 }
 
@@ -123,7 +132,6 @@ func TestScanOfEmptyDirectory(t *testing.T) {
 	inv := Scan(&preview.Store{Root: filepath.Join(t.TempDir(), "none")}, filepath.Join(t.TempDir(), "none.json"), time.Now())
 	assert.NoError(t, inv.Err)
 	assert.Empty(t, inv.Photos)
-	assert.Empty(t, inv.NotSaved())
 }
 
 func TestPage(t *testing.T) {
@@ -141,10 +149,13 @@ func TestPage(t *testing.T) {
 	assert.NotRegexp(t, regexp.MustCompile(`\sstyle=|<style|\son[a-z]+=|<script>`), body, "the policy allows no inline style or script")
 	assert.Contains(t, body, "Example &lt;b&gt;channel&lt;/b&gt;", "titles are escaped")
 	assert.Contains(t, body, `data-count="2"`)
-	assert.Contains(t, body, "/thumbnails/a42/c123/7/p9007199254740993.jpg")
+	assert.Contains(t, body, "/thumbnails/c123/7/p9007199254740993.jpg")
 	assert.Contains(t, body, "30 requests per download on average")
 	assert.Contains(t, body, "gone from Telegram with no local copy")
-	assert.Contains(t, body, "/api/v1/unsaved | xargs -n 1 curl")
+	assert.Contains(t, body, "from 2 channels")
+	for _, gone := range []string{"registered", "unsaved", "source record"} {
+		assert.NotContains(t, body, gone)
+	}
 	assert.Contains(t, body, "The calendar fills in once")
 	assert.NotContains(t, body, "Table of the days", "no table without a calendar")
 	for _, path := range regexp.MustCompile(`/assets/[0-9a-f]+/[a-z]+\.[a-z]+`).FindAllString(body, -1) {
@@ -165,21 +176,23 @@ func TestAPI(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out))
 	recent := out["recent"].([]any)[0].(map[string]any)
 	assert.Equal(t, "9007199254740993", recent["photo"], "IDs are strings, beyond the integers of JavaScript")
-	assert.Equal(t, "42", recent["account"])
+	assert.Equal(t, "123", recent["channel"])
+	assert.NotContains(t, recent, "account")
+	photographs := out["photographs"].(map[string]any)
+	assert.NotContains(t, photographs, "registered")
 	requests := out["requests"].(map[string]any)
 	assert.InDelta(t, 30, requests["served"], 0)
 	assert.InDelta(t, 1, requests["gone_without_copy"], 0)
 
-	w = get(t, h, "/api/v1/unsaved", nil)
-	assert.Equal(t, "http://indexit.localhost:17840"+unsaved.Path()+"\n", w.Body.String())
+	assert.Equal(t, http.StatusNotFound, get(t, h, "/api/v1/unsaved", nil).Code)
 }
 
 func TestThumbnailsNeverDownload(t *testing.T) {
 	d, called := newDashboard(t)
 	h := d.Handler(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { *called = true }))
-	w := get(t, h, "/thumbnails/a42/c123/7/p9007199254740993.jpg", nil)
+	w := get(t, h, "/thumbnails/c123/7/p9007199254740993.jpg", nil)
 	assert.Equal(t, http.StatusOK, w.Code)
-	for _, path := range []string{"/thumbnails/a42/c123/8/p11.jpg", "/thumbnails/../sources/a42/c123/8/p11.jpg.json", "/thumbnails/a42/c123/7/p9007199254740993.jpg?x", "/thumbnails/a42/c123/7/p13.jpg"} {
+	for _, path := range []string{"/thumbnails/c123/8/p11.jpg", "/thumbnails/../notes.txt", "/thumbnails/c123/7/p9007199254740993.jpg?x", "/thumbnails/c123/7/p13.jpg", "/thumbnails/a42/c123/7/p1.jpg"} {
 		w = get(t, h, path, nil)
 		assert.Equal(t, http.StatusNotFound, w.Code, path)
 	}
@@ -249,7 +262,7 @@ func TestAccess(t *testing.T) {
 	assert.True(t, *called)
 
 	// every route of the page answers the same way
-	for _, path := range []string{"/api/v1/unsaved", "/thumbnails/a42/c123/7/p9007199254740993.jpg", d.assets.paths["CSS"]} {
+	for _, path := range []string{"/api/v1/stats", "/thumbnails/c123/7/p9007199254740993.jpg", d.assets.paths["CSS"]} {
 		for _, header := range []map[string]string{{"X-Real-Ip": "203.0.113.1"}, {"X-Forwarded-Host": "images.example"}, {"Sec-Fetch-Site": "cross-site"}} {
 			assert.Equal(t, http.StatusForbidden, get(t, h, path, header).Code, "%s %v", path, header)
 		}
@@ -269,8 +282,6 @@ func TestPageBeforeTheFirstScan(t *testing.T) {
 	w := get(t, d.Handler(http.NotFoundHandler()), "/", nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "Counting photographs")
-	w = get(t, d.Handler(http.NotFoundHandler()), "/api/v1/unsaved", nil)
-	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 }
 
 func TestActivity(t *testing.T) {

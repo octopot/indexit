@@ -244,7 +244,8 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			"--page-size does not apply to this command.\n\n" +
 			"A message of an album brings every message of the album, in message order,\n" +
 			"whichever of them the link names; each message is emitted once per run.\n" +
-			"Photo media includes a stable local preview_url.",
+			"A photograph of a channel or supergroup post includes a stable local\n" +
+			"preview_url; fetching it writes nothing.",
 		Example: `  indexit telegram fetch message https://t.me/example_channel/11 https://t.me/example_channel/46
   indexit telegram fetch message --dialog @example_channel --id 11 --id 46,47`,
 		Args: cobra.ArbitraryArgs,

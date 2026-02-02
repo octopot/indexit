@@ -117,10 +117,11 @@ Every command and flag of this release:
 - A link to a message of an album gives every message of the album, in
   message order, each as its own record; the text is on one of them. Build a
   post from all of them.
-- Ordinary photo messages include `media.preview_url` by default, pointing to
-  the local `http://indexit.localhost:17840/` service; each message of an
-  album carries its own. URLs need the local service to display but are generated without it. The
-  service saves a photograph on its first request; from then on it shows
+- Photo messages of channels and supergroups include `media.preview_url` by
+  default, pointing to the local `http://indexit.localhost:17840/` service;
+  private chats and basic groups get none. URLs need the local service to
+  display but are generated without it, and generating them writes nothing.
+  The service saves a photograph on its first request; from then on it shows
   without Telegram, even after the source disappears.
 - Records carry `_kind`: `dialog`, `topic`, `peer`, `message`, `media`.
   Fields: [references/output.md](references/output.md).
@@ -160,7 +161,5 @@ The service uses the CLI's configuration and authorization. Saved photographs
 live in `~/.local/share/indexit` (or `INDEXIT_DATA_DIR`) and are never evicted
 automatically; uninstall preserves them. Do not delete them as routine cleanup.
 The service writes a commented `config.toml` when there is none.
-`http://indexit.localhost:17840/` is a dashboard of the saved photographs.
-`curl -fsS http://indexit.localhost:17840/api/v1/unsaved` lists the URLs of
-registered photographs without a local copy, and `/api/v1/stats` the numbers as
-JSON.
+`http://indexit.localhost:17840/` is a dashboard of the saved photographs, and
+`/api/v1/stats` has the numbers as JSON.

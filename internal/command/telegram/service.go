@@ -44,6 +44,8 @@ func NewService() *cobra.Command {
 		"--listen replaces the defaults and may repeat. Photograph URLs use origin\n" +
 		"under [service] in config.toml, " + preview.DefaultOrigin + " by default.\n" +
 		"Without a config.toml, it writes one with every key commented out.\n\n" +
+		"A photograph is saved the first time its URL is requested and served from\n" +
+		"disk from then on.\n\n" +
 		"On this machine, / is a dashboard of the saved photographs. dashboard = false\n" +
 		"under [service] turns it off. Request counts go to stats/ in the data directory.", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		for _, address := range listen {
@@ -93,6 +95,7 @@ func NewService() *cobra.Command {
 			board.ConfigPath = configPath
 			board.Logger = log
 		}
+		previews := &tgsvc.Previews{Peers: paths.Peers, Log: log}
 		handler := store.Handler(func(ctx context.Context, src preview.Source, path string) error {
 			client, err := newClient(cmd, paths)
 			if err != nil {
@@ -100,10 +103,10 @@ func NewService() *cobra.Command {
 				return err
 			}
 			err = client.RunMedia(ctx, func(ctx context.Context, api tgsvc.MediaAPI) error {
-				return tgsvc.DownloadPreview(ctx, api, src, path, tgsvc.RateGuard{})
+				return previews.Download(ctx, api, client.Session(), src, path, tgsvc.RateGuard{})
 			})
 			if err != nil {
-				log.Error("preview: download failed", "message", src.Message, "error", err)
+				log.Error("preview: download failed", "channel", src.Channel, "message", src.Message, "error", err)
 			}
 			return err
 		}, func(outcome preview.Outcome) {
@@ -131,7 +134,7 @@ func NewService() *cobra.Command {
 			served = board.Handler(handler)
 			workers.Go(func() { board.Run(background) })
 		}
-		fmt.Fprintf(cmd.ErrOrStderr(), "image service: %s (URLs: %s, data: %s)\n", strings.Join(addresses, ", "), store.Origin, store.Root)
+		fmt.Fprintf(cmd.ErrOrStderr(), "image service: %s (URLs: %s, data: %s, photographs: %s)\n", strings.Join(addresses, ", "), store.Origin, store.Root, store.ImageDir())
 		err = serve(cmd.Context(), listeners, served, 5*time.Second)
 		stop()
 		workers.Wait()
