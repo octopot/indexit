@@ -58,7 +58,7 @@ Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH
 | `app/globals.css` | Shared colors, responsive layouts, and landing page styles |
 | `app/layout.jsx` | Site identity and Nextra theme |
 | `app/[[...mdxPath]]/page.jsx` | Page-specific titles and social metadata |
-| `public/` | Favicon and social preview |
+| `public/` | Favicon, social preview and illustrations in `images/` |
 
 The public origin in metadata comes from `SITE_URL` (see `site.mjs`); the Pages workflow sets it from the Pages configuration. Internal links use Next.js/Nextra and keep the configured base path.
 
