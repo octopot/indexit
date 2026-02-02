@@ -185,3 +185,18 @@ func TestCacheUserMinNeverContributesAccessHash(t *testing.T) {
 	assert.Zero(t, entry.AccessHash)
 	assert.Equal(t, "bob", entry.Username)
 }
+
+func TestCacheChannelMinNeverContributesAccessHash(t *testing.T) {
+	cache := peers.New()
+	CacheChannel(cache, &tg.Channel{ID: 1, AccessHash: 10, Title: "Full", Username: "full"})
+	CacheChannel(cache, &tg.Channel{ID: 1, AccessHash: 99, Min: true, Title: "Forwarded"})
+	entry, _ := cache.Get(uid.KindChannel, 1)
+	assert.EqualValues(t, 10, entry.AccessHash, "a min channel never overwrites a full entry")
+	assert.Equal(t, "Full", entry.Title)
+
+	CacheEntities(cache, gotdpeer.NewEntities(nil, nil, map[int64]*tg.Channel{2: {ID: 2, AccessHash: 20, Min: true, Username: "source"}}))
+	entry, ok := cache.Get(uid.KindChannel, 2)
+	require.True(t, ok)
+	assert.Zero(t, entry.AccessHash, "a min channel alone is an identity without a hash")
+	assert.Equal(t, "source", entry.Username)
+}

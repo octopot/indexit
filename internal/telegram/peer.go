@@ -139,7 +139,7 @@ func fetchPeer(ctx context.Context, api API, cache *peers.Cache, raw string, gua
 		return fetchUsername(ctx, api, cache, ref, guard)
 	case ref.Kind == uid.KindChannel:
 		entry, ok := cache.Get(uid.KindChannel, ref.ID)
-		if !ok {
+		if !ok || entry.AccessHash == 0 {
 			return model.PeerRecord{}, coldPeer(ref)
 		}
 		return fetchFullChannel(ctx, api, cache, &tg.InputChannel{ChannelID: entry.ID, AccessHash: entry.AccessHash}, guard)

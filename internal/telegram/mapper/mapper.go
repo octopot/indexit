@@ -58,8 +58,24 @@ func CacheUser(cache *peers.Cache, user *tg.User) {
 	})
 }
 
+// CacheChannel stores the address of a channel. A min channel, sent with
+// partial data as the source of a forward, carries an access hash that
+// cannot read its posts: like a min user, it never touches a cached entry
+// and is stored without a hash when nothing is cached yet.
 func CacheChannel(cache *peers.Cache, channel *tg.Channel) {
 	if cache == nil || channel == nil {
+		return
+	}
+	if channel.Min {
+		if _, ok := cache.Get(uid.KindChannel, channel.ID); ok {
+			return
+		}
+		cache.Put(peers.Entry{
+			Kind:     uid.KindChannel,
+			ID:       channel.ID,
+			Username: channel.Username,
+			Title:    channel.Title,
+		})
 		return
 	}
 	cache.Put(peers.Entry{

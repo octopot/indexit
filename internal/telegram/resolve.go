@@ -97,9 +97,9 @@ func canonicalUID(peer tg.PeerClass) (string, error) {
 	}
 }
 
-// inputFromCache addresses a cached peer. A user without an access hash, as a
-// min user leaves it, is cold: a cache entry is never addressed as self, since
-// the cache outlives a change of account.
+// inputFromCache addresses a cached peer. A user or a channel without an
+// access hash, as a min one leaves it, is cold: a cache entry is never
+// addressed as self, since the cache outlives a change of account.
 func inputFromCache(entry peers.Entry) (tg.InputPeerClass, bool) {
 	switch entry.Kind {
 	case uid.KindUser:
@@ -108,6 +108,9 @@ func inputFromCache(entry peers.Entry) (tg.InputPeerClass, bool) {
 		}
 		return &tg.InputPeerUser{UserID: entry.ID, AccessHash: entry.AccessHash}, true
 	case uid.KindChannel:
+		if entry.AccessHash == 0 {
+			return nil, false
+		}
 		return &tg.InputPeerChannel{ChannelID: entry.ID, AccessHash: entry.AccessHash}, true
 	case uid.KindChat:
 		return &tg.InputPeerChat{ChatID: entry.ID}, true
