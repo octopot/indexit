@@ -25,6 +25,12 @@ package config
 	// or a loopback IP address), false otherwise: another origin means a
 	// proxy in front of the service, which would expose the page.
 	dashboard?: bool
+
+	// The directory of the saved photographs: an absolute path, or one in the
+	// home directory starting with ~/. It can be a folder another computer
+	// shares, such as one in Google Drive; the locks and the request counts
+	// stay in the data directory. Default: images in the data directory.
+	images?: string & =~"^(/|~/)."
 }
 
 #Config

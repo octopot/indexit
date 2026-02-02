@@ -118,14 +118,36 @@ With an origin outside this Mac, the dashboard is off unless you set
 `dashboard = true`: the proxy in front of the service would show it to
 everyone who reaches the proxy.
 
+### Share the photographs between computers
+
+The saved photographs can live apart from the rest of the data, in a folder
+another computer shares, such as one in Google Drive. Uncomment `images` under
+`[service]` with an absolute path or one starting with `~/`:
+
+```toml
+[service]
+images = "~/Google Drive/indexit/images"
+```
+
+A photograph's path is its URL's path under that folder:
+`images/c<channel>/<message>/p<photo>.jpg`. Another computer that runs the
+service with the same folder shows the same photographs by the same URLs,
+without asking Telegram. A photograph neither has saved is filled by whichever
+service is asked, if its account can see the channel. A service writes a
+photograph to a temporary file next to it, named for the computer, checks that
+it is a complete JPEG, then moves it into place, and never replaces a saved
+one. A conflict copy the cloud folder leaves, `p… (1).jpg`, is neither served
+nor counted.
+
 ## Storage and availability
 
 Data lives in `~/.local/share/indexit`, or `$XDG_DATA_HOME/indexit`.
-`INDEXIT_DATA_DIR` overrides the complete directory. A photograph is in
-`images/` of it at the path of its URL, `images/c<channel>/<message>/p<photo>.jpg`.
-`stats/` holds the request counts of the dashboard, one small file a month; the
-service removes months older than 13. Deleting it resets the counts and nothing
-else.
+`INDEXIT_DATA_DIR` overrides the complete directory. The photographs are in
+`images/` of it unless `images` under `[service]` says otherwise; the locks of
+the downloads and the request counts stay in the data directory of each
+computer. `stats/` holds the request counts of the dashboard, one small file a
+month; the service removes months older than 13. Deleting it resets the counts
+and nothing else.
 There is no automatic eviction or storage limit: disk use grows as images are read.
 Keep a backup if a local copy may become the only surviving photograph.
 

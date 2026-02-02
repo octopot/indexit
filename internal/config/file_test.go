@@ -43,6 +43,7 @@ func TestReadFile_SchemaFixtures(t *testing.T) {
 		"service-without-origin.toml":   "",
 		"dashboard-off.toml":            "",
 		"proxy-with-dashboard.toml":     "https://images.example",
+		"images.toml":                   "",
 	}
 	valid, err := filepath.Glob(filepath.Join("testdata", "valid", "*.toml"))
 	require.NoError(t, err)
@@ -81,6 +82,24 @@ func TestReadFile_Dashboard(t *testing.T) {
 	}
 }
 
+func TestReadFile_Images(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	file, err := ReadFile(filepath.Join("testdata", "valid", "images.toml"))
+	require.NoError(t, err)
+	assert.Equal(t, filepath.Join(home, "Google Drive", "indexit", "images"), file.Service.Images)
+
+	path := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(path, []byte("[service]\nimages = \"/Volumes/Photos/indexit/\"\n"), 0o600))
+	file, err = ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "/Volumes/Photos/indexit", file.Service.Images)
+
+	file, err = ReadFile(filepath.Join("testdata", "valid", "default.toml"))
+	require.NoError(t, err)
+	assert.Empty(t, file.Service.Images, "the default is the data directory")
+}
+
 func TestLocalHost(t *testing.T) {
 	for _, host := range []string{"localhost", "LOCALHOST.", "indexit.localhost", "a.b.localhost", "127.0.0.1", "127.1.2.3", "::1", "[::1]"} {
 		assert.True(t, LocalHost(host), host)
@@ -103,6 +122,7 @@ func TestReadFile_ErrorsNameTheKey(t *testing.T) {
 		"not-a-string.toml":         "service.origin cannot be a TOML integer",
 		"service-not-a-table.toml":  "service cannot be a TOML string",
 		"dashboard-not-a-bool.toml": "service.dashboard cannot be a TOML string",
+		"relative-images.toml":      "service.images must be an absolute path",
 	} {
 		path := filepath.Join("testdata", "invalid", name)
 		_, err := ReadFile(path)

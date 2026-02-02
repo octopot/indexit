@@ -30,6 +30,9 @@ type Service struct {
 	// Dashboard turns the statistics page at / on or off; nil when the file
 	// does not set it.
 	Dashboard *bool
+	// Images is the absolute path of the photograph directory, with ~/
+	// expanded; empty when the file does not set it.
+	Images string
 }
 
 // DashboardEnabled reports whether the service shows its statistics page.
@@ -64,7 +67,11 @@ var origin = regexp.MustCompile(`^https?://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])
 
 // schema holds the keys of config.cue, spelled exactly: go-toml matches
 // struct fields regardless of case, a closed CUE definition does not.
-var schema = map[string]any{"service": map[string]any{"origin": nil, "dashboard": nil}}
+var schema = map[string]any{"service": map[string]any{"origin": nil, "dashboard": nil, "images": nil}}
+
+// images mirrors #Service.images in config.cue: an absolute path or one in
+// the home directory.
+var images = regexp.MustCompile(`^(/|~/).`)
 
 // FilePath returns $XDG_CONFIG_HOME/indexit/config.toml, or
 // ~/.config/indexit/config.toml without XDG_CONFIG_HOME: the directory of
@@ -103,6 +110,7 @@ func ReadFile(path string) (File, error) {
 		Service struct {
 			Origin    *string `toml:"origin"`
 			Dashboard *bool   `toml:"dashboard"`
+			Images    *string `toml:"images"`
 		} `toml:"service"`
 	}
 	if err = toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields().Decode(&raw); err != nil {
@@ -116,6 +124,20 @@ func ReadFile(path string) (File, error) {
 		file.Service.Origin = strings.TrimSuffix(*v, "/")
 	}
 	file.Service.Dashboard = raw.Service.Dashboard
+	if v := raw.Service.Images; v != nil {
+		if !images.MatchString(*v) {
+			return File{}, fmt.Errorf("%s: service.images must be an absolute path or one in the home directory, such as %q, not %q", path, "~/Google Drive/indexit/images", *v)
+		}
+		dir := *v
+		if rest, home := strings.CutPrefix(dir, "~/"); home {
+			h, err := os.UserHomeDir()
+			if err != nil {
+				return File{}, fmt.Errorf("%s: service.images: %w", path, err)
+			}
+			dir = filepath.Join(h, rest)
+		}
+		file.Service.Images = filepath.Clean(dir)
+	}
 	return file, nil
 }
 

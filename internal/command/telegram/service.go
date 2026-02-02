@@ -45,7 +45,8 @@ func NewService() *cobra.Command {
 		"under [service] in config.toml, " + preview.DefaultOrigin + " by default.\n" +
 		"Without a config.toml, it writes one with every key commented out.\n\n" +
 		"A photograph is saved the first time its URL is requested and served from\n" +
-		"disk from then on.\n\n" +
+		"disk from then on. images under [service] moves the photographs apart from\n" +
+		"the rest of the data, as to a folder another computer shares.\n\n" +
 		"On this machine, / is a dashboard of the saved photographs. dashboard = false\n" +
 		"under [service] turns it off. Request counts go to stats/ in the data directory.", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		for _, address := range listen {

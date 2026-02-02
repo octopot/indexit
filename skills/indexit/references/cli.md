@@ -36,7 +36,8 @@ under [service] in config.toml, http://indexit.localhost:17840 by default.
 Without a config.toml, it writes one with every key commented out.
 
 A photograph is saved the first time its URL is requested and served from
-disk from then on.
+disk from then on. images under [service] moves the photographs apart from
+the rest of the data, as to a folder another computer shares.
 
 On this machine, / is a dashboard of the saved photographs. dashboard = false
 under [service] turns it off. Request counts go to stats/ in the data directory.

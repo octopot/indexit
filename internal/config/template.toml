@@ -13,3 +13,9 @@
 # plain-text health line. On by default for a local origin, off for another:
 # a proxy in front of the service would expose the page.
 # dashboard = true
+
+# The directory of the saved photographs: an absolute path or one starting with
+# ~/. A folder shared with another computer, such as one in Google Drive, shows
+# the same photographs there by the same URLs. Default: images in the data
+# directory, ~/.local/share/indexit/images.
+# images = "~/Google Drive/indexit/images"

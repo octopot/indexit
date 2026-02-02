@@ -101,7 +101,7 @@ func FromConfig(file config.File) (*Store, error) {
 		}
 		root = filepath.Join(root, "indexit")
 	}
-	return &Store{Root: root, Origin: origin}, nil
+	return &Store{Root: root, Images: file.Service.Images, Origin: origin}, nil
 }
 
 // URL returns the permanent address of src.
