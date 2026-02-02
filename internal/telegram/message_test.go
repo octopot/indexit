@@ -323,3 +323,134 @@ func TestFetchMessagesByID_PropagatesErrors(t *testing.T) {
 		assert.Empty(t, api.channelsReqs)
 	})
 }
+
+// postsAPI answers channels.getMessages of channel 77 by ID.
+type postsAPI struct {
+	scriptedAPI
+	posts map[int]tg.MessageClass
+	asked [][]int
+	// fail is the number of the request, from 1, that fails
+	fail  int
+	calls int
+}
+
+func (f *postsAPI) ChannelsGetMessages(_ context.Context, req *tg.ChannelsGetMessagesRequest) (tg.MessagesMessagesClass, error) {
+	f.calls++
+	if f.calls == f.fail {
+		return nil, errors.New("network unavailable")
+	}
+	out := &tg.MessagesChannelMessages{}
+	var ids []int
+	for _, input := range req.ID {
+		id := input.(*tg.InputMessageID).ID
+		ids = append(ids, id)
+		if msg, ok := f.posts[id]; ok {
+			out.Messages = append(out.Messages, msg)
+		} else {
+			out.Messages = append(out.Messages, &tg.MessageEmpty{ID: id})
+		}
+	}
+	f.asked = append(f.asked, ids)
+	return out, nil
+}
+
+func albumPosts(members ...int) map[int]tg.MessageClass {
+	posts := map[int]tg.MessageClass{}
+	for id := 1; id <= 40; id++ {
+		posts[id] = channelMessage(id, "")
+	}
+	for i, id := range members {
+		msg := channelMessage(id, "")
+		msg.GroupedID = 777
+		if i == 0 {
+			msg.Message = "What the author wrote"
+		}
+		msg.SetMedia(&tg.MessageMediaPhoto{Photo: &tg.Photo{ID: int64(id), Sizes: []tg.PhotoSizeClass{&tg.PhotoSize{Type: "w", W: 10, H: 10, Size: 4}}}})
+		posts[id] = msg
+	}
+	return posts
+}
+
+func fetchIDs(t *testing.T, api *postsAPI, opt MessageOptions) []int {
+	t.Helper()
+	cache := peers.New()
+	cache.Put(peers.Entry{Kind: uid.KindChannel, ID: 77, AccessHash: 555})
+	opt.Peer = uid.PeerRef{Kind: uid.KindChannel, ID: 77}
+	w := &recWriter{}
+	require.NoError(t, FetchMessagesByID(t.Context(), api, cache, w, opt, RateGuard{}))
+	var ids []int
+	for _, r := range w.records {
+		ids = append(ids, r.(model.MessageRecord).ID)
+	}
+	return ids
+}
+
+func TestFetchMessagesByID_AlbumWhole(t *testing.T) {
+	for _, linked := range []int{11, 12, 13} {
+		api := &postsAPI{posts: albumPosts(11, 12, 13)}
+		assert.Equal(t, []int{11, 12, 13}, fetchIDs(t, api, MessageOptions{IDs: []int{linked}}), "a link to %d", linked)
+		assert.Len(t, api.asked, 2, "the message, then one read around it")
+	}
+}
+
+func TestFetchMessagesByID_AlbumOncePerRun(t *testing.T) {
+	api := &postsAPI{posts: albumPosts(11, 12, 13)}
+	emitted := map[string]bool{}
+	assert.Equal(t, []int{11, 12, 13, 20}, fetchIDs(t, api, MessageOptions{IDs: []int{13, 12, 20}, Emitted: emitted}))
+	assert.Empty(t, fetchIDs(t, api, MessageOptions{IDs: []int{11}, Emitted: emitted}), "another link into the same album")
+}
+
+func TestFetchMessagesByID_MessageOutsideAnAlbumAlone(t *testing.T) {
+	api := &postsAPI{posts: albumPosts(11, 12, 13)}
+	assert.Equal(t, []int{20}, fetchIDs(t, api, MessageOptions{IDs: []int{20}}))
+	assert.Len(t, api.asked, 1, "no read around it")
+}
+
+func TestFetchMessagesByID_AlbumWithAMissingMember(t *testing.T) {
+	posts := albumPosts(11, 13)
+	posts[12] = &tg.MessageEmpty{ID: 12}
+	api := &postsAPI{posts: posts}
+	assert.Equal(t, []int{11, 13}, fetchIDs(t, api, MessageOptions{IDs: []int{13}}))
+}
+
+func TestFetchMessagesByID_LargeAlbumIsReadToItsEnd(t *testing.T) {
+	members := make([]int, 0, 20)
+	for id := 5; id < 25; id++ {
+		members = append(members, id)
+	}
+	api := &postsAPI{posts: albumPosts(members...)}
+	assert.Equal(t, members, fetchIDs(t, api, MessageOptions{IDs: []int{5}}))
+}
+
+func TestFetchMessagesByID_AlbumCountsAgainstLimit(t *testing.T) {
+	api := &postsAPI{posts: albumPosts(11, 12, 13)}
+	assert.Equal(t, []int{11, 12}, fetchIDs(t, api, MessageOptions{IDs: []int{12}, Limit: 2}))
+}
+
+func TestFetchMessagesByID_NeighbouringAlbums(t *testing.T) {
+	posts := albumPosts(11, 12)
+	for _, id := range []int{20, 21} {
+		msg := posts[id].(*tg.Message)
+		msg.GroupedID = 888
+	}
+	api := &postsAPI{posts: posts}
+	assert.Equal(t, []int{11, 12, 20, 21}, fetchIDs(t, api, MessageOptions{IDs: []int{11, 20}}), "a member read for the first album belongs to the second")
+}
+
+func TestFetchMessagesByID_NoAlbumReadAfterTheLimit(t *testing.T) {
+	posts := albumPosts(11, 12)
+	msg := posts[30].(*tg.Message)
+	msg.GroupedID = 888
+	api := &postsAPI{posts: posts}
+	assert.Equal(t, []int{11, 12}, fetchIDs(t, api, MessageOptions{IDs: []int{11, 30}, Limit: 2}))
+	assert.Len(t, api.asked, 2, "the album at 30 is not looked up")
+}
+
+func TestFetchMessagesByID_FailedAlbumReadIsRetriedByTheNext(t *testing.T) {
+	posts := albumPosts(11, 12)
+	for _, id := range []int{20, 21} {
+		posts[id].(*tg.Message).GroupedID = 888
+	}
+	api := &postsAPI{posts: posts, fail: 2}
+	assert.Equal(t, []int{11, 20, 21}, fetchIDs(t, api, MessageOptions{IDs: []int{11, 20}}), "the read around 11 failed; the one around 20 reads 21 again")
+}

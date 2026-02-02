@@ -114,10 +114,12 @@ Every command and flag of this release:
 
 ## 4. Read the results
 
+- A link to a message of an album gives every message of the album, in
+  message order, each as its own record; the text is on one of them. Build a
+  post from all of them.
 - Ordinary photo messages include `media.preview_url` by default, pointing to
-  the local `http://indexit.localhost:17840/` service. For albums inspect
-  `media.album.photos`, `complete` and `error`; keep every photograph URL.
-  URLs need the local service to display but are generated without it. The
+  the local `http://indexit.localhost:17840/` service; each message of an
+  album carries its own. URLs need the local service to display but are generated without it. The
   service saves a photograph on its first request; from then on it shows
   without Telegram, even after the source disappears.
 - Records carry `_kind`: `dialog`, `topic`, `peer`, `message`, `media`.

@@ -2,7 +2,6 @@ package telegram
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 
@@ -47,30 +46,6 @@ func TestPreviewSingleNeedsNoAdditionalAPI(t *testing.T) {
 		t.Fatalf("%+v %v", saved, e)
 	}
 }
-func TestPreviewAlbumFromMiddleAndPartial(t *testing.T) {
-	cache := peers.New()
-	cache.Account = &peers.Account{ID: 42}
-	p := &PreviewWriter{Store: &preview.Store{Root: t.TempDir()}}
-	resolved := ResolvedPeer{Input: &tg.InputPeerChannel{ChannelID: 123}, UID: "channel:123"}
-	api := &previewAPI{history: &tg.MessagesMessages{Messages: []tg.MessageClass{testPhoto(9, 55), testPhoto(8, 55), testPhoto(7, 55)}}}
-	rec := p.Enrich(context.Background(), api, cache, resolved, testPhoto(8, 55), model.MessageRecord{Text: "keep caption", Media: &model.MediaDescriptor{Type: "photo"}}, RateGuard{})
-	a := rec.Media.Album
-	if !a.Complete || len(a.Photos) != 3 || a.Photos[0].MessageID != 7 || a.Photos[2].MessageID != 9 {
-		t.Fatalf("%+v", a)
-	}
-	p.albums = nil
-	api.err = errors.New("network unavailable")
-	rec = p.Enrich(context.Background(), api, cache, resolved, testPhoto(8, 55), model.MessageRecord{Text: "keep caption", Media: &model.MediaDescriptor{Type: "photo"}}, RateGuard{})
-	if rec.Text != "keep caption" || rec.Media.Album.Complete || rec.Media.Album.Error == "" || len(rec.Media.Album.Photos) != 1 {
-		t.Fatalf("%+v", rec)
-	}
-	api.err = nil
-	api.history = &tg.MessagesMessagesSlice{Count: 300, Messages: []tg.MessageClass{testPhoto(8, 55)}}
-	rec = p.Enrich(context.Background(), api, cache, resolved, testPhoto(8, 55), model.MessageRecord{Media: &model.MediaDescriptor{Type: "photo"}}, RateGuard{})
-	if rec.Media.Album.Complete || rec.Media.Album.Error == "" {
-		t.Fatal("silent partial album")
-	}
-}
 func TestPreviewRejectsEphemeralPhotos(t *testing.T) {
 	msg := testPhoto(7, 0)
 	msg.Media.(*tg.MessageMediaPhoto).TTLSeconds = 5
@@ -106,28 +81,5 @@ func TestDownloadPreviewRejectsChangedAccountAndPhotoBeforeDownload(t *testing.T
 				t.Fatal("download allowed for wrong identity")
 			}
 		})
-	}
-}
-
-func TestPreviewAlbumMemoizedAndMixedVideoAnchor(t *testing.T) {
-	cache := peers.New()
-	cache.Account = &peers.Account{ID: 42}
-	p := &PreviewWriter{Store: &preview.Store{Root: t.TempDir()}}
-	resolved := ResolvedPeer{Input: &tg.InputPeerChannel{ChannelID: 123}, UID: "channel:123"}
-	video := testPhoto(8, 55)
-	video.Media = &tg.MessageMediaDocument{}
-	api := &previewAPI{history: &tg.MessagesMessages{Messages: []tg.MessageClass{testPhoto(7, 55), video, testPhoto(9, 55)}}}
-	for _, msg := range []*tg.Message{video, testPhoto(7, 55), testPhoto(9, 55)} {
-		typ := "photo"
-		if msg.ID == 8 {
-			typ = "video"
-		}
-		rec := p.Enrich(t.Context(), api, cache, resolved, msg, model.MessageRecord{Media: &model.MediaDescriptor{Type: typ}}, RateGuard{})
-		if rec.Media.Album == nil || !rec.Media.Album.Complete || len(rec.Media.Album.Photos) != 2 {
-			t.Fatalf("%+v", rec.Media)
-		}
-	}
-	if api.reads != 1 {
-		t.Fatalf("history requests: %d", api.reads)
 	}
 }

@@ -242,8 +242,9 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 			"Missing, service, and out-of-scope messages are skipped with a warning.\n" +
 			"--limit caps emitted records across all groups. Requests use at most 100 IDs;\n" +
 			"--page-size does not apply to this command.\n\n" +
-			"Photo media includes a stable local preview_url; album.photos lists its photographs.\n" +
-			"Check album.complete and album.error before treating an album as complete.",
+			"A message of an album brings every message of the album, in message order,\n" +
+			"whichever of them the link names; each message is emitted once per run.\n" +
+			"Photo media includes a stable local preview_url.",
 		Example: `  indexit telegram fetch message https://t.me/example_channel/11 https://t.me/example_channel/46
   indexit telegram fetch message --dialog @example_channel --id 11 --id 46,47`,
 		Args: cobra.ArbitraryArgs,
@@ -292,6 +293,7 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 				if err != nil {
 					return err
 				}
+				emitted := map[string]bool{}
 				for _, group := range groups {
 					limit := 0
 					if fetchOpt.limit > 0 {
@@ -305,6 +307,7 @@ func fetchMessageCommand(opt *options, fetchOpt *fetchOptions) *cobra.Command {
 						Peer:     group.ref,
 						IDs:      group.ids,
 						Limit:    limit,
+						Emitted:  emitted,
 					}, tgsvc.RateGuard{})
 					if errors.Is(err, tgsvc.ErrColdPeer) {
 						return usageErr(tgsvc.ColdPeerHint(err, group.ref.String()))

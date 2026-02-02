@@ -64,6 +64,14 @@ Links are grouped by dialog and topic in first-seen order. IDs keep their order 
 
 Missing, inaccessible, service, and out-of-scope messages are skipped. A successful command can return fewer records than requested. Omit `-q` when you want to see the skip warnings.
 
+## Get an album post whole
+
+A post with several photos or videos is an album: Telegram keeps it as one message per photo or video, and a link points to one of them. A link to any of them gives the whole album, in message order, each message as a record of its own with its text and media. The author's text is on one of them, not necessarily the linked one. Each message is emitted once per run, also when several links point into the same album. A member missing between two others, such as a deleted one, is named in a warning, and the others are still emitted.
+
+```sh
+indexit -q telegram fetch message https://t.me/example_channel/12 | jq -c '{id, grouped_id, text, media: .media.type}'
+```
+
 ## Read a link correctly
 
 | Input | Meaning |
@@ -84,11 +92,8 @@ photographs. URLs point to `http://indexit.localhost:17840/` and identify the ac
 message and exact Telegram photo. Producing a URL does not require a running
 service or download the picture. A single photo uses the existing API metadata.
 
-For an album, `media.album.photos` contains message IDs and local URLs for all
-accessible photographs, including when you select an item in the middle.
-`media.album.complete` and `media.album.error` report whether the history window
-was sufficient; never treat an incomplete album as a complete export. Failure to
-store an individual source appears in `media.preview_error`; the caption remains.
+Every message of an album carries the URL of its own photograph. Failure to
+store an individual source appears in `media.preview_error`.
 
 The local service downloads the largest available Telegram JPEG on first GET,
 using your existing Telegram authorization and MTProto proxy. It does not scrape

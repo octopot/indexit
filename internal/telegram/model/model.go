@@ -32,23 +32,13 @@ type PeerDescriptor struct {
 	Display  string `json:"display,omitempty"`
 }
 
-type PreviewPhoto struct {
-	MessageID int    `json:"message_id"`
-	URL       string `json:"url"`
-}
-type PhotoAlbum struct {
-	Photos   []PreviewPhoto `json:"photos"`
-	Complete bool           `json:"complete"`
-	Error    string         `json:"error,omitempty"`
-}
 type MediaDescriptor struct {
-	PreviewURL   string      `json:"preview_url,omitempty"`
-	PreviewError string      `json:"preview_error,omitempty"`
-	Album        *PhotoAlbum `json:"album,omitempty"`
-	Type         string      `json:"type"`
-	MIME         string      `json:"mime,omitempty"`
-	Size         int64       `json:"size,omitempty"`
-	Duration     int         `json:"duration,omitempty"`
+	PreviewURL   string `json:"preview_url,omitempty"`
+	PreviewError string `json:"preview_error,omitempty"`
+	Type         string `json:"type"`
+	MIME         string `json:"mime,omitempty"`
+	Size         int64  `json:"size,omitempty"`
+	Duration     int    `json:"duration,omitempty"`
 }
 
 type ReplyDescriptor struct {
