@@ -38,7 +38,8 @@ brews:
     caveats: |
       Start the image service as your normal user:
         brew services start octolab/tap/indexit
-      It answers at http://indexit.localhost:17840/ on loopback, without sudo.
+      It answers at http://indexit.localhost:17840/ on loopback, without sudo;
+      open that address in a browser for the dashboard of saved photographs.
       Photographs and configuration survive upgrades and uninstall.
     test: |
       system "#{bin}/indexit", "version"

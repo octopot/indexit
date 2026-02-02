@@ -103,11 +103,10 @@ func TestServiceRunServesEveryAddressUntilCancelled(t *testing.T) {
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err, address)
-		body, err := io.ReadAll(resp.Body)
+		_, err = io.Copy(io.Discard, resp.Body)
 		resp.Body.Close()
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode, address)
-		assert.Equal(t, "indexit image service is running\n", string(body), address)
 	}
 	cancel()
 	assert.NoError(t, <-done)
@@ -132,6 +131,48 @@ func TestServiceRunStartsWithoutAWritableConfigDirectory(t *testing.T) {
 	_, done := startServiceWith(t, ctx, configHome, "--listen", "127.0.0.1:0")
 	cancel()
 	assert.NoError(t, <-done)
+}
+
+// fetchPage asks the service at address for / and for the statistics API.
+func fetchPage(t *testing.T, ctx context.Context, address string) (string, int) {
+	t.Helper()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+address+"/", http.NoBody)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, "http://"+address+"/api/v1/stats", http.NoBody)
+	require.NoError(t, err)
+	api, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, api.Body)
+	_ = api.Body.Close()
+	return resp.Header.Get("Content-Type"), api.StatusCode
+}
+
+func TestServiceRunServesTheDashboard(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	addresses, done := startService(t, ctx, "--listen", "127.0.0.1:0")
+	kind, api := fetchPage(t, ctx, addresses[0])
+	assert.Equal(t, "text/html; charset=utf-8", kind)
+	assert.Equal(t, http.StatusOK, api)
+	cancel()
+	require.NoError(t, <-done)
+}
+
+func TestServiceRunWithoutTheDashboard(t *testing.T) {
+	configHome := t.TempDir()
+	path := filepath.Join(configHome, "indexit", "config.toml")
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
+	require.NoError(t, os.WriteFile(path, []byte("[service]\ndashboard = false\n"), 0o600))
+	ctx, cancel := context.WithCancel(context.Background())
+	addresses, done := startServiceWith(t, ctx, configHome, "--listen", "127.0.0.1:0")
+	kind, api := fetchPage(t, ctx, addresses[0])
+	assert.Equal(t, "text/plain; charset=utf-8", kind, "/ is the health line")
+	assert.Equal(t, http.StatusNotFound, api)
+	cancel()
+	require.NoError(t, <-done)
 }
 
 func TestServiceRunRejectsMalformedConfig(t *testing.T) {

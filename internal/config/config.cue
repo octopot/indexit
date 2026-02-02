@@ -18,6 +18,13 @@ package config
 	// the origin they were written with. Default:
 	// "http://indexit.localhost:17840", where `indexit service run` listens.
 	origin?: string & =~"^https?://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*(:([1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?/?$"
+
+	// The statistics page at /: photographs saved, their size, the latest
+	// ones and what the service served. false leaves / a plain-text health
+	// line. Default: true when origin is local (localhost, a .localhost name
+	// or a loopback IP address), false otherwise: another origin means a
+	// proxy in front of the service, which would expose the page.
+	dashboard?: bool
 }
 
 #Config

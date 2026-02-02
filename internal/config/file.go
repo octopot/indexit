@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,6 +27,34 @@ type Service struct {
 	// Origin is the scheme, host and port of the photograph URLs written into
 	// exports, without a trailing slash; empty when the file does not set it.
 	Origin string
+	// Dashboard turns the statistics page at / on or off; nil when the file
+	// does not set it.
+	Dashboard *bool
+}
+
+// DashboardEnabled reports whether the service shows its statistics page.
+// Unless the file says, it does for a local origin only: another origin
+// means a proxy in front of the service, which would expose the page.
+func (s Service) DashboardEnabled() bool {
+	if s.Dashboard != nil {
+		return *s.Dashboard
+	}
+	if s.Origin == "" {
+		return true
+	}
+	u, err := url.Parse(s.Origin)
+	return err == nil && LocalHost(u.Hostname())
+}
+
+// LocalHost reports whether a host name always means this machine:
+// localhost, a name under .localhost or a loopback IP address.
+func LocalHost(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(host, "."))
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return true
+	}
+	ip := net.ParseIP(strings.TrimSuffix(strings.TrimPrefix(host, "["), "]"))
+	return ip != nil && ip.IsLoopback()
 }
 
 // origin mirrors #Service.origin in config.cue: http or https, a host name
@@ -34,7 +64,7 @@ var origin = regexp.MustCompile(`^https?://[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])
 
 // schema holds the keys of config.cue, spelled exactly: go-toml matches
 // struct fields regardless of case, a closed CUE definition does not.
-var schema = map[string]any{"service": map[string]any{"origin": nil}}
+var schema = map[string]any{"service": map[string]any{"origin": nil, "dashboard": nil}}
 
 // FilePath returns $XDG_CONFIG_HOME/indexit/config.toml, or
 // ~/.config/indexit/config.toml without XDG_CONFIG_HOME: the directory of
@@ -71,7 +101,8 @@ func ReadFile(path string) (File, error) {
 	}
 	var raw struct {
 		Service struct {
-			Origin *string `toml:"origin"`
+			Origin    *string `toml:"origin"`
+			Dashboard *bool   `toml:"dashboard"`
 		} `toml:"service"`
 	}
 	if err = toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields().Decode(&raw); err != nil {
@@ -84,6 +115,7 @@ func ReadFile(path string) (File, error) {
 		}
 		file.Service.Origin = strings.TrimSuffix(*v, "/")
 	}
+	file.Service.Dashboard = raw.Service.Dashboard
 	return file, nil
 }
 

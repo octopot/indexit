@@ -1,0 +1,3 @@
+[service]
+origin = "https://images.example"
+dashboard = true

@@ -113,6 +113,8 @@ jq -r '.media | select(.) | .album.photos[]?.url // .preview_url // empty' post.
    downloads the photograph on its first request and keeps the copy; a
    photograph nobody requested is lost with the post. A cold request can wait
    up to two minutes for a running indexit command; retry a failure.
+   `curl -fsS http://indexit.localhost:17840/api/v1/unsaved` lists the
+   photographs still without a local copy.
 4. Report what is missing: `preview_error` instead of a URL, an album with
    `complete: false` or an `error`. Don't present a partial album as the whole
    post. Videos, GIFs and documents get no URL; link to the post for them.

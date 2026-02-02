@@ -28,7 +28,7 @@ Then start the service and check it:
 
 ```sh
 brew services start octolab/tap/indexit
-curl http://indexit.localhost:17840/
+curl -fsS -o /dev/null http://indexit.localhost:17840/
 ```
 
 Photograph URLs point to `http://indexit.localhost:17840/`. A `.localhost` name
@@ -44,6 +44,38 @@ directory; explicit `--env-file` and `INDEXIT_ENV_FILE` still override it. Ordin
 CLI commands retain their working-directory lookup. Use the same account and
 data-directory settings for both processes. Sign in through
 the CLI before requesting an uncached photograph. No separate HTTP proxy is needed.
+
+## Dashboard
+
+Open [http://indexit.localhost:17840/](http://indexit.localhost:17840/) in a
+browser. The page shows how many photographs this Mac keeps and their size,
+the free space on the disk, how many requests the service answered from disk
+and per download, the days photographs were saved, the dialogs they come from
+and the ten latest, with links to the photograph and to its Telegram post.
+It updates by itself every 15 seconds while it is open.
+
+It also lists what needs a look: photographs a fetch registered but nobody
+opened yet, which have no local copy and are lost with the post; photographs
+Telegram answered no longer exist; failed requests. To save every registered
+photograph now, one by one:
+
+```sh
+curl -fsS http://indexit.localhost:17840/api/v1/unsaved | xargs -n 1 curl -fsS -o /dev/null
+```
+
+`/api/v1/stats` returns the same numbers as JSON.
+
+The page lists every saved photograph, so it answers only on this Mac: to an
+address of loopback, `localhost` or a `.localhost` name, and not through a
+proxy. Photograph URLs work as before. To turn the page off, set
+`dashboard = false` under `[service]` and restart the service.
+
+The days come from the dates of the image files: a photograph restored from a
+backup counts as saved on the day it was restored. The calendar of the last 26
+weeks appears once the oldest photograph is two weeks old, with a table of the
+same days for the keyboard and screen readers. Request counts start with
+v0.3.1 and cover the last 13 months. Browsers keep photographs for a year, so a
+view is not always a request.
 
 ## Configuration
 
@@ -73,11 +105,18 @@ the same file, which accepts only the keys of the template: an unknown key or
 a malformed value stops the command with an error naming the file and the
 key. Without an origin, URLs use `http://indexit.localhost:17840`.
 
+With an origin outside this Mac, the dashboard is off unless you set
+`dashboard = true`: the proxy in front of the service would show it to
+everyone who reaches the proxy.
+
 ## Storage and availability
 
 Data lives in `~/.local/share/indexit`, or `$XDG_DATA_HOME/indexit`.
 `INDEXIT_DATA_DIR` overrides the complete directory. Keep the CLI and service on
 the same directory. Source metadata and image bytes are separate private files.
+`stats/` holds the request counts of the dashboard, one small file a month; the
+service removes months older than 13. Deleting it resets the counts and nothing
+else.
 There is no automatic eviction or storage limit: disk use grows as images are read.
 Keep a backup if a local copy may become the only surviving photograph.
 
@@ -91,8 +130,9 @@ They are not promised to work from a phone, another machine or a web page that
 blocks local HTTP. Clearing browser cache does not delete the saved photograph.
 
 If Obsidian opens a note before the service is ready, failed image elements may
-remain visible after the service starts. Check `curl http://indexit.localhost:17840/`,
-then reopen the note or switch to reading view to reload its images.
+remain visible after the service starts. Check
+`curl -fsS -o /dev/null http://indexit.localhost:17840/`, then reopen the note
+or switch to reading view to reload its images.
 
 ## Upgrade, stop and remove
 
@@ -127,4 +167,5 @@ Repeat `--listen` with a literal loopback address and port, such as
 `--listen`, a system without IPv6 serves on `127.0.0.1` alone.
 
 The ordinary Linux CLI still works; automatic Linux service setup is outside
-this iteration. Root `/` is a health page without an image index.
+this iteration. The dashboard works the same way at the address you listen on,
+such as `http://localhost:8080/`.

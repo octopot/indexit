@@ -8,3 +8,8 @@
 # Scheme, host and optional port of the photograph URLs written into exports.
 # Exports keep the origin they were written with.
 # origin = "http://indexit.localhost:17840"
+
+# The statistics page at http://indexit.localhost:17840/. false leaves / a
+# plain-text health line. On by default for a local origin, off for another:
+# a proxy in front of the service would expose the page.
+# dashboard = true

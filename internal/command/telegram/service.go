@@ -6,16 +6,21 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"go.octolab.org/toolset/indexit/internal/buildinfo"
 	"go.octolab.org/toolset/indexit/internal/config"
+	"go.octolab.org/toolset/indexit/internal/dashboard"
 	indexlog "go.octolab.org/toolset/indexit/internal/log"
 	"go.octolab.org/toolset/indexit/internal/preview"
+	"go.octolab.org/toolset/indexit/internal/stats"
 	tgsvc "go.octolab.org/toolset/indexit/internal/telegram"
 )
 
@@ -38,7 +43,9 @@ func NewService() *cobra.Command {
 		"address the system lacks, as ::1 with IPv6 turned off, is skipped.\n" +
 		"--listen replaces the defaults and may repeat. Photograph URLs use origin\n" +
 		"under [service] in config.toml, " + preview.DefaultOrigin + " by default.\n" +
-		"Without a config.toml, it writes one with every key commented out.", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+		"Without a config.toml, it writes one with every key commented out.\n\n" +
+		"On this machine, / is a dashboard of the saved photographs. dashboard = false\n" +
+		"under [service] turns it off. Request counts go to stats/ in the data directory.", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 		for _, address := range listen {
 			host, port, err := net.SplitHostPort(address)
 			if err != nil {
@@ -64,13 +71,27 @@ func NewService() *cobra.Command {
 		} else if created {
 			log.Info("config: created the default file", "path", configPath)
 		}
-		store, err := preview.Default()
+		file, err := config.ReadFile(configPath)
+		if err != nil {
+			return usageErr(err)
+		}
+		store, err := preview.FromConfig(file)
 		if err != nil {
 			return usageErr(err)
 		}
 		paths, err := pathsFromFlags(&opt)
 		if err != nil {
 			return err
+		}
+		statsDir := filepath.Join(store.Root, "stats")
+		recorder := stats.NewRecorder(statsDir, log)
+		var board *dashboard.Dashboard
+		if file.Service.DashboardEnabled() {
+			board = dashboard.New(store, paths.Peers, stats.NewReader(statsDir))
+			board.Dropped = recorder.Dropped
+			board.Version = buildinfo.Display()
+			board.ConfigPath = configPath
+			board.Logger = log
 		}
 		handler := store.Handler(func(ctx context.Context, src preview.Source, path string) error {
 			client, err := newClient(cmd, paths)
@@ -85,6 +106,11 @@ func NewService() *cobra.Command {
 				log.Error("preview: download failed", "message", src.Message, "error", err)
 			}
 			return err
+		}, func(outcome preview.Outcome) {
+			recorder.Observe(outcome)
+			if board != nil && outcome.Kind == preview.Download {
+				board.Refresh()
+			}
 		})
 		listeners, err := listenAll(cmd.Context(), listen, !cmd.Flags().Changed("listen"), func(address string, err error) {
 			log.Warn("service: address unavailable, skipped", "address", address, "error", err)
@@ -96,8 +122,20 @@ func NewService() *cobra.Command {
 		for _, listener := range listeners {
 			addresses = append(addresses, listener.Addr().String())
 		}
+		// The statistics outlive the requests in flight: they stop after serve.
+		background, stop := context.WithCancel(context.WithoutCancel(cmd.Context()))
+		var workers sync.WaitGroup
+		workers.Go(func() { recorder.Run(background) })
+		served := handler
+		if board != nil {
+			served = board.Handler(handler)
+			workers.Go(func() { board.Run(background) })
+		}
 		fmt.Fprintf(cmd.ErrOrStderr(), "image service: %s (URLs: %s, data: %s)\n", strings.Join(addresses, ", "), store.Origin, store.Root)
-		return serve(cmd.Context(), listeners, handler, 5*time.Second)
+		err = serve(cmd.Context(), listeners, served, 5*time.Second)
+		stop()
+		workers.Wait()
+		return err
 	}}
 	run.Flags().StringArrayVar(&listen, "listen", Listen, "loopback address to listen on, repeatable; replaces the defaults")
 	run.Flags().StringVar(&opt.sessionPath, "session", "", "path to Telegram session file")

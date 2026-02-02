@@ -158,3 +158,7 @@ The service uses the CLI's configuration and authorization. Saved photographs
 live in `~/.local/share/indexit` (or `INDEXIT_DATA_DIR`) and are never evicted
 automatically; uninstall preserves them. Do not delete them as routine cleanup.
 The service writes a commented `config.toml` when there is none.
+`http://indexit.localhost:17840/` is a dashboard of the saved photographs.
+`curl -fsS http://indexit.localhost:17840/api/v1/unsaved` lists the URLs of
+registered photographs without a local copy, and `/api/v1/stats` the numbers as
+JSON.

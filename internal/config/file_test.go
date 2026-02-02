@@ -41,6 +41,8 @@ func TestReadFile_SchemaFixtures(t *testing.T) {
 		"mixed-case-host-max-port.toml": "http://Indexit.Localhost:65535",
 		"no-port.toml":                  "http://indexit.localhost",
 		"service-without-origin.toml":   "",
+		"dashboard-off.toml":            "",
+		"proxy-with-dashboard.toml":     "https://images.example",
 	}
 	valid, err := filepath.Glob(filepath.Join("testdata", "valid", "*.toml"))
 	require.NoError(t, err)
@@ -63,18 +65,44 @@ func TestReadFile_SchemaFixtures(t *testing.T) {
 	}
 }
 
+func TestReadFile_Dashboard(t *testing.T) {
+	for name, want := range map[string]bool{
+		"empty.toml":                    true,
+		"default.toml":                  true,
+		"dashboard-off.toml":            false,
+		"ipv4.toml":                     true,
+		"mixed-case-host-max-port.toml": true,
+		"https-trailing-slash.toml":     false,
+		"proxy-with-dashboard.toml":     true,
+	} {
+		file, err := ReadFile(filepath.Join("testdata", "valid", name))
+		require.NoError(t, err, name)
+		assert.Equal(t, want, file.Service.DashboardEnabled(), name)
+	}
+}
+
+func TestLocalHost(t *testing.T) {
+	for _, host := range []string{"localhost", "LOCALHOST.", "indexit.localhost", "a.b.localhost", "127.0.0.1", "127.1.2.3", "::1", "[::1]"} {
+		assert.True(t, LocalHost(host), host)
+	}
+	for _, host := range []string{"", "localhost.example", "notlocalhost", "example.com", "0.0.0.0", "192.168.1.1", "::", "10.0.0.1", "127.0.0.1.nip.io"} {
+		assert.False(t, LocalHost(host), host)
+	}
+}
+
 func TestReadFile_ErrorsNameTheKey(t *testing.T) {
 	for name, key := range map[string]string{
-		"unknown-service-key.toml": "unknown key service.port",
-		"unknown-table.toml":       "unknown key preview",
-		"top-level-origin.toml":    "unknown key origin",
-		"uppercase-table.toml":     "unknown key SERVICE",
-		"uppercase-key.toml":       "unknown key service.ORIGIN",
-		"case-duplicate.toml":      "unknown key service.Origin",
-		"port-out-of-range.toml":   "service.origin must be an http or https origin",
-		"path.toml":                "service.origin must be an http or https origin",
-		"not-a-string.toml":        "service.origin cannot be a TOML integer",
-		"service-not-a-table.toml": "service cannot be a TOML string",
+		"unknown-service-key.toml":  "unknown key service.port",
+		"unknown-table.toml":        "unknown key preview",
+		"top-level-origin.toml":     "unknown key origin",
+		"uppercase-table.toml":      "unknown key SERVICE",
+		"uppercase-key.toml":        "unknown key service.ORIGIN",
+		"case-duplicate.toml":       "unknown key service.Origin",
+		"port-out-of-range.toml":    "service.origin must be an http or https origin",
+		"path.toml":                 "service.origin must be an http or https origin",
+		"not-a-string.toml":         "service.origin cannot be a TOML integer",
+		"service-not-a-table.toml":  "service cannot be a TOML string",
+		"dashboard-not-a-bool.toml": "service.dashboard cannot be a TOML string",
 	} {
 		path := filepath.Join("testdata", "invalid", name)
 		_, err := ReadFile(path)
@@ -100,6 +128,7 @@ func TestReadFile_SchemaIsNextToTheDecoder(t *testing.T) {
 func TestUnknownKeys(t *testing.T) {
 	doc := map[string]any{"service": map[string]any{"origin": "x", "Origin": "y", "port": 1}, "SERVICE": map[string]any{}, "other": 1}
 	assert.Equal(t, []string{"SERVICE", "other", "service.Origin", "service.port"}, unknownKeys(doc, schema, ""))
+	assert.Empty(t, unknownKeys(map[string]any{"service": map[string]any{"origin": "x", "dashboard": false}}, schema, ""))
 	assert.Empty(t, unknownKeys(map[string]any{"service": "not a table"}, schema, ""), "types are left to the decoder")
 }
 
@@ -109,6 +138,7 @@ func TestTemplate_IsTheDefaultConfig(t *testing.T) {
 	file, err := ReadFile(path)
 	require.NoError(t, err, "the template passes the schema")
 	assert.Equal(t, File{}, file, "the template changes no default")
+	assert.True(t, file.Service.DashboardEnabled())
 
 	// Every key of the schema is documented, so uncommenting it is all it takes.
 	for table, keys := range schema {

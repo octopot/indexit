@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="no-referrer">
+<title>indexit · photographs</title>
+<link rel="icon" type="image/svg+xml" href="{{.Assets.Icon}}">
+<link rel="stylesheet" href="{{.Assets.CSS}}">
+<script src="{{.Assets.JS}}" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to statistics</a>
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <h1 class="mark">indexit<span class="vh"> photographs on {{.Here}}</span></h1>
+    <p class="status" id="status" data-restart="{{.Restart}}"><span class="dot" aria-hidden="true"></span><span data-status role="status" aria-live="polite">Serving on {{.Here}}</span>{{if .Ready}}<span class="sep" aria-hidden="true">·</span><span>Updated <time data-updated datetime="{{iso .Updated}}">{{date .Updated}}</time></span>{{end}}</p>
+    <span class="version mono">{{.Version}}</span>
+  </div>
+</header>
+<main id="main" class="wrap" data-refresh="15">
+{{- if not .Ready}}
+  <section class="tile span-12 loading" aria-busy="true">
+    <h2>Counting photographs</h2>
+    <p class="line">The service is reading its data directory. This page updates by itself.</p>
+  </section>
+{{- else}}
+  <section class="tile span-5 hero" aria-labelledby="t-saved">
+    <h2 id="t-saved">Saved on {{.Here}}</h2>
+    <p class="figure"><span data-count="{{.Saved}}">{{.SavedText}}</span></p>
+    <p class="line">{{if eq .Saved 1}}photograph{{else}}photographs{{end}}{{if .Dialogs}} from {{.Dialogs}}{{end}}</p>
+    <p class="note">{{if eq .Registered 0}}Nothing registered yet.{{else if eq .NotSaved 0}}Every registered photograph has a local copy.{{else}}{{.NotSaved}} of {{.Registered}} registered not saved yet.{{end}}</p>
+  </section>
+
+  <section class="tile span-3" aria-labelledby="t-disk">
+    <h2 id="t-disk">Storage</h2>
+    <p class="stat">{{.Size.Value}}<span class="unit">{{.Size.Unit}}</span></p>
+    <p class="line">{{if .HasFree}}{{.Free.Value}}&nbsp;{{.Free.Unit}} free on this disk{{else}}Free space n/a{{end}}</p>
+    {{- if .Orphans}}<p class="note">{{.Orphans}} without a source record, still served.</p>{{end}}
+  </section>
+
+  <section class="tile span-4" aria-labelledby="t-served">
+    <h2 id="t-served">Served from {{.Here}}</h2>
+    <p class="stat">{{.Served.Value}}{{if .Served.Unit}}<span class="unit">{{.Served.Unit}}</span>{{end}}</p>
+    <p class="line">{{if .Reuse}}{{.Reuse}} requests per download on average{{else if .Downloads}}{{.Downloads}} downloaded from Telegram{{else}}photograph requests{{end}}, {{.Sent.Value}}&nbsp;{{.Sent.Unit}} sent</p>
+    <p class="note">{{if .Since.IsZero}}Counting starts with the next request.{{else}}Since <time datetime="{{iso .Since}}">{{date .Since}}</time>. Browsers keep photographs, so a view is not always a request.{{end}}</p>
+  </section>
+
+  {{- if or .NotSaved .Gone .Failed .Invalid .ScanErr .LogErr .Dropped}}
+  <section class="tile span-12 attention" aria-labelledby="t-attention">
+    <h2 id="t-attention">Needs a look</h2>
+    <ul class="issues">
+      {{- if .NotSaved}}
+      <li>
+        <p><strong class="num">{{.NotSaved}}</strong> registered {{if eq .NotSaved 1}}photograph has{{else}}photographs have{{end}} no local copy yet. A copy appears the first time its URL is opened; while the post exists, this saves {{if eq .NotSaved 1}}it{{else}}them all{{end}}, one by one:</p>
+        <div class="command"><pre class="mono" id="warm" tabindex="0" aria-label="Command to save them">{{.WarmScript}}</pre><button type="button" class="copy" data-copy="warm">Copy</button></div>
+      </li>
+      {{- end}}
+      {{- if .Gone}}
+      <li><p><strong class="num">{{.Gone}}</strong> {{if eq .Gone 1}}photograph is{{else}}photographs are{{end}} gone from Telegram with no local copy: Telegram answered they no longer exist.</p></li>
+      {{- end}}
+      {{- if .Failed}}
+      <li><p><strong class="num">{{.Failed}}</strong> {{if eq .Failed 1}}request{{else}}requests{{end}} failed for other reasons, such as a busy session or the network. Check the service log, <span class="mono">{{.ServiceLog}}</span>.</p></li>
+      {{- end}}
+      {{- if .Invalid}}
+      <li><p><strong class="num">{{.Invalid}}</strong> {{if eq .Invalid 1}}file{{else}}files{{end}} in the data directory {{if eq .Invalid 1}}is{{else}}are{{end}} neither a photograph nor a source record, such as an empty or foreign file.</p></li>
+      {{- end}}
+      {{- if .ScanErr}}
+      <li><p>Part of the data directory could not be read, so the counts may be short: <span class="mono">{{.ScanErr}}</span></p></li>
+      {{- end}}
+      {{- if .LogErr}}
+      <li><p>The request counts could not be read in full, so they may be short: <span class="mono">{{.LogErr}}</span>. Check that the files in <span class="mono">stats/</span> of the data directory are readable; removing them only resets the counts.</p></li>
+      {{- end}}
+      {{- if .Dropped}}
+      <li><p><strong class="num">{{.Dropped}}</strong> statistics events were dropped under load; photographs were served as usual.</p></li>
+      {{- end}}
+    </ul>
+  </section>
+  {{- end}}
+
+  {{- if eq .Saved 0}}
+  <section class="tile span-12 empty" aria-labelledby="t-empty">
+    <h2 id="t-empty">No photographs saved yet</h2>
+    <p class="line">Fetch a Telegram post with a photograph, then open its <span class="mono">preview_url</span> once; the service keeps a copy from then on.</p>
+    <div class="command"><pre class="mono" id="first" tabindex="0" aria-label="Command to fetch a post">indexit telegram fetch message https://t.me/channel/123</pre><button type="button" class="copy" data-copy="first">Copy</button></div>
+  </section>
+  {{- else}}
+  <section class="tile span-8" aria-labelledby="t-activity">
+    <h2 id="t-activity">Saved per day</h2>
+    {{- with .Activity}}
+    {{- if .Calendar}}
+    <div class="calendar" tabindex="0" role="group" aria-label="{{.Calendar.Label}}, scrolls sideways">
+      <svg class="heat" viewBox="-30 -18 420 123" aria-hidden="true">
+        {{- range .Calendar.Months}}<text class="axis" x="{{.X}}" y="-6">{{.Name}}</text>{{end}}
+        <text class="axis" x="-30" y="10">Mon</text><text class="axis" x="-30" y="40">Wed</text><text class="axis" x="-30" y="70">Fri</text>
+        {{- range .Calendar.Weeks}}{{$x := .X}}{{range .Days}}<rect class="l{{.Level}}" x="{{$x}}" y="{{.Y}}" width="{{cell}}" height="{{cell}}" rx="2"><title>{{.Title}}</title></rect>{{end}}{{end}}
+      </svg>
+    </div>
+    <p class="legend" aria-hidden="true"><span>Fewer</span><svg viewBox="0 0 72 12" width="72" height="12"><rect class="l0" x="0" width="12" height="12" rx="2"/><rect class="l1" x="15" width="12" height="12" rx="2"/><rect class="l2" x="30" width="12" height="12" rx="2"/><rect class="l3" x="45" width="12" height="12" rx="2"/><rect class="l4" x="60" width="12" height="12" rx="2"/></svg><span>More</span></p>
+    <details class="days">
+      <summary>{{.Calendar.Label}}. Table of the days</summary>
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Photographs saved per day">
+      <table>
+        <thead><tr><th scope="col">Week of</th><th scope="col">Mon</th><th scope="col">Tue</th><th scope="col">Wed</th><th scope="col">Thu</th><th scope="col">Fri</th><th scope="col">Sat</th><th scope="col">Sun</th></tr></thead>
+        <tbody>{{range .Calendar.Table}}<tr><th scope="row">{{.Week}}</th>{{range .Counts}}<td>{{.}}</td>{{end}}</tr>{{end}}</tbody>
+      </table>
+      </div>
+    </details>
+    {{- else}}
+    <p class="line">The calendar fills in once the oldest photograph is two weeks old.</p>
+    {{- end}}
+    <dl class="facts">
+      <div><dt>Oldest file</dt><dd><time datetime="{{iso .First}}" data-date>{{.First.Format "2 Jan 2006"}}</time></dd></div>
+      <div><dt>Busiest day</dt><dd>{{.Peak}}, <time datetime="{{iso .Busiest}}" data-date>{{.Busiest.Format "2 Jan"}}</time></dd></div>
+      <div><dt>Days with saves</dt><dd>{{.Active}} of {{.Days}}</dd></div>
+    </dl>
+    <p class="note">By the date of each file; a restored backup counts as saved on the day it was restored.</p>
+    {{- end}}
+  </section>
+
+  <section class="tile span-4" aria-labelledby="t-dialogs">
+    <h2 id="t-dialogs">Where they come from</h2>
+    <ol class="dialogs">
+      {{- range .Top}}
+      <li>
+        <p class="row"><span class="name">{{if .Link}}<a href="{{.Link}}" rel="noreferrer noopener" target="_blank">{{.Title}}</a>{{else}}{{.Title}}{{end}}</span><span class="num">{{.Photos}}<span class="share"> · {{.Share}}</span></span></p>
+        <svg class="meter" viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true"><rect width="{{pct .Bar}}" height="4" rx="1"/></svg>
+      </li>
+      {{- end}}
+    </ol>
+  </section>
+
+  <section class="tile span-12" aria-labelledby="t-recent">
+    <h2 id="t-recent">Latest saved</h2>
+    <ul class="photos">
+      {{- range .Recent}}
+      <li class="photo">
+        <a class="frame" href="{{.URL}}" target="_blank" rel="noreferrer noopener"><img src="{{.Thumbnail}}" alt="{{.Alt}}" width="240" height="240" decoding="async" {{if .Eager}}loading="eager" fetchpriority="high"{{else}}loading="lazy"{{end}}></a>
+        <p class="title">{{.Title}}</p>
+        <p class="meta">{{if .Telegram}}<a href="{{.Telegram}}" target="_blank" rel="noreferrer noopener">{{.Message}}</a>{{else}}{{.Message}}{{end}} · {{.Size}}</p>
+        <p class="meta"><time datetime="{{iso .Saved}}" data-rel>{{date .Saved}}</time></p>
+      </li>
+      {{- end}}
+    </ul>
+  </section>
+  {{- end}}
+{{- end}}
+</main>
+<footer class="wrap foot">
+  <p>Photograph URLs <span class="mono">{{.Origin}}</span></p>
+  <p>Data <span class="mono">{{.DataDir}}</span></p>
+  <p>Config <span class="mono">{{.Config}}</span></p>
+  <p><a href="/api/v1/stats">JSON</a></p>
+</footer>
+</body>
+</html>

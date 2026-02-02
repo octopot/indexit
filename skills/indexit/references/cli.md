@@ -35,6 +35,9 @@ address the system lacks, as ::1 with IPv6 turned off, is skipped.
 under [service] in config.toml, http://indexit.localhost:17840 by default.
 Without a config.toml, it writes one with every key commented out.
 
+On this machine, / is a dashboard of the saved photographs. dashboard = false
+under [service] turns it off. Request counts go to stats/ in the data directory.
+
 ```text
 indexit service run [flags]
 ```

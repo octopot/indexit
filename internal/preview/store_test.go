@@ -93,7 +93,7 @@ func TestConcurrentColdThenOfflineAfterRestart(t *testing.T) {
 			t.Error("lost source metadata")
 		}
 		return os.WriteFile(p, data, 0600)
-	})
+	}, nil)
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
@@ -116,7 +116,7 @@ func TestConcurrentColdThenOfflineAfterRestart(t *testing.T) {
 	offline := reopened.Handler(func(context.Context, Source, string) error {
 		t.Error("network called for cached photo")
 		return errors.New("logged out")
-	})
+	}, nil)
 	r := request(offline, src.Path())
 	if r.Code != 200 || !bytes.Equal(r.Body.Bytes(), data) {
 		t.Fatal("lost cached image")
@@ -148,7 +148,7 @@ func TestFailureDoesNotPublishPartialAndRetries(t *testing.T) {
 				return nil
 			}
 			return os.WriteFile(p, data, 0600)
-		})
+		}, nil)
 		if r := request(h, src.Path()); r.Code != 502 {
 			t.Fatalf("%d", r.Code)
 		}
@@ -161,7 +161,7 @@ func TestFailureDoesNotPublishPartialAndRetries(t *testing.T) {
 	}
 }
 func TestNoExternalSourcesOrDirectoryListing(t *testing.T) {
-	h := (&Store{Root: t.TempDir()}).Handler(func(context.Context, Source, string) error { t.Fatal("unexpected fetch"); return nil })
+	h := (&Store{Root: t.TempDir()}).Handler(func(context.Context, Source, string) error { t.Fatal("unexpected fetch"); return nil }, nil)
 	for _, path := range []string{"/images/", testSource().Path() + "?url=https://example.org", "/preview/telegram/v1/"} {
 		if r := request(h, path); r.Code != 404 {
 			t.Fatal(r.Code)
@@ -220,7 +220,7 @@ func TestStatusAndStaleDownloadCleanup(t *testing.T) {
 		if err := os.WriteFile(stale, []byte("old partial"), 0600); err != nil {
 			t.Fatal(err)
 		}
-		h := store.Handler(func(context.Context, Source, string) error { return tc.err })
+		h := store.Handler(func(context.Context, Source, string) error { return tc.err }, nil)
 		r := request(h, src.Path())
 		if r.Code != tc.status || r.Header().Get("Cache-Control") != "no-store" {
 			t.Fatalf("%d %v", r.Code, r.Header())
@@ -228,5 +228,101 @@ func TestStatusAndStaleDownloadCleanup(t *testing.T) {
 		if _, err := os.Stat(stale); !os.IsNotExist(err) {
 			t.Fatal("crash leftover not removed")
 		}
+	}
+}
+func TestOutcomes(t *testing.T) {
+	store := &Store{Root: t.TempDir()}
+	src := testSource()
+	if e := store.Save(src); e != nil {
+		t.Fatal(e)
+	}
+	data := jpegBytes(t)
+	gone := src
+	gone.Message++
+	if e := store.Save(gone); e != nil {
+		t.Fatal(e)
+	}
+	var outcomes []Outcome
+	h := store.Handler(func(_ context.Context, s Source, p string) error {
+		if s.Message == gone.Message {
+			return ErrSourceGone
+		}
+		return os.WriteFile(p, data, 0600)
+	}, func(o Outcome) { outcomes = append(outcomes, o) })
+	size := int64(len(data))
+	request(h, src.Path())
+	request(h, src.Path())
+	head := httptest.NewRecorder()
+	h.ServeHTTP(head, httptest.NewRequestWithContext(context.Background(), "HEAD", src.Path(), nil))
+	cached := httptest.NewRecorder()
+	revalidate := httptest.NewRequestWithContext(context.Background(), "GET", src.Path(), nil)
+	revalidate.Header.Set("If-Modified-Since", time.Now().Add(time.Hour).UTC().Format(http.TimeFormat))
+	h.ServeHTTP(cached, revalidate)
+	request(h, gone.Path())
+	request(h, Prefix+"invalid")
+	if !store.Saved(src) || store.Saved(gone) {
+		t.Fatal("Saved disagrees with the disk")
+	}
+	want := []Outcome{
+		{Source: src, Kind: Download, Status: 200, Sent: size, Downloaded: size},
+		{Source: src, Kind: Hit, Status: 200, Sent: size},
+		{Source: src, Kind: Hit, Status: 200},
+		{Source: src, Kind: Hit, Status: 304},
+		{Source: gone, Kind: Failure, Status: 410, Sent: int64(len(ErrSourceGone.Error()) + 1)},
+	}
+	if len(outcomes) != len(want) {
+		t.Fatalf("outcomes: %+v", outcomes)
+	}
+	for i := range want {
+		got := outcomes[i]
+		got.Source.AccessHash = want[i].Source.AccessHash
+		if got != want[i] {
+			t.Errorf("outcome %d: %+v, want %+v", i, got, want[i])
+		}
+	}
+}
+func TestServeSavedNeverDownloads(t *testing.T) {
+	store := &Store{Root: t.TempDir()}
+	src := testSource()
+	r := httptest.NewRecorder()
+	if store.ServeSaved(r, httptest.NewRequestWithContext(context.Background(), "GET", "/", nil), src) {
+		t.Fatal("served a photograph that is not saved")
+	}
+	if e := os.MkdirAll(filepath.Dir(store.ImagePath(src)), 0700); e != nil {
+		t.Fatal(e)
+	}
+	if e := os.WriteFile(store.ImagePath(src), jpegBytes(t), 0600); e != nil {
+		t.Fatal(e)
+	}
+	r = httptest.NewRecorder()
+	if !store.ServeSaved(r, httptest.NewRequestWithContext(context.Background(), "GET", "/", nil), src) || r.Code != 200 {
+		t.Fatal("did not serve a saved photograph")
+	}
+}
+func TestDownloadCountsWhenTheResponseFails(t *testing.T) {
+	store := &Store{Root: t.TempDir()}
+	src := testSource()
+	if e := store.Save(src); e != nil {
+		t.Fatal(e)
+	}
+	data := jpegBytes(t)
+	var outcomes []Outcome
+	h := store.Handler(func(_ context.Context, _ Source, p string) error { return os.WriteFile(p, data, 0600) },
+		func(o Outcome) { outcomes = append(outcomes, o) })
+	r := httptest.NewRequestWithContext(context.Background(), "GET", src.Path(), nil)
+	r.Header.Set("Range", "bytes=999999-")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusRequestedRangeNotSatisfiable {
+		t.Fatalf("status %d", w.Code)
+	}
+	if len(outcomes) != 1 || outcomes[0].Kind != Download || outcomes[0].Downloaded != int64(len(data)) {
+		t.Fatalf("outcomes: %+v", outcomes)
+	}
+	// the same range on the saved photograph is neither served nor a failure
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusRequestedRangeNotSatisfiable || len(outcomes) != 1 {
+		t.Fatalf("%d %+v", w.Code, outcomes)
 	}
 }
