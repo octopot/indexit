@@ -29,9 +29,12 @@ the rule under each says which `state` and `stateReason` it takes, and
   moves it to Idle.
 - A closed issue moves to Done when completed and to Won't do when not
   planned.
-- A move is `maintainer.py boards add IDXIT-P1 --column "<column>" --cards
-  IDXIT-<n> --yes`; it edits only the board file and is staged with the commit
-  that changes the issue's state, or with the next
+- A new card is `maintainer.py boards add IDXIT-P1 --column "<column>"
+  --cards IDXIT-<n> --yes`. `add` refuses a card already on the board, so a
+  move cuts the card's line from its column and puts it at the end of the
+  new one, ticked (`- [x]`) once the issue is closed. Either edits only the
+  board file, `maintainer.py lint` checks it, and it is staged with the
+  commit that changes the issue's state, or with the next
   `chore(project): sync the issue mirror`.
 
 ## Releasing
@@ -77,8 +80,10 @@ are in [docs/README.md](docs/README.md#keep-the-release-accurate).
   to the tag. A missed fix ships in the next patch, or in the next candidate
   before the final tag.
 - A release that changes stored data or URLs ships with the way to move to
-  it, and the agent moves this Mac with it: a backup, the data directory, the
-  owner's notes, a live check, then the backup goes once the owner confirms.
+  it, and the agent moves this Mac with it: it backs up the data directory,
+  migrates it, rewrites the owner's notes that carry the old URLs, checks
+  that the running service serves the photographs at the new URLs, and
+  removes the backup once the owner confirms.
 
 ### Before you start
 
@@ -229,7 +234,7 @@ release commit:
 git tag -s vX.Y.Z -F .agents/release/vX.Y.Z/annotation.txt && git tag -v vX.Y.Z && make release-check TAG=vX.Y.Z && git push --atomic origin main vX.Y.Z
 ```
 
-Run them on `main` with the release commit checked out: `make release-check`
+Run it on `main` with the release commit checked out: `make release-check`
 checks the tag against the branch you are about to push, as the `pre-push`
 hook does, together with tidy modules and the GoReleaser config.
 
@@ -286,9 +291,13 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
 - The site shows the new changelog page and release band once `cd.docs`
   finishes for the release commit.
 - On this Mac: `brew services restart octolab/tap/indexit` (or `start` when it
-  was stopped), `/` answers, the photographs of the owner's notes are served
-  with no `telegram: connecting` in `$(brew --prefix)/var/log/indexit.log`,
-  and the change of the release works with the installed binary.
+  was stopped), `/` answers, and the change of the release works with the
+  installed binary. The photographs of the owner's notes are saved already,
+  so they are served without Telegram: note the line count of
+  `$(brew --prefix)/var/log/indexit.log`, request a few photographs with
+  `curl -fsS -o /dev/null -w '%{http_code}\n' <URL>`, each answers `200`,
+  and the lines added since have no `telegram: connecting`. A browser may
+  show its cached copy without asking the service.
 - Criteria ticked by the release commit go to GitHub
   (`maintainer.py sync --only <N> --yes`); the server fields it brings back
   are the next `chore(project): sync the issue mirror` commit.
