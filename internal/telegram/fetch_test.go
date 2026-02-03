@@ -585,3 +585,33 @@ func TestFetchDialogs_AccountStatusNeedsNoPeerRequests(t *testing.T) {
 	assert.Nil(t, unknown.IsAdmin)
 	assert.Nil(t, unknown.IsCreator)
 }
+
+// Every channel numbers its messages from 1: two dialogs of one page can
+// share the ID of their top message, as #1 of channels with nothing but their
+// creation. Each takes its own date, and so does the cursor.
+func TestFetchDialogs_TopMessagesOfEqualIDs(t *testing.T) {
+	early, late := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC)
+	api := &scriptedAPI{dialogsPages: []tg.MessagesDialogsClass{
+		&tg.MessagesDialogsSlice{
+			Count: 3,
+			Dialogs: []tg.DialogClass{
+				&tg.Dialog{Peer: &tg.PeerChannel{ChannelID: 8}, TopMessage: 1},
+				&tg.Dialog{Peer: &tg.PeerChannel{ChannelID: 9}, TopMessage: 1},
+			},
+			// the last dialog's message comes first, the other overwrote it
+			Messages: []tg.MessageClass{
+				&tg.Message{ID: 1, Date: int(early.Unix()), PeerID: &tg.PeerChannel{ChannelID: 9}},
+				&tg.Message{ID: 1, Date: int(late.Unix()), PeerID: &tg.PeerChannel{ChannelID: 8}},
+			},
+			Chats: []tg.ChatClass{&tg.Channel{ID: 8, AccessHash: 1}, &tg.Channel{ID: 9, AccessHash: 2}},
+		},
+		&tg.MessagesDialogs{},
+	}}
+	w := &recWriter{}
+	require.NoError(t, FetchDialogs(t.Context(), api, peers.New(), w, DialogsOptions{PageSize: 2}, RateGuard{}))
+	require.Len(t, w.records, 2)
+	assert.Equal(t, late.Format(time.RFC3339), w.records[0].(model.DialogRecord).LastMessageAt)
+	assert.Equal(t, early.Format(time.RFC3339), w.records[1].(model.DialogRecord).LastMessageAt)
+	require.Len(t, api.dialogsReqs, 2)
+	assert.Equal(t, int(early.Unix()), api.dialogsReqs[1].OffsetDate, "the cursor takes the date of the last dialog's own top message")
+}

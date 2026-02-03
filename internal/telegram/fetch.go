@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	gotdpeer "github.com/gotd/td/telegram/message/peer"
@@ -91,7 +92,7 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 
 		entities := entitiesFromLists(modified.GetUsers(), modified.GetChats())
 		mapper.CacheEntities(cache, entities)
-		lastByID := lastMessagesByID(messages)
+		tops := topMessages(messages)
 		page++
 		pageGot := 0
 		for _, dialog := range dialogs {
@@ -99,7 +100,7 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 			if !ok {
 				continue
 			}
-			last := lastByID[ref.GetTopMessage()]
+			last := tops[topKey(ref.GetPeer(), ref.GetTopMessage())]
 			rec, ok := mapper.Dialog(dialog, entities, last)
 			if !ok {
 				continue
@@ -130,7 +131,7 @@ func FetchDialogs(ctx context.Context, api API, cache *peers.Cache, out Writer, 
 		}
 		offsetID = lastDialog.GetTopMessage()
 		offsetPeer = inputPeerForOffset(lastDialog.GetPeer(), entities)
-		if last, ok := lastByID[offsetID]; ok {
+		if last, ok := tops[topKey(lastDialog.GetPeer(), offsetID)]; ok {
 			offsetDate = last.GetDate()
 		} else {
 			offsetDate = 0
@@ -336,16 +337,24 @@ func normalizePageSize(pageSize, limit int) int {
 	return pageSize
 }
 
-func lastMessagesByID(messages []tg.MessageClass) map[int]tg.NotEmptyMessage {
-	out := make(map[int]tg.NotEmptyMessage, len(messages))
+// topMessages indexes the top messages of a page of dialogs by topKey:
+// every channel numbers its messages from 1, so an ID alone can name the top
+// message of several dialogs, as #1 of channels with nothing but their
+// creation.
+func topMessages(messages []tg.MessageClass) map[string]tg.NotEmptyMessage {
+	out := make(map[string]tg.NotEmptyMessage, len(messages))
 	for _, msg := range messages {
 		notEmpty, ok := msg.AsNotEmpty()
 		if !ok {
 			continue
 		}
-		out[notEmpty.GetID()] = notEmpty
+		out[topKey(notEmpty.GetPeerID(), notEmpty.GetID())] = notEmpty
 	}
 	return out
+}
+
+func topKey(peer tg.PeerClass, id int) string {
+	return peerName(peer) + "/" + strconv.Itoa(id)
 }
 
 func inputPeerForOffset(peer tg.PeerClass, entities gotdpeer.Entities) tg.InputPeerClass {

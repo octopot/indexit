@@ -219,12 +219,8 @@ func (p *Previews) scanDialogs(ctx context.Context, api API, channel int64, guar
 			}
 			entities := entitiesFromLists(modified.GetUsers(), modified.GetChats())
 			next := &tg.MessagesGetDialogsRequest{OffsetPeer: inputPeerForOffset(last.GetPeer(), entities), OffsetID: last.GetTopMessage(), Limit: defaultPageSize, FolderID: folder}
-			// IDs repeat across channels: the top message is the one of the
-			// dialog's peer.
-			for _, m := range modified.GetMessages() {
-				if m, ok := m.AsNotEmpty(); ok && m.GetID() == next.OffsetID && samePeer(m.GetPeerID(), last.GetPeer()) {
-					next.OffsetDate = m.GetDate()
-				}
+			if m, ok := topMessages(modified.GetMessages())[topKey(last.GetPeer(), next.OffsetID)]; ok {
+				next.OffsetDate = m.GetDate()
 			}
 			// an offset peer that cannot be addressed is empty on both pages
 			if next.OffsetID == req.OffsetID && next.OffsetDate == req.OffsetDate && peerName(peerOf(next.OffsetPeer)) == peerName(peerOf(req.OffsetPeer)) {
@@ -309,11 +305,6 @@ func (p *Previews) read(ctx context.Context, api MediaAPI, src preview.Source, h
 		return nil
 	}
 	return preview.ErrSourceGone
-}
-
-func samePeer(a, b tg.PeerClass) bool {
-	x, y := peerName(a), peerName(b)
-	return x != "" && x == y
 }
 
 // peerName is the UID of peer, empty for none.
