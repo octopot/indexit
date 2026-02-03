@@ -12,13 +12,13 @@ assignees:
 milestone: null
 parent: null
 issueFields: {}
-state: OPEN
-stateReason: null
+state: CLOSED
+stateReason: COMPLETED
 duplicateOf: null
 createdAt: 2026-10-22T08:11:21Z
-updatedAt: 2026-10-22T08:11:47Z
-lastEditedAt: null
-closedAt: null
+updatedAt: 2026-10-22T09:37:39Z
+lastEditedAt: 2026-10-22T09:37:39Z
+closedAt: 2026-10-22T09:55:17Z
 ---
 
 # service: save photographs lazily, from their URLs alone
@@ -53,32 +53,32 @@ $ curl -fsS -o /dev/null -w '%{http_code}\n' http://indexit.localhost:17840/prev
 
 URLs and fetch:
 
-- [ ] `fetch message` and `fetch messages` write nothing to the data directory for the photographs they describe: a preview URL is a function of the message alone;
-- [ ] a photograph of a channel or supergroup post, public or private, gets `/preview/telegram/v1/c<channel_id>/<message_id>/p<photo_id>.jpg`; nothing in it identifies the account, and the photo ID keeps its sign;
-- [ ] a photograph of a private chat or a basic group gets neither `preview_url` nor `preview_error`: it is not a case of the service, not a failure; `fetch media` still downloads it;
-- [ ] the picture's path on disk is the URL's path under the image directory, and nothing else is kept per picture.
+- [x] `fetch message` and `fetch messages` write nothing to the data directory for the photographs they describe: a preview URL is a function of the message alone;
+- [x] a photograph of a channel or supergroup post, public or private, gets `/preview/telegram/v1/c<channel_id>/<message_id>/p<photo_id>.jpg`; nothing in it identifies the account, and the photo ID keeps its sign;
+- [x] a photograph of a private chat or a basic group gets neither `preview_url` nor `preview_error`: it is not a case of the service, not a failure; `fetch media` still downloads it;
+- [x] the picture's path on disk is the URL's path under the image directory, and nothing else is kept per picture.
 
 Serving:
 
-- [ ] a picture on disk is served without any request to Telegram and without a Telegram session; an existing file that cannot be read answers 503, never a new download;
-- [ ] on a miss the service finds the channel by itself, in this order: a channel it already found, the CLI's peer cache read without writing it, the account's dialogs with the archive, the channel's cached username resolved and checked against the ID; otherwise it answers 404 that tells to fetch the post on this computer. Concurrent misses of one channel share one lookup;
-- [ ] the service re-reads the post, checks the photo ID and answers 410 when the post or the photograph is gone or replaced;
-- [ ] any signed-in account that can see the channel can fill a miss: the service no longer requires the account that gave the URL;
-- [ ] a min channel never overwrites a full entry of the peer cache, so a cached access hash can always read posts.
+- [x] a picture on disk is served without any request to Telegram and without a Telegram session; an existing file that cannot be read answers 503, never a new download;
+- [x] on a miss the service finds the channel by itself, in this order: a channel it already found, the CLI's peer cache read without writing it, the account's dialogs with the archive, the channel's cached username resolved and checked against the ID; otherwise it answers 404 that tells to fetch the post on this computer. Concurrent misses of one channel share one lookup;
+- [x] the service re-reads the post, checks the photo ID and answers 410 when the post or the photograph is gone or replaced;
+- [x] any signed-in account that can see the channel can fill a miss: the service no longer requires the account that gave the URL;
+- [x] a min channel never overwrites a full entry of the peer cache, so a cached access hash can always read posts.
 
 Storage:
 
-- [ ] the image directory can be set apart from the rest of the data, for example to a Google Drive folder (`images` under `[service]`); locks, statistics and thumbnails stay on the local disk;
-- [ ] two computers that share the image directory show the same pictures by the same URLs; a miss is filled by whichever service is asked, if its account can see the channel;
-- [ ] a picture is written to a temporary file in its own directory, named for the host and process, checked as a complete JPEG, then renamed; a saved picture is never overwritten, and a service removes only its own temporary files;
-- [ ] a conflict copy left by the cloud folder (`p… (1).jpg`) is neither served nor counted as an error.
+- [x] the image directory can be set apart from the rest of the data, for example to a Google Drive folder (`images` under `[service]`); locks, statistics and thumbnails stay on the local disk;
+- [x] two computers that share the image directory show the same pictures by the same URLs; a miss is filled by whichever service is asked, if its account can see the channel;
+- [x] a picture is written to a temporary file in its own directory, named for the host and process, checked as a complete JPEG, then renamed; a saved picture is never overwritten, and a service removes only its own temporary files;
+- [x] a conflict copy left by the cloud folder (`p… (1).jpg`) is neither served nor counted as an error.
 
 Dashboard, compatibility and docs:
 
-- [ ] the dashboard counts the pictures on disk; «what needs a look» for photographs nobody opened, `/api/v1/unsaved` and the warm-up command are gone;
+- [x] the dashboard counts the pictures on disk; «what needs a look» for photographs nobody opened, `/api/v1/unsaved` and the warm-up command are gone;
 - [ ] the URLs with the account segment, the `sources/` records and the code that reads them are gone; the release note says that notes made before have to be made again;
-- [ ] the local images guide, the output reference and the agent skill describe the new URLs, the image directory and that previews cover only posts with a message link, and no longer call a fetched photograph registered;
-- [ ] tests prove that a fetch writes nothing, that a hit never calls Telegram, each step of the channel lookup, and 410 for a replaced photograph.
+- [x] the local images guide, the output reference and the agent skill describe the new URLs, the image directory and that previews cover only posts with a message link, and no longer call a fetched photograph registered;
+- [x] tests prove that a fetch writes nothing, that a hit never calls Telegram, each step of the channel lookup, and 410 for a replaced photograph.
 
 ## Out of scope
 
@@ -105,4 +105,8 @@ Design agreed with a review by Fable 5.1 and gpt-6-astra (high), checked against
 - The photo ID stays in the URL: after an edit that replaces the photograph, the old URL answers 410 instead of showing another picture.
 - Two defects to fix on the way: `mapper.CacheChannel` stores min channels without the guard users have, and `DownloadPreview` rejects a session of another account.
 - Writing to a cloud folder: gpt-6-astra proposed a local temporary file, a copy and a SHA-256 sidecar; the simpler recipe with a temporary file next to the target and a JPEG check was chosen. Keeping the URLs given before working, proposed by both as a new URL version beside the old one, was dropped by the owner: v0, a single user.
+-->
+
+<!-- 2026-10-22T13:05Z https://github.com/octopot/indexit/issues/129#issuecomment-6337604735
+Implemented and staged with #130, reviewed by Fable 5.1 and gpt-6-astra (xhigh) in three rounds. Open until the release commit: the v0.4.0 note says that notes made before have to be made again (draft ready). Two choices on the way: a download takes one of 64 shared lock files of this computer, so nothing is kept per picture; where a filesystem has no hard links, publishing falls back to a rename after a look, which only another computer saving the same photograph, with the same bytes, can race.
 -->
