@@ -14,6 +14,26 @@ AGENTS.md of the other repository:
 
 A new service takes the next free port and adds it to both tables.
 
+## Issues and the board
+
+The issues are mirrored in `.github/issues/` and laid out on the board
+`.github/roadmap/IDXIT-P1.md` by the `projects:maintainer` skill. Its columns
+are the standard ones: Backlog, Todo, In progress, Idle, Done and Won't do;
+the rule under each says which `state` and `stateReason` it takes, and
+`maintainer.py lint` checks them.
+
+- A new issue goes to Backlog, or to Todo once it is picked for the near
+  work.
+- Taking an issue into work moves its card to In progress; a pause or a block
+  moves it to Idle.
+- A closed issue moves to Done when completed and to Won't do when not
+  planned: `maintainer.py boards publish IDXIT-P1 --closed --yes` places the
+  closed ones by those rules, in the file and on GitHub.
+- A move edits only the board file
+  (`maintainer.py boards add IDXIT-P1 --column "<column>" --cards IDXIT-<n> --yes`)
+  and is staged with the commit that changes the issue's state, or with the
+  next `chore(project): sync the issue mirror`.
+
 ## Releasing
 
 A release is a curated note plus a signed tag. A stable release also publishes
