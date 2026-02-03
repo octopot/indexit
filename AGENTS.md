@@ -27,10 +27,24 @@ are in [docs/README.md](docs/README.md#keep-the-release-accurate).
 
 ### Ground rules
 
-- The maintainer commits, tags and pushes. Stage one self-contained change at a
-  time and propose its message in a code block: one line,
-  `type(scope): summary`, with issues as `, issue #N` or `, closes #N`; no
-  body.
+- The agent brings the shells, the maintainer fires: the agent prepares each
+  step in full and hands over one command; the maintainer reviews it, commits,
+  tags and pushes. Nothing else waits for him.
+- A change is a series of commits planned up front, each bound to its issue
+  (`, issue #N` while it is in progress, `, closes #N` on the commit that
+  finishes it). The agent stages one self-contained commit at a time, writes
+  its message to a file outside the repository and gives
+  `git contrib < <file>`: `type(scope): summary`, then, when it helps, a body
+  wrapped at 72 columns. An intermediate state the working tree no longer has
+  is staged from blobs (`git hash-object -w` and `git update-index
+  --cacheinfo`), leaving the tree as it is. Tests and linters run on the end
+  state, not on each commit.
+- What can be verified mechanically the agent does without asking: the checks
+  before the release, the release commit, the note, the image and the tag
+  annotation, the checks after the push with the upgrade of this Mac, the
+  issue mirror, the announcement row, `.agents/self-control.md` and the
+  cleanup. It asks only for decisions: scope, wording the owner cares about,
+  a criterion to change.
 - Product changes first, release commit last: `chore(release): prepare vX.Y.Z`.
   A guide that explains new behavior changes with the product commit, and so
   does the agent skill in `skills/indexit/`; `go test ./skills` keeps its
@@ -38,9 +52,13 @@ are in [docs/README.md](docs/README.md#keep-the-release-accurate).
   `go generate ./skills` rewrites the reference.
 - The CLI is the source of truth for what the docs, the notes and the skill
   claim.
-- A published release is frozen: its note, annotation, image and catalog entry
-  stay as tagged. A missed fix ships in the next patch, or in the next
-  candidate before the final tag.
+- A published release is frozen: its tag, annotation, image and catalog entry
+  stay as tagged. Its note may still get pictures or wording that keep it true
+  to the tag. A missed fix ships in the next patch, or in the next candidate
+  before the final tag.
+- A release that changes stored data or URLs ships with the way to move to
+  it, and the agent moves this Mac with it: a backup, the data directory, the
+  owner's notes, a live check, then the backup goes once the owner confirms.
 
 ### Before you start
 
@@ -103,6 +121,9 @@ Lead paragraph: what the release does, in terms of commands and results.
 
 **Upgrade:** on macOS, run `brew update` followed by `brew upgrade --formula octolab/tap/indexit`. For a manual installation, use a [vX.Y.Z release archive](https://github.com/octopot/indexit/releases/tag/vX.Y.Z). Run `indexit version` to check the installed version.
 ```
+
+A release that changes the service also says, in a bullet or the **Upgrade:**
+paragraph, to run `brew services restart octolab/tap/indexit`.
 
 - English; a short slogan ending with a period ("One message, one entry.").
 - Only what users get: behavior and Telegram compatibility, no docs, tools or
@@ -169,11 +190,8 @@ at 72 columns.
 Release notes: docs/content/changelog/vX.Y.Z.md
 ```
 
-Same scope as the note. Write it to a file outside the repository:
-
-```sh
-annotation="$(mktemp -d)/annotation.txt"
-```
+Same scope as the note. Write it to `.agents/release/vX.Y.Z/annotation.txt`:
+`.agents/` is not tracked, so it never reaches a commit.
 
 ### 4. Tag, check, push
 
@@ -184,13 +202,11 @@ gh release view --json tagName -q .tagName
 gh api repos/octolab/homebrew-tap/contents/Formula/indexit.rb -q .sha
 ```
 
-Then:
+Then the maintainer runs one line, which the agent hands over with the
+release commit:
 
 ```sh
-git tag -s vX.Y.Z -F "$annotation"
-git tag -v vX.Y.Z
-make release-check TAG=vX.Y.Z
-git push --atomic origin main vX.Y.Z
+git tag -s vX.Y.Z -F .agents/release/vX.Y.Z/annotation.txt && git tag -v vX.Y.Z && make release-check TAG=vX.Y.Z && git push --atomic origin main vX.Y.Z
 ```
 
 Run them on `main` with the release commit checked out: `make release-check`
@@ -208,6 +224,9 @@ Never push the tag separately. A tag pushed by mistake can be deleted only
 before the GitHub release exists; after that, ship the next patch.
 
 ### 5. After the push
+
+The agent runs this section by itself once the push is done and reports what
+it saw.
 
 ```sh
 gh run watch --exit-status "$(gh run list -w cd.yml -c "$(git rev-parse 'vX.Y.Z^{commit}')" -L 1 --json databaseId -q '.[0].databaseId')"
@@ -246,6 +265,15 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   the plugin is a leftover: remove it, the agent would load both.
 - The site shows the new changelog page and release band once `cd.docs`
   finishes for the release commit.
+- On this Mac: `brew services restart octolab/tap/indexit` (or `start` when it
+  was stopped), `/` answers, the photographs of the owner's notes are served
+  with no `telegram: connecting` in `$(brew --prefix)/var/log/indexit.log`,
+  and the change of the release works with the installed binary.
+- Criteria ticked by the release commit go to GitHub
+  (`maintainer.py sync --only <N> --yes`); the server fields it brings back
+  are the next `chore(project): sync the issue mirror` commit.
+- What the owner has to see himself, such as a note in Obsidian or the
+  dashboard in a browser, goes to `.agents/self-control.md`.
 
 ### When `cd` fails
 
@@ -264,8 +292,10 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
 
 ### 6. Announcement
 
-Propose a row for "Latest contributions" in the
-[kamilsk/kamilsk](https://github.com/kamilsk/kamilsk) profile README:
+Add a row for "Latest contributions" in the
+[kamilsk/kamilsk](https://github.com/kamilsk/kamilsk) profile README, in the
+checkout `~/Development/public/kamilsk/kamilsk`, stage it with the message
+`chore: add new contribution log entry` and hand over its `git contrib`:
 
 ```md
 | 2026-10-02   | 🗃️ [indexit][]              | [v0.1.1][oi011], [v0.1.2][oi012]  | Telegram exports without duplicates       |
@@ -277,3 +307,15 @@ Newest first, one row per release day; a prerelease gets no row. The
 reference label is `o` + project
 initials + version digits. Notes is a short phrase, no longer than the
 existing ones, saying what the user gets.
+
+### 7. Self-control and cleanup
+
+`.agents/self-control.md` holds the checks that outlive a session: each item
+says when to look, what proves it and what to do if it fails. The agent adds
+the checks a release leaves open, closes an item with what proved it and
+removes it once proven, and keeps the follow-ups that still need an issue.
+
+The drafts of a release live in `.agents/release/vX.Y.Z/` (plan, note,
+annotation, migration). After the checks of step 5 the agent removes them,
+its scratch services, builds and test folders, and any backup the owner has
+confirmed.
