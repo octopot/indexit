@@ -1,5 +1,6 @@
 export default {
   index: { title: 'All releases', theme: { toc: false, breadcrumb: false } },
+  'v0.4.0': 'v0.4.0 — The whole post, nothing left behind.',
   'v0.3.1': 'v0.3.1 — Your photos at a glance.',
   'v0.3.0': 'v0.3.0 — Photos that stay.',
   'v0.2.3': 'v0.2.3 — Every copy in sight.',

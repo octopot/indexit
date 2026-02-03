@@ -76,7 +76,7 @@ Storage:
 Dashboard, compatibility and docs:
 
 - [x] the dashboard counts the pictures on disk; «what needs a look» for photographs nobody opened, `/api/v1/unsaved` and the warm-up command are gone;
-- [ ] the URLs with the account segment, the `sources/` records and the code that reads them are gone; the release note says that notes made before have to be made again;
+- [x] the URLs with the account segment, the `sources/` records and the code that reads them are gone; the release note says that notes made before have to be made again;
 - [x] the local images guide, the output reference and the agent skill describe the new URLs, the image directory and that previews cover only posts with a message link, and no longer call a fetched photograph registered;
 - [x] tests prove that a fetch writes nothing, that a hit never calls Telegram, each step of the channel lookup, and 410 for a replaced photograph.
 

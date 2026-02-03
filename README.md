@@ -15,7 +15,7 @@ brew install --formula octolab/tap/indexit
 indexit version
 ```
 
-For Linux or a manual installation, download a [v0.3.1 release archive](https://github.com/octopot/indexit/releases/tag/v0.3.1) for your platform. Ready-to-run binaries are available for macOS and Linux on `amd64` and `arm64`; Go is not required. See the [installation steps](docs/content/quick-start.mdx#1-install-indexit).
+For Linux or a manual installation, download a [v0.4.0 release archive](https://github.com/octopot/indexit/releases/tag/v0.4.0) for your platform. Ready-to-run binaries are available for macOS and Linux on `amd64` and `arm64`; Go is not required. See the [installation steps](docs/content/quick-start.mdx#1-install-indexit).
 
 ## Quick start
 
@@ -34,9 +34,9 @@ Set up your API credentials first and replace the example channel with your own.
 - [Messages](docs/content/guide/messages.mdx) — history, date windows, and exact links.
 - [Topics & media](docs/content/guide/media.mdx) — bring a trip archive home.
 - [Local image service](docs/content/guide/local-images.mdx) — photographs that keep showing in your notes.
-- [v0.3.1 release notes](docs/content/changelog/v0.3.1.md) — a dashboard of your photographs and a default config file.
+- [v0.4.0 release notes](docs/content/changelog/v0.4.0.md) — whole album posts and photograph URLs that name only the post.
 
-v0.3.1 describes and exports Telegram data, including users, bots, and your account’s membership and admin status, serves its photographs to your notes from this Mac with a dashboard of them, with a bundled skill to help coding agents use the CLI. Built-in search, contacts, Stories, and automatic synchronization are future work.
+v0.4.0 describes and exports Telegram data, including users, bots, your account’s membership and admin status, and whole album posts, serves its photographs to your notes from this Mac with a dashboard of them, with a bundled skill to help coding agents use the CLI. Built-in search, contacts, Stories, and automatic synchronization are future work.
 
 ## Development
 
