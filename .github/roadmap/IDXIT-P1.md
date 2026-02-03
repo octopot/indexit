@@ -6,7 +6,7 @@ number: null
 url: null
 owner:
   id: null
-  login: "lifeosm"
+  login: "octopot"
   type: Organization
 title: "Telegram integration"
 shortDescription: "Read-only personal-data ingestion from Telegram into the Sparkle index — dialogs, messages, topics, contacts, multi-account."
@@ -15,10 +15,6 @@ closed: false
 createdAt: null
 updatedAt: null
 closedAt: null
-creator: kamilsk
-tags:
-  - type/project
-  - topic/telegram
 ---
 
 # Telegram integration

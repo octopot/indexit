@@ -17,7 +17,8 @@ A new service takes the next free port and adds it to both tables.
 ## Issues and the board
 
 The issues are mirrored in `.github/issues/` and laid out on the board
-`.github/roadmap/IDXIT-P1.md` by the `projects:maintainer` skill. Its columns
+`.github/roadmap/IDXIT-P1.md` by the `projects:maintainer` skill. The board
+lives only in that file, with no project on GitHub. Its columns
 are the standard ones: Backlog, Todo, In progress, Idle, Done and Won't do;
 the rule under each says which `state` and `stateReason` it takes, and
 `maintainer.py lint` checks them.
@@ -27,12 +28,11 @@ the rule under each says which `state` and `stateReason` it takes, and
 - Taking an issue into work moves its card to In progress; a pause or a block
   moves it to Idle.
 - A closed issue moves to Done when completed and to Won't do when not
-  planned: `maintainer.py boards publish IDXIT-P1 --closed --yes` places the
-  closed ones by those rules, in the file and on GitHub.
-- A move edits only the board file
-  (`maintainer.py boards add IDXIT-P1 --column "<column>" --cards IDXIT-<n> --yes`)
-  and is staged with the commit that changes the issue's state, or with the
-  next `chore(project): sync the issue mirror`.
+  planned.
+- A move is `maintainer.py boards add IDXIT-P1 --column "<column>" --cards
+  IDXIT-<n> --yes`; it edits only the board file and is staged with the commit
+  that changes the issue's state, or with the next
+  `chore(project): sync the issue mirror`.
 
 ## Releasing
 
