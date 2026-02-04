@@ -12,10 +12,6 @@ dueOn: null
 createdAt: 2026-09-23T17:27:44Z
 updatedAt: 2026-10-18T13:38:26Z
 closedAt: null
-creator: kamilsk
-tags:
-  - type/milestone
-  - topic/telegram
 ---
 
 # Telegram fetcher PoC implementation
