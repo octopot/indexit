@@ -65,9 +65,9 @@ are in [docs/README.md](docs/README.md#keep-the-release-accurate).
 - What can be verified mechanically the agent does without asking: the checks
   before the release, the release commit, the note, the image and the tag
   annotation, the checks after the push with the upgrade of this Mac, the
-  issue mirror, the announcement row, `.agents/self-control.md` and the
-  cleanup. It asks only for decisions: scope, wording the owner cares about,
-  a criterion to change.
+  issue mirror and the board, the announcement row, `.agents/self-control.md`
+  and the cleanup. It asks only for decisions: scope, wording the owner cares
+  about, a criterion to change.
 - Product changes first, release commit last: `chore(release): prepare vX.Y.Z`.
   A guide that explains new behavior changes with the product commit, and so
   does the agent skill in `skills/indexit/`; `go test ./skills` keeps its
@@ -300,7 +300,8 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   show its cached copy without asking the service.
 - Criteria ticked by the release commit go to GitHub
   (`maintainer.py sync --only <N> --yes`); the server fields it brings back
-  are the next `chore(project): sync the issue mirror` commit.
+  and the board moves are the next `chore(project): sync the issue mirror`
+  commit.
 - What the owner has to see himself, such as a note in Obsidian or the
   dashboard in a browser, goes to `.agents/self-control.md`.
 
