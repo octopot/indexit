@@ -445,9 +445,9 @@ func TestFetchDialogs_LimitHonoured(t *testing.T) {
 					&tg.Dialog{Peer: &tg.PeerChat{ChatID: 3}, TopMessage: 102},
 				},
 				Messages: []tg.MessageClass{
-					userMessage(100, time.Unix(1700000000, 0), ""),
-					userMessage(101, time.Unix(1700000001, 0), ""),
-					userMessage(102, time.Unix(1700000002, 0), ""),
+					&tg.Message{ID: 100, Date: 1700000000, PeerID: &tg.PeerChat{ChatID: 1}},
+					&tg.Message{ID: 101, Date: 1700000001, PeerID: &tg.PeerChat{ChatID: 2}},
+					&tg.Message{ID: 102, Date: 1700000002, PeerID: &tg.PeerChat{ChatID: 3}},
 				},
 				Chats: []tg.ChatClass{
 					&tg.Chat{ID: 1, Title: "one"},
@@ -461,7 +461,8 @@ func TestFetchDialogs_LimitHonoured(t *testing.T) {
 	w := &recWriter{}
 	err := FetchDialogs(t.Context(), api, peers.New(), w, DialogsOptions{Limit: 2}, RateGuard{})
 	require.NoError(t, err)
-	assert.Len(t, w.records, 2)
+	require.Len(t, w.records, 2)
+	assert.Equal(t, time.Unix(1700000001, 0).UTC().Format(time.RFC3339), w.records[1].(model.DialogRecord).LastMessageAt)
 }
 
 func TestFetchDialogs_PaginationDeduplicatesPeers(t *testing.T) {
@@ -531,7 +532,7 @@ func TestFetchDialogs_PopulatesPeerCache(t *testing.T) {
 				Dialogs: []tg.DialogClass{
 					&tg.Dialog{Peer: &tg.PeerChannel{ChannelID: 77}, TopMessage: 100},
 				},
-				Messages: []tg.MessageClass{userMessage(100, time.Unix(1700000000, 0), "")},
+				Messages: []tg.MessageClass{&tg.Message{ID: 100, Date: 1700000000, PeerID: &tg.PeerChannel{ChannelID: 77}}},
 				Chats: []tg.ChatClass{
 					&tg.Channel{ID: 77, AccessHash: 12345, Username: "demo", Title: "Demo"},
 				},
