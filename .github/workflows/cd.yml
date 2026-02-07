@@ -34,8 +34,9 @@ jobs:
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: node .github/scripts/release.mjs check "${GITHUB_REF_NAME}"
-      # the catalog takes the skill only from a tag GitHub verifies, after the
-      # release is out; checked here, a bad tag can still be replaced
+      # a release, and the catalog's copy of the skill, come only from a tag
+      # GitHub verifies; checked before anything is published, a bad tag can
+      # still be replaced
       - name: Check the tag signature
         if: startsWith(github.ref, 'refs/tags/v')
         env:

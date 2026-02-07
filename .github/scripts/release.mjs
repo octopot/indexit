@@ -13,12 +13,12 @@
 //   release.mjs signature <tag>                              (CI: GitHub verifies the tag's signature)
 //   release.mjs skill [--published <digest>]                 (CI: one agent skill in the source, archives and binary, or in the catalog)
 
-import { checkGoreleaser } from './goreleaser-check.mjs'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { appendFileSync, existsSync, lstatSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { checkGoreleaser } from './goreleaser-check.mjs'
 
 const SETTINGS = '.github/settings.json'
 const SKILL = 'skills/indexit/SKILL.md'
@@ -174,8 +174,9 @@ function check(tag, opts) {
   return errors
 }
 
-// The catalog publishes a skill only from a tag GitHub verifies, after the
-// release is out. Checked first, a bad tag can still be replaced.
+// A release, and the catalog's copy of the skill, come only from a tag GitHub
+// verifies. Checked before anything is published, a bad tag can still be
+// replaced.
 function signature(tag) {
   const slug = repoSlug()
   if (!slug) return ['cannot resolve the repository; set GITHUB_REPOSITORY']
@@ -594,10 +595,10 @@ async function doctor() {
   try {
     const result = checkGoreleaser({ ...process.env, PATH: goreleaser.join(':') })
     if (result.ok) ok(result.accepted ? 'goreleaser check (accepted brews deprecation)' : 'goreleaser check')
-    else fail('goreleaser check failed; run node .github/scripts/goreleaser-check.mjs for details')
+    else fail('goreleaser check failed; run: make release-config-check')
   } catch (e) {
     if (e.code === 'ENOENT') skip('goreleaser is not installed; run: make tools')
-    else fail('goreleaser check failed; run it to see the details')
+    else fail('goreleaser check failed; run: make release-config-check')
   }
   return report
 }

@@ -58,7 +58,7 @@ test('release notes render site links but preserve code examples', () => fixture
 }))
 
 test('preflight refuses missing App credentials and hands the tap to the token step', () => fixture(({ cwd, run, withEnv }) => {
-  writeFileSync(join(cwd, '.goreleaser.yml'), 'homebrew_casks:\n  - name: indexit\n    repository:\n      owner: octolab\n      name: homebrew-tap\n      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"\n')
+  writeFileSync(join(cwd, '.goreleaser.yml'), 'brews:\n  - name: indexit\n    repository:\n      owner: octolab\n      name: homebrew-tap\n      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"\n')
   const output = join(cwd, 'github-output')
   withEnv({ GITHUB_OUTPUT: output })
   const missing = run('preflight')
@@ -167,6 +167,19 @@ test('a release tag requires the skill version of its commit', () => releaseFixt
   assert.match(run('check', 'v9.9.9', '--local').stderr, /metadata\.version is 9\.9\.8, not 9\.9\.9/)
   skill('9.9.9')
   assert.equal(run('check', 'v9.9.9', '--local').status, 0)
+}))
+
+test('skill compares the source with the catalog digest and needs release archives', () => fixture(({ cwd, run }) => {
+  // The test vector shared with internal/skill and the octolab/skills catalog.
+  mkdirSync(join(cwd, 'skills/indexit/references'), { recursive: true })
+  writeFileSync(join(cwd, 'skills/indexit/SKILL.md'), 'hello\n')
+  writeFileSync(join(cwd, 'skills/indexit/references/a.md'), 'a')
+  const digest = 'sha256:64ce802d5cef2c789ce95d306c9fcce6779c6e8166339ae47634e7f8b265a34b'
+  assert.equal(run('skill', '--published', digest).status, 0)
+  assert.match(run('skill', '--published', '').stderr, /published nothing, the source is sha256:64ce/)
+  assert.match(run('skill').stderr, /dist: no release archives/)
+  writeFileSync(join(cwd, 'skills/indexit/.hidden'), '')
+  assert.notEqual(run('skill', '--published', digest).status, 0)
 }))
 
 test('pre-push checks annotated tags and destination branches, deletions and tag-only pushes', () => releaseFixture(({ cwd, git, sha, base }) => {

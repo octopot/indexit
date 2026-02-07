@@ -10,8 +10,9 @@ archives:
     formats: [tar.gz]
     name_template: "{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}"
 
-# brews is deprecated upstream, but supplies the Formula service DSL needed
-# for one package managed by brew services. Keep GoReleaser pinned in CI.
+# brews is deprecated upstream, but it is the only GoReleaser generator of a
+# Formula, and only a Formula has the service block that brew services runs:
+# one package for the CLI and the service. Keep GoReleaser pinned in CI.
 brews:
   - name: indexit
     ids: [indexit]

@@ -63,7 +63,8 @@ Nothing here is stored in the repository, so a fresh repository or a fork needs 
    no webhook and Repository permissions → Contents: Read and write, installed
    on `octolab/homebrew-tap` and `octolab/skills`. Save both as secrets of the
    `octopot` organization available to this repository. The release itself
-   uses the workflow token.
+   uses the workflow token. `octolab/skills` registers the tool in its
+   `catalog.json`: the publish action refuses a tool it doesn't list.
 3. Branch protection of main: require signed commits; `.github/settings.yml`
    cannot set it.
 4. Activate the repository in Codecov; the upload uses OIDC, no `CODECOV_TOKEN`.
@@ -168,8 +169,9 @@ flowchart TB
   skips it, so the catalog keeps stable releases only.
 - **The agent skill ships with the release.** `skills/indexit/` is embedded in
   the binary and packed into every archive; `release.mjs skill` checks that the
-  source, the archives and `indexit skill info` agree on its digest. For a
-  stable tag, the `skill` job then runs
+  source, the archives and `indexit skill info` agree on its digest, and
+  `release.mjs check` that its `metadata.version` is the tag. For a stable
+  tag, the `skill` job then runs
   [octomation/skills-action](https://github.com/octomation/skills-action),
   pinned to a release tag: it copies the skill from the tag into the
   catalog, with a commit signed as the App and a tag `indexit--vX.Y.Z`, and
@@ -180,6 +182,8 @@ flowchart TB
   release stays as it is; the action is idempotent. Dependabot proposes the
   action's next release with its release note; review the note before
   accepting it.
+- The binary is neither signed nor notarized. Homebrew does not quarantine
+  what a Formula downloads, so the Formula needs no step to clear it.
 - A manual run on a branch builds a snapshot and publishes nothing, but still
   checks the skill in the archives; on a tag it publishes, as a tag push does.
 

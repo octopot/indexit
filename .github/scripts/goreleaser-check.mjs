@@ -1,8 +1,9 @@
 import { spawnSync } from 'node:child_process'
 import { pathToFileURL } from 'node:url'
 
-// GoReleaser v2.18.2 supports Formula services, but check exits 2 for brews.
-// Accept only this deliberate exception, never arbitrary validation failures.
+// GoReleaser v2.18.2 supports the Formula service block only through brews,
+// but check exits 2 for it. Accept only this deliberate exception, never
+// arbitrary validation failures.
 export function acceptedBrewsDeprecation(status, output) {
   const plain = output.replace(/\x1b\[[0-9;]*m/g, '')
   const warnings = plain.split('\n').filter(line => line.includes('DEPRECATED:'))
