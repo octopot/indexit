@@ -11,17 +11,17 @@ ignore (
 require (
 	github.com/fatih/color v1.19.0
 	github.com/gotd/log/logzap v0.1.1
-	github.com/gotd/td v0.162.0
+	github.com/gotd/td v0.163.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
 	go.octolab.org v0.12.2
 	go.octolab.org/toolkit/cli v0.6.4
 	go.octolab.org/toolkit/config v0.0.5
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 	golang.org/x/term v0.47.0
 	rsc.io/qr v0.2.0
 )
