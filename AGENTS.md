@@ -1,5 +1,24 @@
 # Agent guide
 
+## Features
+
+A larger feature goes from its issue to the code to the user guide.
+
+- **The issue comes first.** Before you implement it, its issue in
+  `.github/issues/IDXIT-N.md` states the expected behavior, the limits and the
+  acceptance criteria. When the requirements change, update the issue before
+  the code. The issue sets the requirements: don't rewrite it to fit a defect
+  or a limit of the implementation.
+- **The guide finishes it.** A feature is done when `docs/content/` describes
+  it for users: what it does, how to use it, and an example of the result.
+  Update the command's page or add one; mention only the flags and limits
+  needed to use it, and check the examples against the code and `--help`. The
+  guide changes in the product commit ([ground rules](#ground-rules)); what a
+  guide may claim is in
+  [docs/README.md](docs/README.md#keep-the-release-accurate).
+- A guide stands on its own: no development history, implementation plans,
+  test reports, internals or promises of unreleased behavior.
+
 ## Local services
 
 A local service listens on loopback only, on `127.0.0.1` and `::1`, and
@@ -65,7 +84,7 @@ are in [docs/README.md](docs/README.md#keep-the-release-accurate).
 - What can be verified mechanically the agent does without asking: the checks
   before the release, the release commit, the note, the image and the tag
   annotation, the checks after the push with the upgrade of this Mac, the
-  issue mirror and the board, the announcement row, `.agents/self-control.md`
+  issue mirror and the board, the announcement row, `.github/self-control.md`
   and the cleanup. It asks only for decisions: scope, wording the owner cares
   about, a criterion to change.
 - Product changes first, release commit last: `chore(release): prepare vX.Y.Z`.
@@ -79,11 +98,12 @@ are in [docs/README.md](docs/README.md#keep-the-release-accurate).
   stay as tagged. Its note may still get pictures or wording that keep it true
   to the tag. A missed fix ships in the next patch, or in the next candidate
   before the final tag.
-- A release that changes stored data or URLs ships with the way to move to
-  it, and the agent moves this Mac with it: it backs up the data directory,
-  migrates it, rewrites the owner's notes that carry the old URLs, checks
-  that the running service serves the photographs at the new URLs, and
-  removes the backup once the owner confirms.
+- A release that changes stored data, configuration or URLs ships with the
+  way to move to it, and the agent moves this Mac with it: it backs up the
+  data directory and the configuration, migrates them, rewrites the owner's
+  notes that carry the old URLs, checks that the running service serves the
+  photographs at the new URLs, and removes the backup once the owner
+  confirms.
 
 ### Before you start
 
@@ -106,8 +126,9 @@ make doctor
   since its last run, run it again:
   `make workflow-doctor REASON="before vX.Y.Z"` dispatches it on `main` and
   waits for the result; `REASON` is optional.
-- `ci` in `octolab/skills` is green: the publish action refuses an invalid
-  catalog.
+- `ci` in `octolab/skills` is green, and its `catalog.json` registers
+  `indexit`: the publish action refuses an invalid catalog and an
+  unregistered tool.
 - `make doctor` has no `fail`.
 
 On the candidate commit:
@@ -125,6 +146,22 @@ the local image guide. Published changelogs retain their original Cask
 commands.
 
 ### 1. Changelog
+
+The note covers everything that changed since the last stable release, not
+only the issues of the milestone, and a final note after candidates also
+counts from that stable tag. Read the whole range before writing:
+
+```sh
+base="$(git describe --tags --abbrev=0 --exclude='*-rc*')"
+git log --oneline "$base"..HEAD
+git diff --stat "$base"..HEAD -- . ':!docs' ':!tools' ':!.github' ':!AGENTS.md'
+```
+
+Go through every product change the second command lists: the code, the
+dashboard, the agent skill, the release channels, and each dependency the
+binary ships with (`go.mod`), whose own release notes say whether users see
+a difference: a new Telegram layer in `gotd/td`, for one. Only what users get
+goes into the note; tooling, CI, docs and the mirror stay out, however large.
 
 Write `docs/content/changelog/vX.Y.Z.md`; it becomes the GitHub release:
 
@@ -147,15 +184,14 @@ Lead paragraph: what the release does, in terms of commands and results.
 **Upgrade:** on macOS, run `brew update` followed by `brew upgrade --formula octolab/tap/indexit`. For a manual installation, use a [vX.Y.Z release archive](https://github.com/octopot/indexit/releases/tag/vX.Y.Z). Run `indexit version` to check the installed version.
 ```
 
-A release that changes the service also says, in a bullet or the **Upgrade:**
-paragraph, to run `brew services restart octolab/tap/indexit`.
-
 - English; a short slogan ending with a period ("One message, one entry.").
 - Only what users get: behavior and Telegram compatibility, no docs, tools or
   CI/CD. Explain jargon in user terms; no comparisons to release candidates.
 - Links are site-relative with a trailing slash. Markdown and HTML, no MDX.
 - After v0.2.0, end the **Upgrade:** paragraph with
   `If you use the agent skill, [replace it](/guide/agents/#keep-it-in-step) with the new binary’s copy.`
+- A release that changes the service also says, in a bullet or the
+  **Upgrade:** paragraph, to run `brew services restart octolab/tap/indexit`.
 
 A prerelease note, `vX.Y.Z-rcN.md`, is short and self-contained: what to try,
 what to report, and links only to pages that are already on the site, not to
@@ -165,7 +201,7 @@ give it no card. Of the list below, a prerelease changes only
 
 Then, in the same release commit:
 
-- `changelog/_meta.js`: the new entry on top.
+- `changelog/_meta.js`: the new entry on top, `'vX.Y.Z': 'vX.Y.Z — Slogan.'`.
 - `changelog/index.mdx`: a new card `vX.Y.Z · LATEST`; the previous one
   becomes `· STABLE`.
 - `docs/content/index.mdx`: description, release pill, release band, scope note.
@@ -193,12 +229,56 @@ no prerelease note in it.
 ### 2. Social preview image
 
 `docs/public/og.png` shows the version at the bottom left. Patch only the
-changed characters of the label, don't regenerate the image: cover each old
-glyph with background copied from the same rows (the background is textured).
-The label is monospaced: copy a new glyph from the label itself when it is
-there, shifted by whole character cells; otherwise draw it at the same baseline
-in Overpass Mono, about weight 450, which matches the label. Compare the label
-at 4× and diff the images: only the label area may change.
+changed characters of the label, don't regenerate the image or resize or
+requantize it: work on an untouched RGB copy at native resolution.
+Coordinates are pixels from the top left as (x, y, width, height); the label
+geometry is in [docs/README.md](docs/README.md#social-preview-image).
+
+- The label is monospaced, close to Overpass Mono at about 40 px, weight 450,
+  `#c24819`, on the baseline y=768. Its editing box is (97, 735, 141, 37), six
+  cells of 23 px: the boundaries are x=98, 121, 144, 167, 190, 213, 236.
+- Cover each changed cell with background copied from the clean donor strip
+  (260, 735, 141, 37) at the same rows: for the cell (x, 735, w, 37), copy
+  (260 + x - 97, 735, w, 37). The background is textured; keep unchanged cells.
+- Copy a new glyph from the untouched label when it is there, with its
+  antialiased fringe, shifted by whole cells (two cells are 46 px) at the same
+  y, through a foreground mask that keeps the destination paper. Otherwise
+  draw it at the baseline in the font above, rendered at 4× and downsampled
+  as a patch, after matching an existing `0` or `4` on a scratch crop: the
+  lettering was generated, the font name is an approximation.
+- A longer version extends the editing box by whole cells into the blank
+  space to the right; update the coordinates here and in docs/README.md.
+
+Compare the label at 4× and diff the images: only the editing box may change.
+With Pillow, `before.png` being the untouched original:
+
+```python
+from PIL import Image, ImageChops
+a = Image.open("before.png").convert("RGB")
+b = Image.open("docs/public/og.png").convert("RGB")
+assert a.size == b.size == (1733, 908)
+diff = ImageChops.difference(a, b)
+bounds = diff.getbbox()
+assert bounds is not None, "No version change"
+x0, y0, x1, y1 = bounds
+assert 97 <= x0 < x1 <= 238 and 735 <= y0 < y1 <= 772, bounds
+outside = diff.copy()
+outside.paste((0, 0, 0), (97, 735, 238, 772))
+assert outside.getbbox() is None
+for name, im in [("before", a), ("after", b)]:
+    im.crop((85, 725, 255, 782)).resize((680, 228), Image.Resampling.NEAREST).save(name + "-label-4x.png")
+print("Only the version label changed:", bounds)
+```
+
+Save the result as RGB PNG (`optimize=True, compress_level=9`). The site is
+the only user of this file: the binary does not embed it and
+`indexit service` does not serve it, so there is no second copy to update.
+
+A prerelease doesn't change the image. Regenerate it in full only when the
+wordmark, the slogan, the monospaced line or the brand colors change, then
+measure the label again and update the coordinates here and in
+docs/README.md, and `width`, `height` and `alt` in
+`docs/app/[[...mdxPath]]/page.jsx` if they changed.
 
 ### 3. Tag annotation
 
@@ -239,8 +319,8 @@ checks the tag against the branch you are about to push, as the `pre-push`
 hook does, together with tidy modules and the GoReleaser config.
 
 `git tag -v` must report a good signature from a key GitHub knows for your
-email. The catalog publishes only from a tag GitHub verifies, so `cd` checks
-that before anything is published.
+email: `cd` checks that GitHub verifies the tag before anything is published,
+and the catalog publishes only from a verified tag.
 
 If the push lock is set (`remote.origin.pushurl` is `no_push`), lift it for
 this push only and set it again afterwards.
@@ -250,8 +330,8 @@ before the GitHub release exists; after that, ship the next patch.
 
 ### 5. After the push
 
-The agent runs this section by itself once the push is done and reports what
-it saw.
+The agent runs this section by itself once the push is done, the upgrade of
+this Mac included, and reports what it saw.
 
 ```sh
 gh run watch --exit-status "$(gh run list -w cd.yml -c "$(git rev-parse 'vX.Y.Z^{commit}')" -L 1 --json databaseId -q '.[0].databaseId')"
@@ -303,7 +383,8 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   and the board moves are the next `chore(project): sync the issue mirror`
   commit.
 - What the owner has to see himself, such as a note in Obsidian or the
-  dashboard in a browser, goes to `.agents/self-control.md`.
+  dashboard in a browser, goes to
+  [.github/self-control.md](.github/self-control.md).
 
 ### When `cd` fails
 
@@ -315,8 +396,9 @@ gh run list -R octolab/skills -w ci.install.yml -b indexit--vX.Y.Z -L 1
   restore the previous stable release as *Latest* and the Formula, then
   file an issue before the next candidate.
 - **Only the skill job failed**: the release and the Formula are out and stay.
-  Fix the cause, for example the App's installation on `octolab/skills`, and
-  run the failed job again: `gh run rerun <run-id> --failed`.
+  Fix the cause, for example the App's installation on `octolab/skills` or
+  the tool's entry in its `catalog.json`, and run the failed job again:
+  `gh run rerun <run-id> --failed`.
 - **Anything else after the release exists**: it is frozen; ship the fix in
   the next patch.
 
@@ -334,16 +416,18 @@ checkout `~/Development/public/kamilsk/kamilsk`, stage it with the message
 ```
 
 Newest first, one row per release day; a prerelease gets no row. The
-reference label is `o` + project
-initials + version digits. Notes is a short phrase, no longer than the
-existing ones, saying what the user gets.
+reference label is `o` + project initials + version digits. Notes is a short
+phrase, no longer than the existing ones, saying what the user gets.
 
 ### 7. Self-control and cleanup
 
-`.agents/self-control.md` holds the checks that outlive a session: each item
-says when to look, what proves it and what to do if it fails. The agent adds
-the checks a release leaves open, closes an item with what proved it and
-removes it once proven, and keeps the follow-ups that still need an issue.
+[.github/self-control.md](.github/self-control.md) holds the checks that
+outlive a session: each item says when to look, what proves it and what to do
+if it fails. The agent adds the checks a release leaves open, removes an item
+once it is proven or filed as an issue, and keeps the follow-ups that still
+need one. The file is public: no private paths, notes, secrets or names of
+agent sessions. Its changes go with the commit they belong to, or with the
+next `chore(project): sync the issue mirror` commit.
 
 The drafts of a release live in `.agents/release/vX.Y.Z/` (plan, note,
 annotation, migration). After the checks of step 5 the agent removes them,

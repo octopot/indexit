@@ -59,13 +59,28 @@ Static output is written to `docs/dist/`. `SITE_URL` is required; add `BASE_PATH
 | `app/globals.css` | Shared colors, responsive layouts, and landing page styles |
 | `app/layout.jsx` | Site identity and Nextra theme |
 | `app/[[...mdxPath]]/page.jsx` | Page-specific titles and social metadata |
-| `public/` | Favicon, social preview and illustrations in `images/` |
+| `public/` | Favicon, social preview (see [below](#social-preview-image)) and illustrations in `images/` |
 
 The public origin in metadata comes from `SITE_URL` (see `site.mjs`); the Pages workflow sets it from the Pages configuration. Internal links use Next.js/Nextra and keep the configured base path.
 
 Quick start lives at `/quick-start/`. The sidebar groups the quick start with the guide pages through `_meta.js`.
 
 Changelog is a section of the same sidebar, with All releases first. `navigation.mjs` groups release pages into expandable `v0.1.x`, `v0.2.x`, and later branches, newest first. Add each release note and its label to `content/changelog/_meta.js` as before; the version group is created automatically. A prerelease note, such as `v0.3.0-rc1`, is not grouped: add it with `display: 'hidden'`, so its page exists for the GitHub release but the sidebar shows stable releases only. Keep the notes at `content/changelog/{tag}.md` so published links and the release workflow stay valid. Top-level navbar links use separate `type: 'page'` aliases; content folders use `display: 'children'` to keep the full sidebar available across guides and releases.
+
+## Social preview image
+
+`public/og.png`, 1733×908, is the social preview of the home page; other pages share a link without an image (`app/[[...mdxPath]]/page.jsx`). On warm, lightly textured off-white paper, it shows the `indexit` wordmark in heavy lowercase ink with an orange dot over the i, the slogan "Your Telegram. Your data.", the monospaced line "Export conversations. Save photos. Build on your data." and the orange version label at the bottom left. On the right, a thin terminal frame holds a prompt and lines of output.
+
+Each release patches only the changed characters of the version label, so the rest of the image stays byte-for-byte as it was: see [AGENTS.md](../AGENTS.md#2-social-preview-image), which also has the diff check. Coordinates are pixels from the top left as (x, y, width, height), right and bottom edges exclusive:
+
+| Part | Geometry |
+| --- | --- |
+| Visible label | (101, 738, 133, 30) |
+| Editing box | (97, 735, 141, 37) |
+| Cell boundaries | x=98, 121, 144, 167, 190, 213, 236: 23 px |
+| Baseline | y=768 |
+| Clean background donor strip | (260, 735, 141, 37) |
+| Label type | monospaced, close to Overpass Mono at about 40 px, weight 450, `#c24819` |
 
 ## Change the domain
 
