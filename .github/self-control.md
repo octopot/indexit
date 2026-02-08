@@ -16,10 +16,15 @@ rebuilds every cache, `cleanup.pulls.yml` leaves no `refs/pull/*/merge`
 caches, and on 2026-11-08 three `release-Linux-go1.27.3-…` caches on `main`
 were read the same day, with the scheduled warmup green on 2026-11-05.
 
-- [ ] **On the v0.4.1 tag**: the `cd` run restores the exact key, skips the
-  parallelism limit, builds the binaries in under 45 s and saves no cache from
-  the tag (the PoC in #105). If it misses, look at what changed the key since
-  the last push to `main`.
+- [ ] **On the next release tag**: the `cd` run restores the exact key, skips
+  the parallelism limit, builds the binaries in under 45 s and saves no cache
+  from the tag (the PoC in #105). On v0.4.1 the key missed for an outside
+  reason: the three warmups on `main` that day failed to download GoReleaser
+  (`/releases/download/` answered 504 on GitHub's side), so the tag restored
+  an older cache by prefix and built with `--parallelism 2`, still in 21 s,
+  and saved no cache from the tag. Before the next tag, check that the latest
+  warmup on `main` is green; rerun it if not. If it still misses, look at what
+  changed the key since the last push to `main`.
 - [ ] **About 2026-11-15**:
   `gh api repos/octopot/indexit/actions/cache/usage` is under 8 GB. On
   2026-11-08 it was 8.59 GB in 14 caches, after five merges that day; the
