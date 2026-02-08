@@ -30,6 +30,7 @@ brews:
     install: |
       bin.install "indexit"
       generate_completions_from_executable(bin/"indexit", "completion")
+      prefix.install_metafiles
     service: |
       run macos: [opt_bin/"indexit", "service", "run"]
       keep_alive true
