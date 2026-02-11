@@ -42,6 +42,7 @@ Tracking:
 > state: OPEN
 
 - [ ] [[IDXIT-13]] — service: keep photographs of posts from other platforms
+- [ ] [[IDXIT-14]] — vault: index notes by filters and serve the index
 
 ## Todo
 
