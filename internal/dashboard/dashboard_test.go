@@ -62,7 +62,7 @@ func fixtureWith(t *testing.T, hash string) (*preview.Store, string) {
 	require.NoError(t, os.Symlink(store.ImagePath(saved), filepath.Join(images, "c123", "7", "p13.jpg")))
 	peers := filepath.Join(t.TempDir(), "peers.json")
 	write(peers, []byte(`{"account":{"id":42},"entries":{
-		"channel:123":{"kind":"channel","id":123,"access_hash":` + hash + `,"username":"example","title":"Example <b>channel</b>"},
+		"channel:123":{"kind":"channel","id":123,"access_hash":`+hash+`,"username":"example","title":"Example <b>channel</b>"},
 		"chat:5":{"kind":"chat","id":5,"title":"A basic group, not channel 5"}}}`), now)
 	return store, peers
 }
