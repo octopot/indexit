@@ -18,6 +18,16 @@ import (
 	"go.octolab.org/toolset/indexit/internal/stats"
 )
 
+// The tests run on a fixed time and a fixed free space: a response depends on
+// the fixture alone and is the same in every run.
+var clock = time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
+
+const freeSpace = 250_729_472_000
+
+// accessHash is the access hash of the fixture channel, which never leaves the
+// peer cache: nineteen digits that no time, size or count of the fixture holds.
+const accessHash = "-6148914691236517205"
+
 var (
 	saved    = preview.Source{Channel: 123, Message: 7, Photo: 9_007_199_254_740_993}
 	unsaved  = preview.Source{Channel: 123, Message: 8, Photo: 11}
@@ -28,13 +38,19 @@ var (
 // and a peer cache that knows channel 123.
 func fixture(t *testing.T) (*preview.Store, string) {
 	t.Helper()
+	return fixtureWith(t, accessHash)
+}
+
+// fixtureWith is the fixture with hash as the access hash of channel 123.
+func fixtureWith(t *testing.T, hash string) (*preview.Store, string) {
+	t.Helper()
 	store := &preview.Store{Root: t.TempDir()}
 	write := func(path string, data []byte, at time.Time) {
 		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o700))
 		require.NoError(t, os.WriteFile(path, data, 0o600))
 		require.NoError(t, os.Chtimes(path, at, at))
 	}
-	now := time.Now()
+	now := clock
 	write(store.ImagePath(saved), []byte("\xff\xd8\xff\xe0 jpeg"), now.Add(-time.Hour))
 	write(store.ImagePath(stranger), []byte("\xff\xd8\xff\xe0 other"), now.Add(-2*time.Hour))
 	images := store.ImageDir()
@@ -46,26 +62,45 @@ func fixture(t *testing.T) (*preview.Store, string) {
 	require.NoError(t, os.Symlink(store.ImagePath(saved), filepath.Join(images, "c123", "7", "p13.jpg")))
 	peers := filepath.Join(t.TempDir(), "peers.json")
 	write(peers, []byte(`{"account":{"id":42},"entries":{
-		"channel:123":{"kind":"channel","id":123,"access_hash":555,"username":"example","title":"Example <b>channel</b>"},
+		"channel:123":{"kind":"channel","id":123,"access_hash":` + hash + `,"username":"example","title":"Example <b>channel</b>"},
 		"chat:5":{"kind":"chat","id":5,"title":"A basic group, not channel 5"}}}`), now)
 	return store, peers
 }
 
 func newDashboard(t *testing.T) (*Dashboard, *bool) {
 	t.Helper()
-	store, peers := fixture(t)
+	return newDashboardWith(t, accessHash)
+}
+
+// newDashboardWith is a dashboard of fixtureWith(hash) and a statistics log of
+// the month of clock, which has looked at them once.
+func newDashboardWith(t *testing.T, hash string) (*Dashboard, *bool) {
+	t.Helper()
+	store, peers := fixtureWith(t, hash)
 	dir := filepath.Join(store.Root, "stats")
 	require.NoError(t, os.MkdirAll(dir, 0o700))
-	month := time.Now().UTC().Format("2006-01")
-	log := `{"at":"` + time.Now().UTC().Format(time.RFC3339) + `","event":"download","path":"` + saved.Path() + `","sent":10,"saved":10}` + "\n" +
-		`{"at":"` + time.Now().UTC().Format(time.RFC3339) + `","event":"hits","count":29,"sent":290}` + "\n" +
-		`{"at":"` + time.Now().UTC().Format(time.RFC3339) + `","event":"gone","path":"` + unsaved.Path() + `"}` + "\n"
-	require.NoError(t, os.WriteFile(filepath.Join(dir, month+".jsonl"), []byte(log), 0o600))
-	d := New(store, peers, stats.NewReader(dir))
+	at := clock.Format(time.RFC3339)
+	log := `{"at":"` + at + `","event":"download","path":"` + saved.Path() + `","sent":10,"saved":10}` + "\n" +
+		`{"at":"` + at + `","event":"hits","count":29,"sent":290}` + "\n" +
+		`{"at":"` + at + `","event":"gone","path":"` + unsaved.Path() + `"}` + "\n"
+	require.NoError(t, os.WriteFile(monthLog(dir), []byte(log), 0o600))
+	d := New(store, peers, readerAt(dir))
+	d.now = func() time.Time { return clock }
+	d.free = func(string) (uint64, bool) { return freeSpace, true }
 	d.Version = "v0.3.1"
 	d.update()
 	called := new(bool)
 	return d, called
+}
+
+// monthLog is the statistics log of the month of clock in dir.
+func monthLog(dir string) string { return filepath.Join(dir, clock.Format("2006-01")+".jsonl") }
+
+// readerAt reads the statistics log in dir as it stands at clock.
+func readerAt(dir string) *stats.Reader {
+	r := stats.NewReader(dir)
+	r.SetClock(func() time.Time { return clock })
+	return r
 }
 
 func get(t *testing.T, h http.Handler, path string, header map[string]string) *httptest.ResponseRecorder {
@@ -81,7 +116,7 @@ func get(t *testing.T, h http.Handler, path string, header map[string]string) *h
 
 func TestScan(t *testing.T) {
 	store, peers := fixture(t)
-	inv := Scan(store, peers, time.Now())
+	inv := Scan(store, peers, clock)
 	require.NoError(t, inv.Err)
 	require.Len(t, inv.Photos, 2, "a symbolic link, an empty and a foreign file are no photographs")
 	assert.Equal(t, saved.Path(), inv.Photos[0].Source.Path(), "the latest first")
@@ -98,7 +133,7 @@ func TestScanOfASeparateImageDirectory(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Dir(moved), 0o700))
 	require.NoError(t, os.Rename(store.ImageDir(), moved))
 	store.Images = moved
-	assert.Len(t, Scan(store, peers, time.Now()).Photos, 2)
+	assert.Len(t, Scan(store, peers, clock).Photos, 2)
 	d := New(store, peers, stats.NewReader(t.TempDir()))
 	w := get(t, d.Handler(http.NotFoundHandler()), "/thumbnails/c123/7/p9007199254740993.jpg", nil)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -109,7 +144,7 @@ func TestScanFollowsALinkedDirectory(t *testing.T) {
 	moved := filepath.Join(t.TempDir(), "images")
 	require.NoError(t, os.Rename(filepath.Join(store.Root, "images"), moved))
 	require.NoError(t, os.Symlink(moved, filepath.Join(store.Root, "images")))
-	assert.Len(t, Scan(store, peers, time.Now()).Photos, 2, "images/ on another disk")
+	assert.Len(t, Scan(store, peers, clock).Photos, 2, "images/ on another disk")
 	d := New(store, peers, stats.NewReader(t.TempDir()))
 	w := get(t, d.Handler(http.NotFoundHandler()), "/thumbnails/c123/7/p9007199254740993.jpg", nil)
 	assert.Equal(t, http.StatusOK, w.Code, "a thumbnail from images/ on another disk")
@@ -118,10 +153,10 @@ func TestScanFollowsALinkedDirectory(t *testing.T) {
 func TestStatsErrorIsShown(t *testing.T) {
 	d, _ := newDashboard(t)
 	dir := filepath.Join(d.Store.Root, "stats")
-	month := filepath.Join(dir, time.Now().UTC().Format("2006-01")+".jsonl")
+	month := monthLog(dir)
 	require.NoError(t, os.Chmod(month, 0))
 	t.Cleanup(func() { _ = os.Chmod(month, 0o600) })
-	d.Log = stats.NewReader(dir)
+	d.Log = readerAt(dir)
 	d.update()
 	h := d.Handler(http.NotFoundHandler())
 	assert.Contains(t, get(t, h, "/", nil).Body.String(), "could not be read in full")
@@ -129,7 +164,7 @@ func TestStatsErrorIsShown(t *testing.T) {
 }
 
 func TestScanOfEmptyDirectory(t *testing.T) {
-	inv := Scan(&preview.Store{Root: filepath.Join(t.TempDir(), "none")}, filepath.Join(t.TempDir(), "none.json"), time.Now())
+	inv := Scan(&preview.Store{Root: filepath.Join(t.TempDir(), "none")}, filepath.Join(t.TempDir(), "none.json"), clock)
 	assert.NoError(t, inv.Err)
 	assert.Empty(t, inv.Photos)
 }
@@ -171,9 +206,11 @@ func TestAPI(t *testing.T) {
 	w := get(t, h, "/api/v1/stats", nil)
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.NotContains(t, w.Body.String(), "access_hash")
-	assert.NotContains(t, w.Body.String(), "555")
+	assert.NotContains(t, w.Body.String(), strings.TrimPrefix(accessHash, "-"))
 	var out map[string]any
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &out))
+	assert.Equal(t, clock.Format(time.RFC3339Nano), out["scanned_at"])
+	assert.InDelta(t, freeSpace, out["disk_free_bytes"], 0)
 	recent := out["recent"].([]any)[0].(map[string]any)
 	assert.Equal(t, "9007199254740993", recent["photo"], "IDs are strings, beyond the integers of JavaScript")
 	assert.Equal(t, "123", recent["channel"])
@@ -185,6 +222,20 @@ func TestAPI(t *testing.T) {
 	assert.InDelta(t, 1, requests["gone_without_copy"], 0)
 
 	assert.Equal(t, http.StatusNotFound, get(t, h, "/api/v1/unsaved", nil).Code)
+}
+
+// TestAPIDependsOnTheFixtureOnly checks what a search for the hash cannot: the
+// access hash reaches no field in any form, and the response repeats itself.
+func TestAPIDependsOnTheFixtureOnly(t *testing.T) {
+	stats := func(hash string) string {
+		d, _ := newDashboardWith(t, hash)
+		w := get(t, d.Handler(http.NotFoundHandler()), "/api/v1/stats", nil)
+		require.Equal(t, http.StatusOK, w.Code)
+		return w.Body.String()
+	}
+	first := stats(accessHash)
+	assert.Equal(t, first, stats(accessHash), "the same fixture, the same response")
+	assert.Equal(t, first, stats("1"), "another access hash, the same response")
 }
 
 func TestThumbnailsNeverDownload(t *testing.T) {

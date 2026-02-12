@@ -157,7 +157,7 @@ func (d *Dashboard) build(inv *Inventory, totals stats.Totals, now time.Time) vi
 	}
 	v.Size = bytesAmount(size)
 	// the disk of the photographs, which may be another than of the rest
-	if free, ok := diskFree(d.Store.ImageDir()); ok {
+	if free, ok := d.free(d.Store.ImageDir()); ok {
 		v.Free, v.HasFree = bytesAmount(int64(min(free, math.MaxInt64))), true
 	}
 

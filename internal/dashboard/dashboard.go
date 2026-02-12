@@ -57,6 +57,9 @@ type Dashboard struct {
 	kick   chan struct{}
 	assets assets
 	page   *template.Template
+	// now and free are the clock and the free space of a disk; tests fix them.
+	now  func() time.Time
+	free func(path string) (uint64, bool)
 }
 
 type state struct {
@@ -80,7 +83,10 @@ type asset struct {
 
 // New prepares a dashboard; Run keeps it current.
 func New(store *preview.Store, peers string, log *stats.Reader) *Dashboard {
-	d := &Dashboard{Store: store, Peers: peers, Log: log, Logger: slog.Default(), kick: make(chan struct{}, 1)}
+	d := &Dashboard{
+		Store: store, Peers: peers, Log: log, Logger: slog.Default(), kick: make(chan struct{}, 1),
+		now: time.Now, free: diskFree,
+	}
 	d.assets = assets{paths: map[string]string{}, files: map[string]asset{}}
 	for key, name := range map[string]string{"CSS": "app.css", "JS": "app.js", "Icon": "icon.svg"} {
 		data, err := web.ReadFile("web/" + name)
@@ -94,7 +100,7 @@ func New(store *preview.Store, peers string, log *stats.Reader) *Dashboard {
 	}
 	d.page = template.Must(template.New("page.html.tmpl").Funcs(template.FuncMap{
 		"iso":  func(t time.Time) string { return t.Format(time.RFC3339) },
-		"date": dateText,
+		"date": d.dateText,
 		"pct":  func(f float64) string { return strconv.FormatFloat(f, 'f', 1, 64) },
 		"cell": func() int { return cell },
 	}).ParseFS(web, "web/page.html.tmpl"))
@@ -132,7 +138,7 @@ func (d *Dashboard) Refresh() {
 }
 
 func (d *Dashboard) update() {
-	inv := Scan(d.Store, d.Peers, time.Now())
+	inv := Scan(d.Store, d.Peers, d.now())
 	if inv.Err != nil {
 		d.Logger.Warn("dashboard: incomplete scan", "error", inv.Err)
 	}
@@ -201,7 +207,7 @@ func (d *Dashboard) html(w http.ResponseWriter, r *http.Request, s *state) {
 	if s != nil {
 		inv, totals = s.inv, s.totals
 	}
-	v := d.build(inv, totals, time.Now())
+	v := d.build(inv, totals, d.now())
 	if s != nil && s.logErr != nil {
 		v.LogErr = s.logErr.Error()
 	}
@@ -277,9 +283,9 @@ func local(r *http.Request, page bool) bool {
 	return true
 }
 
-func dateText(t time.Time) string {
+func (d *Dashboard) dateText(t time.Time) string {
 	t = t.Local()
-	if t.Year() == time.Now().Year() {
+	if t.Year() == d.now().Year() {
 		return t.Format("2 Jan, 15:04")
 	}
 	return t.Format("2 Jan 2006, 15:04")
@@ -368,7 +374,7 @@ func (d *Dashboard) json(w http.ResponseWriter, r *http.Request, s *state) {
 		}
 		out.Photographs.Saved = len(inv.Photos)
 		out.Photographs.Invalid = inv.Invalid
-		if free, ok := diskFree(d.Store.ImageDir()); ok {
+		if free, ok := d.free(d.Store.ImageDir()); ok {
 			n := int64(min(free, 1<<63-1))
 			out.DiskFree = &n
 		}

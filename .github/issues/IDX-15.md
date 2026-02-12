@@ -42,11 +42,11 @@ go test -count=1 ./internal/stats/   # with the clock moved past October 2027
 
 ## Acceptance criteria
 
-- [ ] the dashboard reads the time and the free disk space through its own sources, which a test can replace; the service behaves as before;
-- [ ] the dashboard tests run on a fixed time and a fixed free space, and the API response of the fixture is the same in every run;
-- [ ] the access hash cannot leak unnoticed: a response with another access hash in the peer cache is identical, and the fixture's hash is a value no other field can contain by chance;
-- [ ] the statistics tests do not depend on today's date, and no test computes the current month twice;
-- [ ] `go test -count=2000 -run 'TestAPI$' ./internal/dashboard/` passes.
+- [x] the dashboard reads the time and the free disk space through its own sources, which a test can replace; the service behaves as before;
+- [x] the dashboard tests run on a fixed time and a fixed free space, and the API response of the fixture is the same in every run;
+- [x] the access hash cannot leak unnoticed: a response with another access hash in the peer cache is identical, and the fixture's hash is a value no other field can contain by chance;
+- [x] the statistics tests do not depend on today's date, and no test computes the current month twice;
+- [x] `go test -count=2000 -run 'TestAPI$' ./internal/dashboard/` passes.
 
 ## Out of scope
 
