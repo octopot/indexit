@@ -1,5 +1,5 @@
 ---
-code: IDXIT-9
+code: IDX-9
 id: I_kwDOSVi84s8AAAABXrRFwA
 databaseId: 5883839936
 number: 122
@@ -13,7 +13,7 @@ labels:
   - "effort: medium"
 assignees:
   - kamilsk
-milestone: "[[IDXIT-M1]]"
+milestone: "[[IDX-M1]]"
 parent: null
 issueFields: {}
 state: CLOSED
@@ -29,7 +29,7 @@ closedAt: 2026-10-18T13:38:26Z
 
 ## Motivation
 
-`fetch peer` describes channels and groups in full since [[IDXIT-8]], but a user or a bot gets only its identity and the error `not_channel`: no bio, no personal channel, nothing a consumer can file. The case behind it is the same notes vault: a person's Telegram account is a note of its own, next to their contact card and their channel, and that note wants the account's bio and the channel the account itself points to. Today the bio is copied by hand from the `t.me/<username>` web preview, which is blocked on some networks and never names the personal channel; the channel is guessed from the bio text.
+`fetch peer` describes channels and groups in full since [[IDX-8]], but a user or a bot gets only its identity and the error `not_channel`: no bio, no personal channel, nothing a consumer can file. The case behind it is the same notes vault: a person's Telegram account is a note of its own, next to their contact card and their channel, and that note wants the account's bio and the channel the account itself points to. Today the bio is copied by hand from the `t.me/<username>` web preview, which is blocked on some networks and never names the personal channel; the channel is guessed from the bio text.
 
 Telegram answers this with one call, `users.getFullUser`: the bio, the personal channel (`personal_channel_id`), the birthday and business card, and for a bot its description and commands. The card carries everything the profile shows, the phone number included when Telegram returns it.
 

@@ -1,5 +1,5 @@
 ---
-code: IDXIT-5
+code: IDX-5
 id: I_kwDOSVi84s8AAAABR_1hCw
 databaseId: 5502755083
 number: 102

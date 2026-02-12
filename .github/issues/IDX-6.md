@@ -1,5 +1,5 @@
 ---
-code: IDXIT-6
+code: IDX-6
 id: I_kwDOSVi84s8AAAABSmBHNQ
 databaseId: 5542790965
 number: 105

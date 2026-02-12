@@ -1,5 +1,5 @@
 ---
-code: IDXIT-M1
+code: IDX-M1
 id: MI_kwDOSVi84s4BExLM
 databaseId: 18027212
 number: 1
@@ -18,7 +18,7 @@ closedAt: null
 
 Read-only Telegram fetcher in the indexit CLI — dialogs, messages, topics, contacts, multi-account — delivered in four phases.
 
-Milestone of [[IDXIT-P1]]. Tracks the four-phase PoC defined in [[Telegram fetcher, PoC implementation plan]] (see its `PoC phases` section and §12 milestones). Tasks below map 1:1 to the §12 milestone IDs.
+Milestone of [[IDX-P1]]. Tracks the four-phase PoC defined in [[Telegram fetcher, PoC implementation plan]] (see its `PoC phases` section and §12 milestones). Tasks below map 1:1 to the §12 milestone IDs.
 
 ## Progress
 
@@ -48,11 +48,11 @@ Legend: `[x]` done · `[ ] 🔄` in progress · `[ ]` not started.
 ### Phase 2 — Topics & single message
 
 - [x] 2.0 Forum-topic history via `messages.getReplies`
-- [x] 2.1 Topic discovery — `fetch topics --dialog=<uid>` (`messages.getForumTopics`) — [[IDXIT-3]]
+- [x] 2.1 Topic discovery — `fetch topics --dialog=<uid>` (`messages.getForumTopics`) — [[IDX-3]]
 - [x] 2.2 Single message — `fetch message <msg-uid>` (URL anchor applied)
-- [x] 2.3 Media download — `fetch media --dialog=<uid> --dir <path>` (`gotd` downloader) — [[IDXIT-4]]
-- [x] 2.4 Peer cards — `fetch peer <ref>…`: channels, groups and invite links described without joining — [[IDXIT-8]]
-- [x] 2.5 User and bot cards — `fetch peer` reads `users.getFullUser`: bio, personal channel, bot description and commands — [[IDXIT-9]]
+- [x] 2.3 Media download — `fetch media --dialog=<uid> --dir <path>` (`gotd` downloader) — [[IDX-4]]
+- [x] 2.4 Peer cards — `fetch peer <ref>…`: channels, groups and invite links described without joining — [[IDX-8]]
+- [x] 2.5 User and bot cards — `fetch peer` reads `users.getFullUser`: bio, personal channel, bot description and commands — [[IDX-9]]
 
 ### Phase 3 — Contacts & Stories
 
@@ -73,9 +73,9 @@ Functional behaviour is in place; these are tracked, not blocking:
 
 ## Issues
 
-- [x] [[IDXIT-1]] — proxy: support MTProto proxies as a SOCKS5 replacement
-- [x] [[IDXIT-2]] — auth: QR login as a working path when phone codes are not delivered
-- [x] [[IDXIT-3]] — fetch: list forum topics of a dialog
-- [x] [[IDXIT-4]] — fetch: download message media from a dialog or topic
-- [x] [[IDXIT-8]] — fetch: describe channels, groups and invite links as peer cards
-- [x] [[IDXIT-9]] — fetch: describe users and bots as peer cards
+- [x] [[IDX-1]] — proxy: support MTProto proxies as a SOCKS5 replacement
+- [x] [[IDX-2]] — auth: QR login as a working path when phone codes are not delivered
+- [x] [[IDX-3]] — fetch: list forum topics of a dialog
+- [x] [[IDX-4]] — fetch: download message media from a dialog or topic
+- [x] [[IDX-8]] — fetch: describe channels, groups and invite links as peer cards
+- [x] [[IDX-9]] — fetch: describe users and bots as peer cards

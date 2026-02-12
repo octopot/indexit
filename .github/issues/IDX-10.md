@@ -1,5 +1,5 @@
 ---
-code: IDXIT-10
+code: IDX-10
 id: I_kwDOSVi84s8AAAABZCwzyg
 databaseId: 5975585738
 number: 128

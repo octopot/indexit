@@ -1,5 +1,5 @@
 ---
-code: IDXIT-13
+code: IDX-13
 id: I_kwDOSVi84s8AAAABZCw_pQ
 databaseId: 5975588773
 number: 131

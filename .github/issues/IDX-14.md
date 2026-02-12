@@ -1,5 +1,5 @@
 ---
-code: IDXIT-14
+code: IDX-14
 id: I_kwDOSVi84s8AAAABg_Lx6w
 databaseId: 6508704235
 number: 147

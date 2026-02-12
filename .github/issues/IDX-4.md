@@ -1,5 +1,5 @@
 ---
-code: IDXIT-4
+code: IDX-4
 id: I_kwDOSVi84s8AAAABOSddOw
 databaseId: 5253848379
 number: 81
@@ -13,7 +13,7 @@ labels:
   - "effort: medium"
 assignees:
   - kamilsk
-milestone: "[[IDXIT-M1]]"
+milestone: "[[IDX-M1]]"
 parent: null
 issueFields: {}
 state: CLOSED

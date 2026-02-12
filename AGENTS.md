@@ -5,7 +5,7 @@
 A larger feature goes from its issue to the code to the user guide.
 
 - **The issue comes first.** Before you implement it, its issue in
-  `.github/issues/IDXIT-N.md` states the expected behavior, the limits and the
+  `.github/issues/IDX-N.md` states the expected behavior, the limits and the
   acceptance criteria. When the requirements change, update the issue before
   the code. The issue sets the requirements: don't rewrite it to fit a defect
   or a limit of the implementation.
@@ -36,7 +36,7 @@ A new service takes the next free port and adds it to both tables.
 ## Issues and the board
 
 The issues are mirrored in `.github/issues/` and laid out on the board
-`.github/roadmap/IDXIT-P1.md` by the `projects:maintainer` skill. The board
+`.github/roadmap/IDX-P1.md` by the `projects:maintainer` skill. The board
 lives only in that file, with no project on GitHub. Its columns
 are the standard ones: Backlog, Todo, In progress, Idle, Done and Won't do;
 the rule under each says which `state` and `stateReason` it takes, and
@@ -48,8 +48,8 @@ the rule under each says which `state` and `stateReason` it takes, and
   moves it to Idle.
 - A closed issue moves to Done when completed and to Won't do when not
   planned.
-- A new card is `maintainer.py boards add IDXIT-P1 --column "<column>"
-  --cards IDXIT-<n> --yes`. `add` refuses a card already on the board, so a
+- A new card is `maintainer.py boards add IDX-P1 --column "<column>"
+  --cards IDX-<n> --yes`. `add` refuses a card already on the board, so a
   move cuts the card's line from its column and puts it at the end of the
   new one, ticked (`- [x]`) once the issue is closed. Either edits only the
   board file, `maintainer.py lint` checks it, and it is staged with the

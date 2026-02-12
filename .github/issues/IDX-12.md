@@ -1,5 +1,5 @@
 ---
-code: IDXIT-12
+code: IDX-12
 id: I_kwDOSVi84s8AAAABZCw7jg
 databaseId: 5975587726
 number: 130

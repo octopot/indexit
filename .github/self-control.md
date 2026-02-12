@@ -8,7 +8,7 @@ is proven or moved into an issue; a release adds the checks it leaves open
 
 ## Watch
 
-### Release build cache ([IDXIT-6](issues/IDXIT-6.md), #105)
+### Release build cache ([IDX-6](issues/IDX-6.md), #105)
 
 `main` holds the release build cache; `cd` lifts `--parallelism 2` only on an
 exact key. Proven so far: exact hits on the v0.2.2 and v0.3.0 runs, the warmup

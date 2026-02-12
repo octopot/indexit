@@ -1,5 +1,5 @@
 ---
-code: IDXIT-8
+code: IDX-8
 id: I_kwDOSVi84s8AAAABU7ZCKg
 databaseId: 5699420714
 number: 109
@@ -13,7 +13,7 @@ labels:
   - "effort: medium"
 assignees:
   - kamilsk
-milestone: "[[IDXIT-M1]]"
+milestone: "[[IDX-M1]]"
 parent: null
 issueFields: {}
 state: CLOSED

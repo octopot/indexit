@@ -1,5 +1,5 @@
 ---
-code: IDXIT-7
+code: IDX-7
 id: I_kwDOSVi84s8AAAABUksSzA
 databaseId: 5675619020
 number: 108

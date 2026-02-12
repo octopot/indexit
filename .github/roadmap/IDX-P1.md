@@ -1,5 +1,5 @@
 ---
-code: IDXIT-P1
+code: IDX-P1
 id: null
 fullDatabaseId: null
 number: null
@@ -25,7 +25,7 @@ Design and scope live in the spec: [[Telegram fetcher, PoC implementation plan]]
 
 Milestones:
 
-- [[IDXIT-M1]] — Telegram fetcher PoC implementation: open; Phase 1 functionally complete, Phase 2 done; 12 / 19 tasks closed.
+- [[IDX-M1]] — Telegram fetcher PoC implementation: open; Phase 1 functionally complete, Phase 2 done; 12 / 19 tasks closed.
 
 Later milestones (not yet opened) will graduate the PoC into the wider pipeline — e.g. durable peer/message store, and wiring the JSONL stream into the Sparkle indexer itself.
 
@@ -41,8 +41,8 @@ Tracking:
 >
 > state: OPEN
 
-- [ ] [[IDXIT-13]] — service: keep photographs of posts from other platforms
-- [ ] [[IDXIT-14]] — vault: index notes by filters and serve the index
+- [ ] [[IDX-13]] — service: keep photographs of posts from other platforms
+- [ ] [[IDX-14]] — vault: index notes by filters and serve the index
 
 ## Todo
 
@@ -50,7 +50,7 @@ Tracking:
 >
 > state: OPEN
 
-- [ ] [[IDXIT-10]] — fetch: keep the author's formatting of message text
+- [ ] [[IDX-10]] — fetch: keep the author's formatting of message text
 
 ## In progress
 
@@ -58,7 +58,7 @@ Tracking:
 >
 > state: OPEN
 
-- [ ] [[IDXIT-6]] — ci/cd: start release builds from a warm cache on the default branch
+- [ ] [[IDX-6]] — ci/cd: start release builds from a warm cache on the default branch
 
 ## Idle
 
@@ -72,16 +72,16 @@ Tracking:
 >
 > state: CLOSED · stateReason: COMPLETED, DUPLICATE
 
-- [x] [[IDXIT-1]] — proxy: support MTProto proxies as a SOCKS5 replacement
-- [x] [[IDXIT-2]] — auth: QR login as a working path when phone codes are not delivered
-- [x] [[IDXIT-3]] — fetch: list forum topics of a dialog
-- [x] [[IDXIT-4]] — fetch: download message media from a dialog or topic
-- [x] [[IDXIT-5]] — ci/cd: restore HTTPS and Go module discovery for go.octolab.org
-- [x] [[IDXIT-7]] — ci/cd: sign the Cask commits in the Homebrew tap
-- [x] [[IDXIT-8]] — fetch: describe channels, groups and invite links as peer cards
-- [x] [[IDXIT-9]] — fetch: describe users and bots as peer cards
-- [x] [[IDXIT-11]] — service: save photographs lazily, from their URLs alone
-- [x] [[IDXIT-12]] — fetch: give an album post whole
+- [x] [[IDX-1]] — proxy: support MTProto proxies as a SOCKS5 replacement
+- [x] [[IDX-2]] — auth: QR login as a working path when phone codes are not delivered
+- [x] [[IDX-3]] — fetch: list forum topics of a dialog
+- [x] [[IDX-4]] — fetch: download message media from a dialog or topic
+- [x] [[IDX-5]] — ci/cd: restore HTTPS and Go module discovery for go.octolab.org
+- [x] [[IDX-7]] — ci/cd: sign the Cask commits in the Homebrew tap
+- [x] [[IDX-8]] — fetch: describe channels, groups and invite links as peer cards
+- [x] [[IDX-9]] — fetch: describe users and bots as peer cards
+- [x] [[IDX-11]] — service: save photographs lazily, from their URLs alone
+- [x] [[IDX-12]] — fetch: give an album post whole
 
 ## Won't do
 
