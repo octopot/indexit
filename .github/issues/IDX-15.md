@@ -7,22 +7,22 @@ url: https://github.com/octopot/indexit/issues/148
 title: "test: make the dashboard and stats tests independent of the clock and the disk"
 issueType: null
 labels:
-  - "effort: medium"
-  - "impact: medium"
-  - "scope: code"
   - "type: bug"
+  - "scope: code"
+  - "impact: medium"
+  - "effort: medium"
 assignees:
   - kamilsk
 milestone: null
 parent: null
 issueFields: {}
-state: OPEN
-stateReason: null
+state: CLOSED
+stateReason: COMPLETED
 duplicateOf: null
 createdAt: 2026-11-22T17:33:28Z
-updatedAt: 2026-11-22T17:33:28Z
-lastEditedAt: null
-closedAt: null
+updatedAt: 2026-11-22T17:37:42Z
+lastEditedAt: 2026-11-22T17:37:42Z
+closedAt: 2026-11-22T17:36:58Z
 ---
 
 # test: make the dashboard and stats tests independent of the clock and the disk

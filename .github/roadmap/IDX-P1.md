@@ -59,7 +59,6 @@ Tracking:
 > state: OPEN
 
 - [ ] [[IDX-6]] — ci/cd: start release builds from a warm cache on the default branch
-- [ ] [[IDX-15]] — test: make the dashboard and stats tests independent of the clock and the disk
 
 ## Idle
 
@@ -83,6 +82,7 @@ Tracking:
 - [x] [[IDX-9]] — fetch: describe users and bots as peer cards
 - [x] [[IDX-11]] — service: save photographs lazily, from their URLs alone
 - [x] [[IDX-12]] — fetch: give an album post whole
+- [x] [[IDX-15]] — test: make the dashboard and stats tests independent of the clock and the disk
 
 ## Won't do
 
