@@ -39,6 +39,13 @@ func record(t *testing.T, dir string, at time.Time, outcomes ...preview.Outcome)
 	return r
 }
 
+// readerAt reads the log in dir as it stands at at, whatever today is.
+func readerAt(dir string, at time.Time) *Reader {
+	r := NewReader(dir)
+	r.now = func() time.Time { return at }
+	return r
+}
+
 func TestRecorderAndReader(t *testing.T) {
 	dir := t.TempDir()
 	at := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
@@ -50,7 +57,7 @@ func TestRecorderAndReader(t *testing.T) {
 		preview.Outcome{Source: other, Kind: preview.Failure, Status: 410, Sent: 20},
 		preview.Outcome{Source: other, Kind: preview.Failure, Status: 503, Sent: 20},
 	)
-	reader := NewReader(dir)
+	reader := readerAt(dir, at)
 	totals, err := reader.Update()
 	require.NoError(t, err)
 	assert.Equal(t, at, totals.Since)
@@ -77,7 +84,7 @@ func TestReaderWaitsForCompleteLines(t *testing.T) {
 	path := filepath.Join(dir, "2026-10.jsonl")
 	line := `{"at":"2026-10-21T12:00:00Z","event":"hits","count":2,"sent":10}` + "\n"
 	require.NoError(t, os.WriteFile(path, []byte(line+line[:20]), 0o600))
-	reader := NewReader(dir)
+	reader := readerAt(dir, time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC))
 	totals, err := reader.Update()
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), totals.Served, "half a line is not read yet")
@@ -137,8 +144,7 @@ func TestRecorderSurvivesAnUnwritableLog(t *testing.T) {
 
 func TestReaderFollowsRemovedAndReplacedMonths(t *testing.T) {
 	dir := t.TempDir()
-	reader := NewReader(dir)
-	reader.now = func() time.Time { return time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC) }
+	reader := readerAt(dir, time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC))
 	line := func(n int) string {
 		return `{"at":"2026-10-21T12:00:00Z","event":"hits","count":` + string(rune('0'+n)) + `,"sent":1}` + "\n"
 	}
@@ -198,7 +204,7 @@ func TestColdRangeIsADownloadButNotServed(t *testing.T) {
 		preview.Outcome{Source: photo, Kind: preview.Download, Status: 416, Sent: 30, Downloaded: 100},
 		preview.Outcome{Source: other, Kind: preview.Download, Status: 500, Sent: 25, Downloaded: 90},
 	)
-	totals, err := NewReader(dir).Update()
+	totals, err := readerAt(dir, at).Update()
 	require.NoError(t, err)
 	assert.Equal(t, int64(2), totals.Downloads)
 	assert.Equal(t, int64(190), totals.Downloaded)

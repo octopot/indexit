@@ -281,6 +281,14 @@ func NewReader(dir string) *Reader {
 	return &Reader{dir: dir, now: time.Now, files: map[string]*monthLog{}}
 }
 
+// SetClock makes the reader take the current time from now, which decides
+// the months Retention keeps; a reader starts on the wall clock.
+func (r *Reader) SetClock(now func() time.Time) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.now = now
+}
+
 func newTotals() Totals { return Totals{Failures: map[int]int64{}, Gone: map[string]bool{}} }
 
 // Update reads the new lines and returns the totals. A month that cannot be
