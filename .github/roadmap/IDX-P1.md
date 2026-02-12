@@ -59,6 +59,7 @@ Tracking:
 > state: OPEN
 
 - [ ] [[IDX-6]] — ci/cd: start release builds from a warm cache on the default branch
+- [ ] [[IDX-15]] — test: make the dashboard and stats tests independent of the clock and the disk
 
 ## Idle
 
