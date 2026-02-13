@@ -20,8 +20,8 @@ state: OPEN
 stateReason: null
 duplicateOf: null
 createdAt: 2026-09-22T17:12:29Z
-updatedAt: 2026-11-22T18:38:10Z
-lastEditedAt: 2026-11-22T18:33:00Z
+updatedAt: 2026-11-22T18:45:47Z
+lastEditedAt: 2026-11-22T18:45:47Z
 closedAt: null
 ---
 
@@ -48,8 +48,8 @@ Read the `cd` run in the month of its tag: the runs cleanup deletes it on day 2 
 
 ## Acceptance criteria
 
-- [ ] a release tag restores a release build cache saved on `main`, and saves none;
-- [ ] when that cache was built with the same Go version and `gotd`, building binaries takes under 45 s;
+- [x] a release tag restores a release build cache saved on `main`, and saves none;
+- [x] when that cache was built with the same Go version and `gotd`, building binaries takes under 45 s;
 - [ ] with any other cache, or none, the release still succeeds: it builds at most two targets at once, in under 5 min;
 - [ ] an hour after the last push to `main`, `main` holds one release build cache, the one for its head, under 2.5 GB;
 - [ ] that cache is still there after two weeks without a push;

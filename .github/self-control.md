@@ -15,12 +15,11 @@ on a tag (2026-11-22). Proven so far: v0.4.1 restored a cache from `main` and
 built the binaries in 21 s at `--parallelism 2`, and no cold release ran out of
 memory since 2026-09-22. On 2026-11-22 cache usage went over the 10 GB quota:
 four release caches of about 2 GB each on `main` after four pushes in seven
-minutes, one of them usable.
+minutes, one of them usable. v0.4.2 restored the exact key from `main`, skipped
+the parallelism limit, built the binaries in about 2 s and saved no cache
+(`cd` run 45056412164); usage stood at 10.1 GB in 8 caches right after it,
+four of them release caches on `main`.
 
-- [ ] **On the next release tag**: read the `cd` run in the month of the tag
-  (the runs cleanup deletes it on day 2 of the next one): it restores a cache
-  saved on `main`, builds the binaries in under 45 s when Go and `gotd` match
-  that cache, and saves none.
 - [ ] **An hour after a push to `main` and a day after dependency merges**:
   `gh cache list --ref refs/heads/main --key release-` shows one cache, and
   `gh api repos/octopot/indexit/actions/cache/usage` is under 7 GB with no pull
