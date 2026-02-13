@@ -10,31 +10,29 @@ is proven or moved into an issue; a release adds the checks it leaves open
 
 ### Release build cache ([IDX-6](issues/IDX-6.md), #105)
 
-`main` holds the release build cache; `cd` lifts `--parallelism 2` only on an
-exact key. Proven so far: exact hits on the v0.2.2 and v0.3.0 runs, the warmup
-rebuilds every cache, `cleanup.pulls.yml` leaves no `refs/pull/*/merge`
-caches, and on 2026-11-08 three `release-Linux-go1.27.3-…` caches on `main`
-were read the same day, with the scheduled warmup green on 2026-11-05.
+The issue now asks for one bounded release cache on `main`, not an exact key
+on a tag (2026-11-22). Proven so far: v0.4.1 restored a cache from `main` and
+built the binaries in 21 s at `--parallelism 2`, and no cold release ran out of
+memory since 2026-09-22. On 2026-11-22 cache usage went over the 10 GB quota:
+four release caches of about 2 GB each on `main` after four pushes in seven
+minutes, one of them usable.
 
-- [ ] **On the next release tag**: the `cd` run restores the exact key, skips
-  the parallelism limit, builds the binaries in under 45 s and saves no cache
-  from the tag (the PoC in #105). On v0.4.1 the key missed for an outside
-  reason: the three warmups on `main` that day failed to download GoReleaser
-  (`/releases/download/` answered 504 on GitHub's side), so the tag restored
-  an older cache by prefix and built with `--parallelism 2`, still in 21 s,
-  and saved no cache from the tag. Before the next tag, check that the latest
-  warmup on `main` is green; rerun it if not. If it still misses, look at what
-  changed the key since the last push to `main`.
-- [ ] **About 2026-11-15**:
-  `gh api repos/octopot/indexit/actions/cache/usage` is under 8 GB. On
-  2026-11-08 it was 8.59 GB in 14 caches, after five merges that day; the
-  stale ones should age out within 7 days. If not, look at what keeps them.
-- [ ] **On 2026-12-01/02**: the runs of the caches cleanup and the warmup of
-  day 1 are readable until the runs cleanup on day 2. The window of November
-  passed unchecked.
-- [ ] All of the above hold → tick the acceptance criteria in #105 and close
-  it as completed. If the Slack notifications of the warmup (every `go.sum`
-  merge, twice a week) are noise, notify on failure only.
+- [ ] **On the next release tag**: read the `cd` run in the month of the tag
+  (the runs cleanup deletes it on day 2 of the next one): it restores a cache
+  saved on `main`, builds the binaries in under 45 s when Go and `gotd` match
+  that cache, and saves none.
+- [ ] **An hour after a push to `main` and a day after dependency merges**:
+  `gh cache list --ref refs/heads/main --key release-` shows one cache, and
+  `gh api repos/octopot/indexit/actions/cache/usage` is under 7 GB with no pull
+  request open. Until #105 bounds the cache, a miss here is expected; record the
+  numbers in the issue.
+- [ ] All the criteria of #105 hold → tick them and close it as completed. If
+  the Slack notifications of the warmup (every `go.sum` merge, twice a week)
+  are noise, notify on failure only: five warmup runs on 2026-11-22 make the
+  case.
+- [ ] **File an issue**: `cd` downloads GoReleaser from GitHub Releases on every
+  run, and v0.4.1 needed five attempts over 2h25m because the download
+  answered 504, although the tools module pins the same v2.18.2.
 
 ### Tools
 

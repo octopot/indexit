@@ -42,7 +42,6 @@ Tracking:
 > state: OPEN
 
 - [ ] [[IDX-13]] — service: keep photographs of posts from other platforms
-- [ ] [[IDX-14]] — vault: index notes by filters and serve the index
 
 ## Todo
 
@@ -51,6 +50,7 @@ Tracking:
 > state: OPEN
 
 - [ ] [[IDX-10]] — fetch: keep the author's formatting of message text
+- [ ] [[IDX-14]] — vault: index notes by filters and serve the index
 
 ## In progress
 
@@ -58,13 +58,13 @@ Tracking:
 >
 > state: OPEN
 
-- [ ] [[IDX-6]] — ci/cd: start release builds from a warm cache on the default branch
-
 ## Idle
 
 > Work has started but is deliberately paused or blocked.
 >
 > state: OPEN
+
+- [ ] [[IDX-6]] — ci/cd: keep one bounded release build cache on the default branch
 
 ## Done
 
