@@ -20,7 +20,7 @@ require (
 	go.octolab.org/toolkit/config v0.0.5
 	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 	golang.org/x/term v0.46.0
 	rsc.io/qr v0.2.0
 )
