@@ -237,8 +237,8 @@ github.com/gotd/log/logzap v0.1.1 h1:O6l7d8HUbODe+UMcrM47eXYDwdJ6RNmpQejLjrlcEIQ
 github.com/gotd/log/logzap v0.1.1/go.mod h1:5ObZkITbfhbsBOLzBkzmMk9QxXc0eNQpimau7zRL+Y8=
 github.com/gotd/neo v0.1.5 h1:oj0iQfMbGClP8xI59x7fE/uHoTJD7NZH9oV1WNuPukQ=
 github.com/gotd/neo v0.1.5/go.mod h1:9A2a4bn9zL6FADufBdt7tZt+WMhvZoc5gWXihOPoiBQ=
-github.com/gotd/td v0.162.0 h1:3pUzBsEbb0I5QquvfSkXihkVBXI+QTtdd/upijjUbkw=
-github.com/gotd/td v0.162.0/go.mod h1:ZsGbErIos7XHF7HL0VlsjL6mmX4b1JpinHfDb7gOdvs=
+github.com/gotd/td v0.163.0 h1:A/QHpyMmYaQgyOY//vySoKa1wQP8NCAo3/5OcgfZVnU=
+github.com/gotd/td v0.163.0/go.mod h1:ZsGbErIos7XHF7HL0VlsjL6mmX4b1JpinHfDb7gOdvs=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/hashicorp/consul/api v1.12.0/go.mod h1:6pVBMo0ebnYdt2S3H87XhekM/HHrUoTD2XXb/VrZVy0=
 github.com/hashicorp/consul/sdk v0.8.0/go.mod h1:GBvyrGALthsZObzUGsfgHZQDXjg4lOjagTIwIR1vPms=
