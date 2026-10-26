@@ -11,7 +11,7 @@ ignore (
 require (
 	github.com/fatih/color v1.19.0
 	github.com/gotd/log/logzap v0.1.1
-	github.com/gotd/td v0.162.0
+	github.com/gotd/td v0.163.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.10
